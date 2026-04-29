@@ -1,0 +1,225 @@
+/* 
+ * Django-Layui Theme: 企业红
+ * Auto-generated theme CSS
+ */
+
+:root {
+    --theme-primary: #C9333E;
+    --theme-menu-bg: #263238;
+    --theme-menu-text: #B0BEC5;
+    --theme-header-bg: #C9333E;
+    --theme-logo-color: #FFFFFF;
+}
+
+/* ---- 顶部导航栏 ---- */
+.layui-layout-admin .layui-header {
+    background: #C9333E !important;
+}
+
+.layui-layout-admin .layui-header .layui-logo {
+    color: #FFFFFF !important;
+    background: #263238 !important;
+}
+
+.layui-layout-admin .layui-header .layui-nav .layui-nav-item a {
+    color: #FFFFFF !important;
+}
+
+.layui-layout-admin .layui-header .layui-nav .layui-nav-item a:hover {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+/* ---- 侧边菜单 ---- */
+.layui-layout-admin .layui-side {
+    background-color: #263238 !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-item a {
+    color: #B0BEC5 !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-item a:hover {
+    color: #C9333E !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-item.layui-this a {
+    color: #C9333E !important;
+    background-color: rgba(30, 159, 255, 0.1) !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-child dd.layui-this {
+    background-color: rgba(30, 159, 255, 0.15) !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-child dd.layui-this a {
+    color: #C9333E !important;
+}
+
+.layui-nav-tree .layui-nav-bar {
+    background-color: #C9333E !important;
+}
+
+/* ---- 按钮样式 ---- */
+.layui-btn-primary {
+    border-color: #C9333E !important;
+    color: #C9333E !important;
+}
+
+.layui-btn-primary:hover {
+    border-color: #C9333E !important;
+    color: #C9333E !important;
+    opacity: 0.8;
+}
+
+.layui-btn-normal {
+    background-color: #C9333E !important;
+}
+
+/* ---- 表单元素 ---- */
+.layui-input:focus,
+.layui-textarea:focus {
+    border-color: #C9333E !important;
+}
+
+.layui-form-select dl dd.layui-this {
+    background-color: rgba(30, 159, 255, 0.1) !important;
+    color: #C9333E !important;
+}
+
+/* ---- 表格样式 ---- */
+.layui-table-view .layui-table-body tr:hover {
+    background-color: rgba(30, 159, 255, 0.05) !important;
+}
+
+.layui-table-page .layui-laypage .layui-laypage-curr .layui-laypage-em {
+    background-color: #C9333E !important;
+}
+
+/* ---- Tab标签页 ---- */
+.layui-tab-title li.layui-this {
+    color: #C9333E !important;
+}
+
+.layui-tab-title li.layui-this::after {
+    border-bottom-color: #C9333E !important;
+}
+
+/* ---- 面包屑导航 ---- */
+.layui-breadcrumb a:hover {
+    color: #C9333E !important;
+}
+
+/* ---- 链接样式 ---- */
+a {
+    color: #C9333E !important;
+}
+
+a:hover {
+    color: #C9333E !important;
+    opacity: 0.8;
+}
+
+/* ---- 徽章样式 ---- */
+.layui-badge-dot {
+    background-color: #C9333E !important;
+}
+
+/* ---- 时间线 ---- */
+.layui-timeline-axis {
+    color: #C9333E !important;
+}
+
+/* ---- 进度条 ---- */
+.layui-progress-bar {
+    background-color: #C9333E !important;
+}
+
+/* ---- 开关按钮 ---- */
+.layui-form-onswitch {
+    background-color: #C9333E !important;
+    border-color: #C9333E !important;
+}
+
+/* ---- 复选框 ---- */
+.layui-form-checked span,
+.layui-form-checked:hover span {
+    background-color: #C9333E !important;
+}
+
+/* ---- 单选框 ---- */
+.layui-form-radioed>i,
+.layui-form-radioed>span {
+    color: #C9333E !important;
+}
+
+/* ---- 滑块 ---- */
+.layui-slider-bar {
+    background-color: #C9333E !important;
+}
+
+.layui-slider-step.layui-slider-active {
+    background-color: #C9333E !important;
+}
+
+/* ---- 评分 ---- */
+.layui-rate li i.layui-icon-rate-solid {
+    color: #C9333E !important;
+}
+
+/* ---- 树组件 ---- */
+.layui-tree-set .layui-tree-entry .layui-tree-txt a {
+    color: #C9333E !important;
+}
+
+/* ---- 轮播图指示器 ---- */
+.layui-carousel-ind ul.layui-this {
+    background-color: #C9333E !important;
+}
+
+/* ---- 流加载按钮 ---- */
+.layui-flow-more a {
+    background-color: #C9333E !important;
+}
+
+/* ---- 代码高亮 ---- */
+pre code .layui-code-h3 {
+    border-left-color: #C9333E !important;
+}
+
+/* ---- 分割线 ---- */
+.layui-divider.layui-bg-primary {
+    background-color: #C9333E !important;
+}
+
+/* ---- 动画效果 ---- */
+@keyframes layui-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.layui-icon-loading {
+    animation: layui-rotate 1s linear infinite;
+}
+
+/* ---- 响应式适配 ---- */
+@media screen and (max-width: 768px) {
+    .layui-layout-admin .layui-header .layui-logo {
+        font-size: 14px;
+    }
+}
+
+/* ---- 深色模式优化 ---- */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #1a1a1a;
+    }
+}
+
+/* ---- 打印样式 ---- */
+@media print {
+    .layui-header,
+    .layui-side,
+    .layui-footer {
+        display: none !important;
+    }
+}

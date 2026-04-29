@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 软件测试管理后台</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <style>
+        body { padding: 0; margin: 0; background: var(--bg-primary); }
+        .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
+        .search-bar { margin-bottom: 16px; }
+        .search-bar .layui-form-item { margin-bottom: 16px; }
+        .search-bar .layui-inline { margin-right: 16px; }
+        .search-bar .layui-form-label { width: 80px; padding: 9px 12px 9px 0; }
+        .search-bar .search-btns { text-align: right; padding-bottom: 0; }
+        .search-bar .search-btns .layui-btn { margin-left: 8px; }
+        .role-tags { display: inline-block; margin: 0 2px; }
+        .btn-disabled { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
+        .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
+        .layui-card-header { border-bottom: 1px solid var(--card-border); }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <span style="font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                <i class="layui-icon layui-icon-user" style="color: var(--primary-color);"></i> <span data-i18n="user.title">用户管理</span>
+            </span>
+        </div>
+        <div class="layui-card-body">
+            <!-- 搜索栏 -->
+            <div class="search-bar">
+                <form class="layui-form" lay-filter="searchForm">
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <label class="layui-form-label" data-i18n="common.keyword">关键词</label>
+                            <div class="layui-input-inline" style="width: 200px;">
+                                <input type="text" name="keyword" id="searchKeyword" placeholder="{{ t('user.search.placeholder') }}" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-inline">
+                            <label class="layui-form-label" data-i18n="common.status">状态</label>
+                            <div class="layui-input-inline" style="width: 160px;">
+                                <select name="is_active" id="searchStatus">
+                                    <option value="">{{ t('user.allStatus') }}</option>
+                                    <option value="true">{{ t('user.enabled') }}</option>
+                                    <option value="false">{{ t('user.disabled') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="layui-inline">
+                            <button type="button" class="layui-btn layui-btn-sm" id="searchBtn">
+                                <i class="layui-icon layui-icon-search"></i> {{ t('common.search') }}
+                            </button>
+                            <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary" id="resetBtn">
+                                <i class="layui-icon layui-icon-refresh"></i> {{ t('common.reset') }}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <!-- 表格 -->
+            <table id="userTable" lay-filter="userTable"></table>
+        </div>
+    </div>
+</div>
+
+<!-- 工具栏模板 -->
+<script type="text/html" id="toolbarTpl">
+    <div class="layui-btn-container">
+        {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
+        {{# if(layui.$.inArray('user:add', perms) > -1){ }}
+        <button class="layui-btn layui-btn-sm layui-btn-normal" lay-event="add">
+            <i class="layui-icon layui-icon-add-1"></i> {{ t('user.addForm.title') }}
+        </button>
+        {{# } }}
+        <button class="layui-btn layui-btn-sm layui-btn-primary" lay-event="refresh">
+            <i class="layui-icon layui-icon-refresh"></i> {{ t('common.refresh') }}
+        </button>
+    </div>
+</script>
+
+<!-- 操作列模板 -->
+<script type="text/html" id="operateTpl">
+    {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
+    {{# if(layui.$.inArray('user:edit', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
+    <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="resetPwd">{{ t('user.resetPassword') }}</a>
+    {{# if(d.username === 'admin'){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary btn-disabled" title="{{ t('user.adminCannotDisable') }}">{{ t('common.disable') }}</a>
+    {{# } else { }}
+    <a class="layui-btn layui-btn-xs {{ d.is_active ? 'layui-btn-warm' : 'layui-btn-normal' }}" lay-event="toggleStatus">
+        {{ d.is_active ? t('common.disable') : t('common.enable') }}
+    </a>
+    {{# } }}
+    {{# } }}
+    {{# if(d.username === 'admin'){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger btn-disabled" title="{{ t('user.adminCannotDelete') }}">{{ t('common.delete') }}</a>
+    {{# } else if(layui.$.inArray('user:delete', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">{{ t('common.delete') }}</a>
+    {{# } }}
+</script>
+
+<!-- 新增用户弹窗模板 -->
+<script type="text/html" id="addUserFormTpl">
+    <form class="layui-form" lay-filter="addUserForm" style="padding: 20px 30px 0;">
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.username') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="username" lay-verify="required" lay-reqtext="{{ t('common.inputRequired', [t('user.username')]) }}" placeholder="{{ t('common.inputRequired', [t('user.username')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.password') }}</label>
+            <div class="layui-input-block">
+                <input type="password" name="password" lay-verify="required|password" lay-reqtext="{{ t('common.inputRequired', [t('user.password')]) }}" placeholder="{{ t('user.password') }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.nickname') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="nickname" placeholder="{{ t('common.inputRequired', [t('user.nickname')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.phone') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="phone" placeholder="{{ t('common.inputRequired', [t('user.phone')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.email') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="email" placeholder="{{ t('common.inputRequired', [t('user.email')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.role') }}</label>
+            <div class="layui-input-block">
+                <div id="addRoleSelect"></div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.tester') }}</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="is_tester" lay-skin="switch" lay-text="{{ t('common.yes') }}|{{ t('common.no') }}">
+            </div>
+        </div>
+        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
+            <button type="button" class="layui-btn" lay-submit lay-filter="addUserSubmit">{{ t('common.confirm') }}</button>
+            <button type="reset" class="layui-btn layui-btn-primary">{{ t('common.reset') }}</button>
+        </div>
+    </form>
+</script>
+
+<!-- 编辑用户弹窗模板 -->
+<script type="text/html" id="editUserFormTpl">
+    <form class="layui-form" lay-filter="editUserForm" style="padding: 20px 30px 0;">
+        <input type="hidden" name="id" value="">
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.username') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="username" readonly class="layui-input layui-disabled" style="background:var(--bg-tertiary);">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.nickname') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="nickname" placeholder="{{ t('common.inputRequired', [t('user.nickname')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.phone') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="phone" placeholder="{{ t('common.inputRequired', [t('user.phone')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.email') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="email" placeholder="{{ t('common.inputRequired', [t('user.email')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.role') }}</label>
+            <div class="layui-input-block">
+                <div id="editRoleSelect"></div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.tester') }}</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="is_tester" lay-skin="switch" lay-text="{{ t('common.yes') }}|{{ t('common.no') }}">
+            </div>
+        </div>
+        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
+            <button type="button" class="layui-btn" lay-submit lay-filter="editUserSubmit">{{ t('common.confirm') }}</button>
+            <button type="reset" class="layui-btn layui-btn-primary">{{ t('common.reset') }}</button>
+        </div>
+    </form>
+</script>
+
+<!-- 重置密码弹窗模板 -->
+<script type="text/html" id="resetPwdFormTpl">
+    <form class="layui-form" lay-filter="resetPwdForm" style="padding: 20px 30px 0;">
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.username') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="username" readonly class="layui-input layui-disabled" style="background:var(--bg-tertiary);">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.resetPassword.newPwd') }}</label>
+            <div class="layui-input-block">
+                <input type="password" name="password" lay-verify="required|password" lay-reqtext="{{ t('common.inputRequired', [t('user.resetPassword.newPwd')]) }}" placeholder="{{ t('user.resetPassword.newPwd') }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('user.resetPassword.confirmPwd') }}</label>
+            <div class="layui-input-block">
+                <input type="password" name="confirm_password" lay-verify="required|confirmPwd" lay-reqtext="{{ t('common.inputRequired', [t('user.resetPassword.confirmPwd')]) }}" placeholder="{{ t('user.resetPassword.confirmPwd') }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
+            <button type="button" class="layui-btn" lay-submit lay-filter="resetPwdSubmit">{{ t('common.confirm') }}</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="cancelResetPwd">{{ t('common.cancel') }}</button>
+        </div>
+    </form>
+</script>
+
+<script src="/static/layui/lib/layui.js"></script>
+    <script src="/static/layui/js/common.js"></script>
+    <script src="/static/layui/js/i18n.js"></script>
+    <script>
+inheritTheme();
+
+// 初始化语言
+if (window.parent && window.parent.I18N) {
+    window.I18N = window.parent.I18N;
+    window.t = window.parent.t;
+} else {
+    I18N.getLang();
+}
+
+layui.use(['table', 'form', 'layer', 'laypage'], function(){
+    var table = layui.table;
+    var form = layui.form;
+    var layer = layui.layer;
+    var laypage = layui.laypage;
+    var $ = layui.$;
+
+    // 初始化 data-i18n 和 {{ t() }} 占位符
+    $('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); $(this).text(t(key)); });
+    renderI18n();
+    form.render('select');
+
+    var currentUser = window.parent.currentUser || {};
+    var permissions = currentUser.permissions || [];
+
+    // 分页参数
+    var currentPage = 1;
+    var pageSize = 10;
+    var total = 0;
+
+    // 角色列表缓存
+    var roleList = [];
+
+    // 当前操作的用户数据缓存
+    var currentEditUserData = null;
+    var currentResetPwdUserData = null;
+
+    // 加载角色列表
+    function loadRoles(callback) {
+        getApi('/admin/api/rbac/roles/', function(res) {
+            if (res.code === 200) {
+                roleList = res.data || [];
+            }
+            if (typeof callback === 'function') callback();
+        });
+    }
+
+    // 构建角色多选下拉HTML
+    function buildRoleSelectHtml(containerId, selectedIds) {
+        selectedIds = selectedIds || [];
+        var html = '<select name="role_ids" multiple lay-filter="roleSelect">';
+        html += '<option value="">' + t('user.selectRole') + '</option>';
+        for (var i = 0; i < roleList.length; i++) {
+            var role = roleList[i];
+            var selected = selectedIds.indexOf(role.id) > -1 ? ' selected' : '';
+            html += '<option value="' + role.id + '"' + selected + '>' + role.name + ' (' + role.code + ')</option>';
+        }
+        html += '</select>';
+        $('#' + containerId).html(html);
+        form.render('select');
+    }
+
+    // 加载用户列表
+    function loadTable() {
+        var keyword = $('#searchKeyword').val().trim();
+        var isActive = $('#searchStatus').val();
+
+        var url = '/admin/api/rbac/users/?page=' + currentPage + '&page_size=' + pageSize;
+        if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
+        if (isActive !== '') url += '&is_active=' + isActive;
+
+        getApi(url, function(res) {
+            if (res.code === 200) {
+                var rawData = res.data;
+                // 兼容数组格式和分页格式
+                var list = Array.isArray(rawData) ? rawData : (rawData.list || []);
+                total = Array.isArray(rawData) ? list.length : (rawData.total || 0);
+
+                table.render({
+                    elem: '#userTable',
+                    toolbar: '#toolbarTpl',
+                    defaultToolbar: [],
+                    data: list,
+                    height: 'full-220',
+                    page: {
+                        limit: pageSize,
+                        limits: [10, 30, 50, 100],
+                        curr: currentPage,
+                        count: total,
+                        layout: ['prev', 'page', 'next', 'limit', 'skip', 'count'],
+                        jump: function(obj, first) {
+                            if (!first) {
+                                currentPage = obj.curr;
+                                pageSize = obj.limit;
+                                loadTable();
+                            }
+                        }
+                    },
+                    skin: 'line',
+                    even: true,
+                    cols: [[
+                        {field: 'id', title: t('common.id'), width: 70, align: 'center'},
+                        {field: 'username', title: t('user.username'), width: 120},
+                        {field: 'nickname', title: t('user.nickname'), width: 120},
+                        {field: 'phone', title: t('user.phone'), width: 130},
+                        {field: 'email', title: t('user.email'), width: 180},
+                        {field: 'roles', title: t('user.role'), minWidth: 150, templet: function(d) {
+                            if (!d.roles || d.roles.length === 0) return '<span style="color:var(--text-muted);">' + t('user.noRole') + '</span>';
+                            var html = '';
+                            for (var i = 0; i < d.roles.length; i++) {
+                                html += '<span class="layui-badge layui-bg-blue role-tags">' + d.roles[i].name + '</span>';
+                            }
+                            return html;
+                        }},
+                        {field: 'is_active', title: t('user.status'), width: 90, align: 'center', templet: function(d) {
+                            return d.is_active
+                                ? '<span class="layui-badge layui-bg-green">' + t('user.enabled') + '</span>'
+                                : '<span class="layui-badge layui-bg-gray">' + t('user.disabled') + '</span>';
+                        }},
+                        {field: 'is_tester', title: t('user.tester'), width: 100, align: 'center', templet: function(d) {
+                            return d.is_tester
+                                ? '<span class="layui-badge layui-bg-orange">' + t('common.yes') + '</span>'
+                                : '<span class="layui-badge layui-bg-gray">' + t('common.no') + '</span>';
+                        }},
+                        {field: 'date_joined', title: t('user.createTime'), width: 170, align: 'center'},
+                        {title: t('common.operation'), width: 340, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+                    ]]
+                });
+            }
+        });
+    }
+
+    // 密码校验
+    form.verify({
+        password: function(value) {
+            if (value && value.length < 6) {
+                return t('profile.password.minLen');
+            }
+        },
+        confirmPwd: function(value) {
+            var pwd = $('[lay-filter="resetPwdForm"] input[name="password"]').val();
+            if (value !== pwd) {
+                return t('profile.password.diff');
+            }
+        }
+    });
+
+    // 打开新增用户弹窗
+    function openAddUserForm() {
+        loadRoles(function() {
+            layer.open({
+                type: 1,
+                title: t('user.addForm.title'),
+                area: ['550px', 'auto'],
+                content: renderTpl('addUserFormTpl'),
+                success: function(layero, index) {
+                    buildRoleSelectHtml('addRoleSelect', []);
+                    form.render(null, 'addUserForm');
+                }
+            });
+        });
+    }
+
+    // 新增用户表单提交（绑定一次，避免重复绑定）
+    form.on('submit(addUserSubmit)', function(data) {
+        var field = data.field;
+        var roleIds = [];
+        if (field.role_ids) {
+            if (Array.isArray(field.role_ids)) {
+                roleIds = field.role_ids.map(function(id) { return parseInt(id); });
+            } else {
+                roleIds = [parseInt(field.role_ids)];
+            }
+        }
+
+        var submitData = {
+            username: field.username,
+            password: field.password,
+            nickname: field.nickname || '',
+            phone: field.phone || '',
+            email: field.email || '',
+            role_ids: roleIds,
+            is_tester: field.is_tester === 'on'
+        };
+
+        postApi('/admin/api/rbac/users/create/', submitData, function(res) {
+            if (res.code === 200) {
+                layer.msg(t('common.addSuccess'), {icon: 1});
+                layer.closeAll();
+                loadTable();
+            } else {
+                layer.msg(res.msg || t('common.fail'), {icon: 2});
+            }
+        });
+        return false;
+    });
+
+    // 打开编辑用户弹窗
+    function openEditUserForm(userData) {
+        currentEditUserData = userData;
+        loadRoles(function() {
+            layer.open({
+                type: 1,
+                title: t('user.editForm.title'),
+                area: ['550px', 'auto'],
+                content: renderTpl('editUserFormTpl'),
+                success: function(layero, index) {
+                    form.val('editUserForm', {
+                        id: userData.id,
+                        username: userData.username,
+                        nickname: userData.nickname || '',
+                        phone: userData.phone || '',
+                        email: userData.email || '',
+                        is_tester: userData.is_tester
+                    });
+
+                    var selectedIds = [];
+                    if (userData.roles && userData.roles.length > 0) {
+                        for (var i = 0; i < userData.roles.length; i++) {
+                            selectedIds.push(userData.roles[i].id);
+                        }
+                    }
+                    buildRoleSelectHtml('editRoleSelect', selectedIds);
+
+                    form.render(null, 'editUserForm');
+                }
+            });
+        });
+    }
+
+    // 编辑用户表单提交（绑定一次，避免重复绑定）
+    form.on('submit(editUserSubmit)', function(data) {
+        var field = data.field;
+        var roleIds = [];
+        if (field.role_ids) {
+            if (Array.isArray(field.role_ids)) {
+                roleIds = field.role_ids.map(function(id) { return parseInt(id); });
+            } else {
+                roleIds = [parseInt(field.role_ids)];
+            }
+        }
+
+        var submitData = {
+            nickname: field.nickname || '',
+            phone: field.phone || '',
+            email: field.email || '',
+            role_ids: roleIds,
+            is_tester: field.is_tester === 'on'
+        };
+
+        if (!currentEditUserData) {
+            layer.msg(t('user.missingInfo'), {icon: 2});
+            return false;
+        }
+        putApi('/admin/api/rbac/users/' + currentEditUserData.id + '/update/', submitData, function(res) {
+            if (res.code === 200) {
+                layer.msg(t('common.updateSuccess'), {icon: 1});
+                layer.closeAll();
+                loadTable();
+            } else {
+                layer.msg(res.msg || t('common.fail'), {icon: 2});
+            }
+        });
+        return false;
+    });
+
+    // 打开重置密码弹窗
+    function openResetPwdForm(userData) {
+        currentResetPwdUserData = userData;
+        layer.open({
+            type: 1,
+            title: t('user.resetPassword.title') + ' - ' + userData.username,
+            area: ['450px', 'auto'],
+            content: renderTpl('resetPwdFormTpl'),
+            success: function(layero, index) {
+                form.val('resetPwdForm', {
+                    username: userData.username
+                });
+                form.render(null, 'resetPwdForm');
+
+                layero.find('#cancelResetPwd').on('click', function() {
+                    layer.close(index);
+                });
+            }
+        });
+    }
+
+    // 重置密码表单提交（绑定一次，避免重复绑定）
+    form.on('submit(resetPwdSubmit)', function(data) {
+        var field = data.field;
+        if (field.password !== field.confirm_password) {
+            layer.msg(t('profile.password.diff'), {icon: 2});
+            return false;
+        }
+        if (field.password.length < 6) {
+            layer.msg(t('profile.password.minLen'), {icon: 2});
+            return false;
+        }
+
+        if (!currentResetPwdUserData) {
+            layer.msg(t('user.missingInfo'), {icon: 2});
+            return false;
+        }
+        putApi('/admin/api/rbac/users/' + currentResetPwdUserData.id + '/reset-password/', {new_password: field.password}, function(res) {
+            if (res.code === 200) {
+                layer.msg(t('user.passwordResetSuccess'), {icon: 1});
+                layer.closeAll();
+            } else {
+                layer.msg(res.msg || t('common.fail'), {icon: 2});
+            }
+        });
+        return false;
+    });
+
+    // 搜索
+    $('#searchBtn').on('click', function() {
+        currentPage = 1;
+        loadTable();
+    });
+
+    // 重置搜索
+    $('#resetBtn').on('click', function() {
+        currentPage = 1;
+        $('#searchKeyword').val('');
+        $('#searchStatus').val('');
+        form.render('select');
+        loadTable();
+    });
+
+    // 回车搜索
+    $('#searchKeyword').on('keydown', function(e) {
+        if (e.keyCode === 13) {
+            e.preventDefault();
+            currentPage = 1;
+            loadTable();
+        }
+    });
+
+    // 工具栏事件
+    table.on('toolbar(userTable)', function(obj) {
+        if (obj.event === 'add') {
+            openAddUserForm();
+        } else if (obj.event === 'refresh') {
+            loadTable();
+        }
+    });
+
+    // 操作列事件
+    table.on('tool(userTable)', function(obj) {
+        var data = obj.data;
+        if (obj.event === 'view') {
+            var roleNames = '';
+            if (data.roles && data.roles.length > 0) {
+                for (var i = 0; i < data.roles.length; i++) {
+                    roleNames += (i > 0 ? ', ' : '') + data.roles[i].name;
+                }
+            }
+            var content = '<div style="padding: 20px 30px;">' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.username') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.username || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.nickname') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.nickname || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.phone') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.phone || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.email') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.email || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.role') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(roleNames || t('user.noRole')) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.status') + '</label><div class="layui-input-block"><input type="text" value="' + (data.is_active ? t('user.enabled') : t('user.disabled')) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.tester') + '</label><div class="layui-input-block"><input type="text" value="' + (data.is_tester ? t('common.yes') : t('common.no')) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.createTime') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.date_joined || '') + '" class="layui-input" readonly></div></div>' +
+                '</div>';
+            layer.open({
+                type: 1,
+                title: t('common.view') + ' ' + t('user.title') + ' - ' + data.username,
+                area: ['550px', '480px'],
+                content: content,
+                btn: [t('common.cancel')]
+            });
+        } else if (obj.event === 'edit') {
+            openEditUserForm(data);
+        } else if (obj.event === 'resetPwd') {
+            openResetPwdForm(data);
+        } else if (obj.event === 'toggleStatus') {
+            if (data.username === 'admin') {
+                layer.msg(t('user.adminCannotDisable'), {icon: 2});
+                return;
+            }
+            var action = data.is_active ? t('common.disable') : t('common.enable');
+            layer.confirm(t('common.confirm') + action + t('user.username') + ' <b>' + data.username + '</b> ?', {
+                icon: 3,
+                title: action + t('common.confirm'),
+                btn: [t('common.confirm'), t('common.cancel')]
+            }, function(index) {
+                putApi('/admin/api/rbac/users/' + data.id + '/status/', {is_active: !data.is_active}, function(res) {
+                    if (res.code === 200) {
+                        layer.msg(t('user.statusChanged'), {icon: 1});
+                        layer.close(index);
+                        loadTable();
+                    } else {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                    }
+                });
+            });
+        } else if (obj.event === 'del') {
+            if (data.username === 'admin') {
+                layer.msg(t('user.adminCannotDelete'), {icon: 2});
+                return;
+            }
+            layer.confirm(t('common.confirmDelete') + '<br><b>' + data.username + '</b>', {
+                icon: 3,
+                title: t('common.deleteConfirm.title'),
+                btn: [t('common.confirm'), t('common.cancel')]
+            }, function(index) {
+                deleteApi('/admin/api/rbac/users/' + data.id + '/delete/', function(res) {
+                    if (res.code === 200) {
+                        layer.msg(t('common.deleteSuccess'), {icon: 1});
+                        layer.close(index);
+                        loadTable();
+                    } else {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                    }
+                });
+            });
+        }
+    });
+
+    // 初始化
+    loadTable();
+});
+</script>
+</body>
+</html>

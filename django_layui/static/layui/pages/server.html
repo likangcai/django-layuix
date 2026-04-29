@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器管理</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <style>
+        body { padding: 0; margin: 0; background: var(--bg-primary); }
+        .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
+        .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
+        .layui-card-header { border-bottom: 1px solid var(--card-border); }
+        .auth-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
+        .auth-tag.password { background: rgba(30, 159, 255, 0.1); color: #1e9fff; }
+        .auth-tag.key { background: rgba(24, 144, 255, 0.1); color: #1890ff; }
+
+        /* 日志查看器样式 */
+        .log-viewer {
+            background: #1a1a2e;
+            border-radius: 8px;
+            overflow: hidden;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .log-viewer-header {
+            background: #16213e;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a0a0a0;
+            font-size: 13px;
+        }
+        .log-viewer-body {
+            padding: 14px;
+            color: #00ff88;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 480px;
+            overflow-y: auto;
+            min-height: 200px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-viewer-body::-webkit-scrollbar { width: 6px; }
+        .log-viewer-body::-webkit-scrollbar-track { background: #1a1a2e; }
+        .log-viewer-body::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        .log-viewer-body .log-empty { color: #666; text-align: center; padding: 40px 0; }
+
+        /* AI 分析结果样式 */
+        .ai-analysis-panel {
+            background: var(--bg-secondary, #1e2a3a);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 12px;
+            border: 1px solid var(--card-border, #2a3a4a);
+        }
+        .ai-analysis-header {
+            background: #16213e;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a0a0a0;
+            font-size: 13px;
+        }
+        .ai-analysis-body {
+            padding: 16px;
+            color: var(--text-primary, #e0e0e0);
+            font-size: 13px;
+            line-height: 1.8;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .ai-analysis-body::-webkit-scrollbar { width: 6px; }
+        .ai-analysis-body::-webkit-scrollbar-track { background: var(--bg-secondary, #1e2a3a); }
+        .ai-analysis-body::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        .ai-analysis-body h2 { color: #1890ff; margin: 12px 0 8px; font-size: 15px; }
+        .ai-analysis-body h3 { color: #40a9ff; margin: 10px 0 6px; font-size: 14px; }
+        .ai-analysis-body p { margin: 6px 0; }
+        .ai-analysis-body code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            color: #00ff88;
+        }
+        .ai-analysis-body pre {
+            background: rgba(0,0,0,0.4);
+            padding: 10px 14px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+        .ai-analysis-body pre code {
+            background: none;
+            padding: 0;
+        }
+        .ai-analysis-body ul, .ai-analysis-body ol {
+            padding-left: 20px;
+            margin: 6px 0;
+        }
+        .ai-analysis-body li { margin: 4px 0; }
+        .ai-analysis-body strong { color: #ffd700; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <span style="font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                <i class="layui-icon layui-icon-set" style="color: var(--primary-color);"></i> <span data-i18n="server.title">服务器管理</span>
+            </span>
+        </div>
+        <div class="layui-card-body">
+            <table id="serverTable" lay-filter="serverTable"></table>
+        </div>
+    </div>
+</div>
+
+<!-- 工具栏模板 -->
+<script type="text/html" id="toolbarTpl">
+    <div class="layui-btn-container">
+        {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
+        {{# if(layui.$.inArray('server:add', perms) > -1){ }}
+        <button class="layui-btn layui-btn-sm layui-btn-normal" lay-event="add">
+            <i class="layui-icon layui-icon-add-1"></i> {{ t('server.addForm.title') }}
+        </button>
+        {{# } }}
+        <button class="layui-btn layui-btn-sm layui-btn-primary" lay-event="refresh">
+            <i class="layui-icon layui-icon-refresh"></i> {{ t('common.refresh') }}
+        </button>
+    </div>
+</script>
+
+<!-- 操作列模板 -->
+<script type="text/html" id="operateTpl">
+    {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
+    {{# if(layui.$.inArray('server:edit', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
+    {{# } }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="log">{{ t('server.viewLog') }}</a>
+    <a class="layui-btn layui-btn-xs" lay-event="terminal" style="background:#5FB878;border-color:#5FB878;">{{ t('server.terminal') }}</a>
+    {{# if(layui.$.inArray('server:delete', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">{{ t('common.delete') }}</a>
+    {{# } }}
+</script>
+
+<!-- 新增/编辑服务器弹窗模板 -->
+<script type="text/html" id="serverFormTpl">
+    <form class="layui-form" lay-filter="serverForm" style="padding: 20px 30px 0;">
+        <input type="hidden" name="id" value="">
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('server.name') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="name" lay-verify="required" lay-reqtext="{{ t('common.inputRequired', [t('server.name')]) }}" placeholder="{{ t('common.inputRequired', [t('server.name')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('server.host') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="host" lay-verify="required" lay-reqtext="{{ t('common.inputRequired', [t('server.host')]) }}" placeholder="{{ t('common.inputRequired', [t('server.host')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('server.port') }}</label>
+            <div class="layui-input-block">
+                <input type="number" name="port" value="22" lay-verify="required" placeholder="{{ t('server.port') }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('server.username') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="username" lay-verify="required" lay-reqtext="{{ t('common.inputRequired', [t('server.username')]) }}" placeholder="{{ t('common.inputRequired', [t('server.username')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('server.authType') }}</label>
+            <div class="layui-input-block">
+                <input type="radio" name="auth_type" value="password" title="{{ t('server.auth.password') }}" checked lay-filter="authType">
+                <input type="radio" name="auth_type" value="key" title="{{ t('server.auth.key') }}" lay-filter="authType">
+            </div>
+        </div>
+        <div class="layui-form-item" id="passwordField">
+            <label class="layui-form-label">{{ t('server.auth.password') }}</label>
+            <div class="layui-input-block">
+                <input type="password" name="password" placeholder="{{ t('server.password') }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item" id="privateKeyField" style="display:none;">
+            <label class="layui-form-label">{{ t('server.privateKey') }}</label>
+            <div class="layui-input-block">
+                <textarea name="private_key" placeholder="{{ t('server.privateKey') }}" class="layui-textarea" style="min-height:100px;font-family:monospace;font-size:12px;"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('server.description') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="description" placeholder="{{ t('server.description') }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('common.status') }}</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="is_active" lay-skin="switch" lay-text="{{ t('common.enable') }}|{{ t('common.disable') }}" checked>
+            </div>
+        </div>
+        <div class="layui-form-item" style="text-align:right;padding-top:10px;border-top:1px solid var(--layui-color-gray-2);margin-top:10px;">
+            <button type="button" class="layui-btn layui-btn-warm" id="testConnectBtn" style="margin-right:8px;">
+                <i class="layui-icon layui-icon-engine"></i> {{ t('server.testConnect') }}
+            </button>
+            <button type="button" class="layui-btn" lay-submit lay-filter="serverSubmit">{{ t('common.confirm') }}</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="cancelServerForm">{{ t('common.cancel') }}</button>
+        </div>
+    </form>
+</script>
+
+<!-- 查看日志弹窗模板 -->
+<script type="text/html" id="logViewerTpl">
+    <div style="padding: 16px 20px;">
+        <form class="layui-form" lay-filter="logForm" style="margin-bottom: 12px;">
+            <div class="layui-row layui-col-space10">
+                <div class="layui-col-md5">
+                    <div class="layui-form-item" style="margin-bottom:0;">
+                        <label class="layui-form-label" style="width:80px;padding:9px 12px 9px 0;">{{ t('server.log.path') }}</label>
+                        <div class="layui-input-block" style="margin-left:90px;">
+                            <input type="text" name="log_path" value="/var/log/syslog" placeholder="{{ t('server.log.path') }}" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                </div>
+                <div class="layui-col-md2">
+                    <div class="layui-form-item" style="margin-bottom:0;">
+                        <label class="layui-form-label" style="width:50px;padding:9px 12px 9px 0;">{{ t('server.log.lines') }}</label>
+                        <div class="layui-input-block" style="margin-left:60px;">
+                            <input type="number" name="lines" value="100" placeholder="{{ t('server.log.lines') }}" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                </div>
+                <div class="layui-col-md5">
+                    <div class="layui-form-item" style="margin-bottom:0;">
+                        <div class="layui-input-block" style="margin-left:0;display:flex;align-items:center;gap:8px;">
+                            <button type="button" class="layui-btn layui-btn-sm" id="queryLogBtn">
+                                <i class="layui-icon layui-icon-search"></i> {{ t('server.log.query') }}
+                            </button>
+                            <button type="button" class="layui-btn layui-btn-sm layui-btn-warm" id="aiAnalyzeBtn">
+                                <i class="layui-icon layui-icon-engine"></i> {{ t('server.aiAnalyzing') }}
+                            </button>
+                            <input type="checkbox" name="auto_refresh" lay-skin="switch" lay-text="ON|OFF" lay-filter="autoRefresh" style="width:50px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="log-viewer">
+            <div class="log-viewer-header">
+                <i class="layui-icon layui-icon-file" style="color:#00ff88;"></i>
+                <span id="logTitle">{{ t('server.logViewer') }}</span>
+            </div>
+            <div class="log-viewer-body" id="logContent">
+                <div class="log-empty">{{ t('server.log.queryHint') }}</div>
+            </div>
+        </div>
+        <div class="ai-analysis-panel" id="aiAnalysisPanel" style="display:none;">
+            <div class="ai-analysis-header">
+                <i class="layui-icon layui-icon-engine" style="color:#1890ff;"></i>
+                <span>{{ t('server.aiAnalyzing') }}</span>
+                <span id="aiStatus" style="margin-left:auto;color:#ffd700;font-size:12px;"></span>
+            </div>
+            <div class="ai-analysis-body" id="aiAnalysisContent"></div>
+        </div>
+    </div>
+</script>
+
+<script src="/static/layui/lib/layui.js"></script>
+<script src="/static/layui/js/common.js"></script>
+<script src="/static/layui/js/i18n.js"></script>
+<script>
+inheritTheme();
+
+// 初始化语言
+if (window.parent && window.parent.I18N) {
+    window.I18N = window.parent.I18N;
+    window.t = window.parent.t;
+} else {
+    I18N.getLang();
+}
+
+// WebSSH 服务地址，从全局配置读取（settings.py → LAYUI_CONFIG.webssh_url）
+var WEBSSH_URL = (window.LAYUI_CONFIG && window.LAYUI_CONFIG.webssh_url) || '/webssh/';
+
+layui.use(['table', 'form', 'layer'], function(){
+    var table = layui.table;
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.$;
+
+    // 初始化 data-i18n 和 {{ t() }} 占位符
+    $('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); $(this).text(t(key)); });
+    renderI18n();
+
+    var currentPage = 1;
+    var pageSize = 10;
+    var total = 0;
+    var logRefreshTimer = null;
+
+    // ==================== 服务器列表 ====================
+    function loadTable() {
+        var url = '/admin/api/ops/servers/?page=' + currentPage + '&page_size=' + pageSize;
+        getApi(url, function(res) {
+            if (res.code === 200) {
+                var data = res.data || {};
+                total = data.total || 0;
+                table.render({
+                    elem: '#serverTable',
+                    toolbar: '#toolbarTpl',
+                    defaultToolbar: [],
+                    data: data.list || [],
+                    height: 'full-220',
+                    page: {
+                        limit: pageSize,
+                        limits: [10, 30, 50, 100],
+                        curr: currentPage,
+                        count: total,
+                        layout: ['prev', 'page', 'next', 'limit', 'skip', 'count'],
+                        jump: function(obj, first) {
+                            if (!first) {
+                                currentPage = obj.curr;
+                                pageSize = obj.limit;
+                                loadTable();
+                            }
+                        }
+                    },
+                    skin: 'line',
+                    even: true,
+                    cols: [[
+                        {field: 'id', title: 'ID', width: 70, align: 'center'},
+                        {field: 'name', title: t('server.name'), minWidth: 120},
+                        {field: 'host', title: t('server.host'), minWidth: 130},
+                        {field: 'port', title: t('server.port'), width: 80, align: 'center'},
+                        {field: 'username', title: t('server.username'), width: 100},
+                        {field: 'auth_type', title: t('server.authType'), width: 100, align: 'center', templet: function(d) {
+                            var type = d.auth_type || 'password';
+                            if (type === 'password') {
+                                return '<span class="auth-tag password">' + t('server.auth.password') + '</span>';
+                            } else if (type === 'key') {
+                                return '<span class="auth-tag key">' + t('server.auth.key') + '</span>';
+                            }
+                            return '<span class="auth-tag password">' + escapeHtml(type) + '</span>';
+                        }},
+                        {field: 'is_active', title: t('common.status'), width: 90, align: 'center', templet: function(d) {
+                            return d.is_active
+                                ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
+                                : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
+                        }},
+                        {field: 'description', title: t('server.description'), minWidth: 150, templet: function(d) {
+                            return d.description ? '<span style="color:var(--text-secondary);">' + escapeHtml(d.description) + '</span>' : '<span style="color:var(--text-muted);">-</span>';
+                        }},
+                        {title: t('common.operation'), minWidth: 420, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+                    ]]
+                });
+            }
+        });
+    }
+
+    // ==================== 新增/编辑服务器 ====================
+    function openServerForm(editData) {
+        var isEdit = !!editData;
+        var title = isEdit ? t('server.editForm.title') : t('server.addForm.title');
+        
+        // 如果是编辑模式，先获取服务器详情
+        if (isEdit) {
+            getApi('/admin/api/ops/servers/' + editData.id + '/detail/', function(res) {
+                if (res.code === 200 && res.data) {
+                    openServerFormDialog(res.data, true);
+                } else {
+                    layer.msg(res.msg || t('common.fail'), {icon: 2});
+                }
+            });
+        } else {
+            openServerFormDialog(null, false);
+        }
+    }
+    
+    // 打开服务器表单弹窗
+    function openServerFormDialog(editData, isEdit) {
+        var title = isEdit ? t('server.editForm.title') : t('server.addForm.title');
+        var layerIndex = layer.open({
+            type: 1,
+            title: title,
+            area: ['560px', 'auto'],
+            content: renderTpl('serverFormTpl'),
+            success: function(layero, index) {
+                var formFilter = 'serverForm';
+                // 保存编辑时的原始数据
+                var originalData = isEdit ? {
+                    id: editData.id,
+                    host: editData.host || '',
+                    port: editData.port || 22,
+                    username: editData.username || '',
+                    auth_type: editData.auth_type || 'password'
+                } : null;
+                
+                if (isEdit) {
+                    form.val(formFilter, {
+                        id: editData.id,
+                        name: editData.name || '',
+                        host: editData.host || '',
+                        port: editData.port || 22,
+                        username: editData.username || '',
+                        auth_type: editData.auth_type || 'password',
+                        password: editData.password || '',
+                        private_key: editData.private_key || '',
+                        description: editData.description || '',
+                        is_active: editData.is_active !== false
+                    });
+                    if (editData.auth_type === 'key') {
+                        layero.find('#passwordField').hide();
+                        layero.find('#privateKeyField').show();
+                        layero.find('[name="private_key"]').val(editData.private_key || '');
+                    }
+                }
+                form.render(null, formFilter);
+
+                form.on('radio(authType)', function(data) {
+                    if (data.value === 'password') {
+                        layero.find('#passwordField').show();
+                        layero.find('#privateKeyField').hide();
+                    } else {
+                        layero.find('#passwordField').hide();
+                        layero.find('#privateKeyField').show();
+                    }
+                });
+
+                // 测试连接按钮
+                layero.find('#testConnectBtn').on('click', function() {
+                    var formData = form.val(formFilter);
+                    var serverData = {
+                        id: formData.id,
+                        host: formData.host,
+                        port: parseInt(formData.port) || 22,
+                        username: formData.username,
+                        auth_type: formData.auth_type || 'password'
+                    };
+                    
+                    // 如果是新增，先验证必填字段
+                    if (!serverData.host || !serverData.username) {
+                        layer.msg(t('server.testConnect.fillFirst'), {icon: 0});
+                        return;
+                    }
+                    
+                    // 如果是新增，需要先保存才能测试
+                    if (!serverData.id) {
+                        layer.confirm(t('server.testConnect.needSave'), {
+                            icon: 0,
+                            title: t('common.tips'),
+                            btn: [t('common.confirm'), t('common.cancel')],
+                            area: ['400px']
+                        }, function(confirmIndex) {
+                            layer.close(confirmIndex);
+                            // 触发表单提交保存
+                            layero.find('[lay-filter="serverSubmit"]').click();
+                        });
+                        return;
+                    }
+                    
+                    // 编辑模式，使用数据库中已保存的服务器信息进行测试
+                    testConnection(originalData);
+                });
+
+                layero.find('#cancelServerForm').on('click', function() {
+                    layer.close(layerIndex);
+                });
+
+                form.on('submit(serverSubmit)', function(data) {
+                    var field = data.field;
+                    var submitData = {
+                        name: field.name,
+                        host: field.host,
+                        port: parseInt(field.port) || 22,
+                        username: field.username,
+                        auth_type: field.auth_type || 'password',
+                        description: field.description || '',
+                        is_active: field.is_active === 'on'
+                    };
+                    if (submitData.auth_type === 'password') {
+                        // 编辑模式下，如果密码框为空，不发送 password 字段（保留原密码）
+                        if (isEdit && !field.password) {
+                            // 不更新密码，只更新其他字段
+                            submitData.password = undefined;
+                        } else {
+                            submitData.password = field.password || '';
+                        }
+                        submitData.private_key = '';
+                    } else {
+                        submitData.private_key = field.private_key || '';
+                        submitData.password = '';
+                    }
+                    if (isEdit) {
+                        putApi('/admin/api/ops/servers/' + editData.id + '/update/', submitData, function(res) {
+                            if (res.code === 200) {
+                                layer.msg(t('common.updateSuccess'), {icon: 1});
+                                layer.close(layerIndex);
+                                loadTable();
+                            } else {
+                                layer.msg(res.msg || t('common.fail'), {icon: 2});
+                            }
+                        });
+                    } else {
+                        postApi('/admin/api/ops/servers/create/', submitData, function(res) {
+                            if (res.code === 200) {
+                                layer.msg(t('common.addSuccess'), {icon: 1});
+                                layer.close(layerIndex);
+                                loadTable();
+                            } else {
+                                layer.msg(res.msg || t('common.fail'), {icon: 2});
+                            }
+                        });
+                    }
+                    return false;
+                });
+            }
+        });
+    }
+
+    // ==================== 测试连接 ====================
+    function testConnection(serverData) {
+        var loadIndex = layer.load(1, {shade: [0.3, '#000']});
+        postApi('/admin/api/ops/servers/' + serverData.id + '/test/', {}, function(res) {
+            layer.close(loadIndex);
+            if (res.code === 200) {
+                layer.msg(t('server.connectSuccess'), {icon: 1, time: 2000});
+            } else {
+                layer.msg(res.msg || t('server.connectFail'), {icon: 2, time: 3000});
+            }
+        });
+    }
+
+    // ==================== 查看日志 + AI 分析 ====================
+    function openLogViewer(serverData) {
+        var logLayerIndex = layer.open({
+            type: 1,
+            title: t('server.viewLog') + ' - ' + serverData.name,
+            area: ['900px', '650px'],
+            content: renderTpl('logViewerTpl'),
+            success: function(layero, index) {
+                form.render(null, 'logForm');
+                var logContent = layero.find('#logContent');
+                var logTitle = layero.find('#logTitle');
+                var aiPanel = layero.find('#aiAnalysisPanel');
+                var aiContent = layero.find('#aiAnalysisContent');
+                var aiStatus = layero.find('#aiStatus');
+                logTitle.text(serverData.username + '@' + serverData.host + ' - ' + t('server.logViewer'));
+
+                // 缓存当前日志内容，用于 AI 分析
+                var currentLogContent = '';
+                var currentLogPath = '';
+
+                function queryLog() {
+                    currentLogPath = layero.find('[name="log_path"]').val().trim() || '/var/log/syslog';
+                    var lines = parseInt(layero.find('[name="lines"]').val()) || 100;
+                    logContent.html('<div class="log-empty" style="color:#ffd700;">' + t('server.log.loading') + '</div>');
+                    postApi('/admin/api/ops/servers/' + serverData.id + '/log/', {
+                        log_path: currentLogPath,
+                        lines: lines
+                    }, function(res) {
+                        if (res.code === 200) {
+                            var data = res.data || {};
+                            var content = data.content || data.output || '';
+                            if (content) {
+                                currentLogContent = content;
+                                logContent.text(content);
+                            } else {
+                                currentLogContent = '';
+                                logContent.html('<div class="log-empty">' + t('server.log.noContent') + '</div>');
+                            }
+                        } else {
+                            currentLogContent = '';
+                            logContent.html('<div class="log-empty" style="color:#ff5555;">' + escapeHtml(res.msg || t('common.fail')) + '</div>');
+                        }
+                    });
+                }
+
+                // AI 分析功能
+                function analyzeWithAI() {
+                    if (!currentLogContent) {
+                        layer.msg(t('server.log.queryFirst'), {icon: 0});
+                        return;
+                    }
+                    aiPanel.show();
+                    aiStatus.text(t('server.aiAnalyzing')).css('color', '#ffd700');
+                    aiContent.html('<div style="text-align:center;padding:30px;color:#a0a0a0;"><i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size:24px;"></i><br><br>' + t('server.aiAnalyzing') + '</div>');
+
+                    postApi('/admin/api/ops/ai/analyze-log/', {
+                        content: currentLogContent,
+                        server_name: serverData.name + ' (' + serverData.host + ')',
+                        log_path: currentLogPath
+                    }, function(res) {
+                        // 检查是否需要配置
+                        if (res.code === 401 && res.data && res.data.need_config) {
+                            aiContent.html('');
+                            aiPanel.hide();
+                            layer.confirm(
+                                '<div style="padding:10px 0;">' +
+                                '<i class="layui-icon layui-icon-tips" style="font-size:40px;color:#ffd700;display:block;text-align:center;margin-bottom:12px;"></i>' +
+                                '<p style="text-align:center;font-size:15px;margin-bottom:8px;">' + t('server.ai.notConfigured') + '</p>' +
+                                '<p style="text-align:center;color:#a0a0a0;font-size:13px;">' + t('server.ai.goConfig') + '</p>' +
+                                '</div>',
+                                {
+                                    icon: 0,
+                                    title: t('server.ai.configTitle'),
+                                    btn: [t('server.ai.goConfigBtn'), t('common.cancel')],
+                                    area: ['400px']
+                                },
+                                function(idx) {
+                                    layer.close(idx);
+                                    // 在父窗口打开 AI 配置页面
+                                    if (window.openParentTab) {
+                                        openParentTab(t('ai.title'), '/static/layui/pages/ai-config.html');
+                                    } else {
+                                        window.open('/static/layui/pages/ai-config.html', '_blank');
+                                    }
+                                }
+                            );
+                            return;
+                        }
+                        if (res.code === 200) {
+                            var analysis = (res.data || {}).analysis || '';
+                            if (analysis) {
+                                var html = renderMarkdown(analysis);
+                                aiContent.html(html);
+                                aiStatus.text(t('server.ai.analysisDone')).css('color', '#27c93f');
+                            } else {
+                                aiContent.html('<div style="text-align:center;padding:30px;color:#a0a0a0;">' + t('server.ai.noResult') + '</div>');
+                                aiStatus.text(t('server.ai.noReturn')).css('color', '#a0a0a0');
+                            }
+                        } else {
+                            aiContent.html('<div style="text-align:center;padding:30px;color:#ff5555;">' + escapeHtml(res.msg || t('server.ai.fail')) + '</div>');
+                            aiStatus.text(t('server.ai.fail')).css('color', '#ff5555');
+                        }
+                    });
+                }
+
+                // 简单 Markdown 渲染（不依赖外部库）
+                function renderMarkdown(text) {
+                    var html = escapeHtml(text);
+                    // 代码块
+                    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+                    // 行内代码
+                    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+                    // 标题
+                    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+                    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+                    html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+                    // 粗体
+                    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                    // 斜体
+                    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+                    // 无序列表
+                    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+                    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+                    // 有序列表
+                    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+                    // 分隔线
+                    html = html.replace(/^---$/gm, '<hr style="border-color:#333;margin:12px 0;">');
+                    // 段落（双换行）
+                    html = html.replace(/\n\n/g, '</p><p>');
+                    html = '<p>' + html + '</p>';
+                    // 清理空段落
+                    html = html.replace(/<p>\s*<\/p>/g, '');
+                    return html;
+                }
+
+                layero.find('#queryLogBtn').on('click', function() { queryLog(); });
+                layero.find('#aiAnalyzeBtn').on('click', function() { analyzeWithAI(); });
+
+                form.on('switch(autoRefresh)', function(data) {
+                    if (data.elem.checked) {
+                        queryLog();
+                        logRefreshTimer = setInterval(queryLog, 5000);
+                        layer.msg(t('server.autoRefreshOn'), {icon: 1, time: 1000});
+                    } else {
+                        if (logRefreshTimer) { clearInterval(logRefreshTimer); logRefreshTimer = null; }
+                        layer.msg(t('server.autoRefreshOff'), {icon: 0, time: 1000});
+                    }
+                });
+            },
+            cancel: function() { if (logRefreshTimer) { clearInterval(logRefreshTimer); logRefreshTimer = null; } },
+            end: function() { if (logRefreshTimer) { clearInterval(logRefreshTimer); logRefreshTimer = null; } }
+        });
+    }
+
+    // ==================== Web SSH 终端（跳转 webssh 服务） ====================
+    function openTerminal(serverData) {
+        // 先获取服务器详情（包含密码）
+        getApi('/admin/api/ops/servers/' + serverData.id + '/detail/', function(res) {
+            if (res.code === 200 && res.data) {
+                var detail = res.data;
+                
+                console.log('=== WebSSH Debug Info ===');
+                console.log('Server ID:', detail.id);
+                console.log('Host:', detail.host);
+                console.log('Port:', detail.port);
+                console.log('Username:', detail.username);
+                console.log('Auth Type:', detail.auth_type);
+                console.log('Has Password:', !!detail.password);
+                console.log('Password Length:', detail.password ? detail.password.length : 0);
+                console.log('Has Private Key:', !!detail.private_key);
+                
+                // 构建 webssh URL，支持自动填入连接信息
+                var websshUrl = WEBSSH_URL;
+                if (websshUrl.indexOf('?') === -1) {
+                    websshUrl += '?';
+                } else {
+                    websshUrl += '&';
+                }
+                websshUrl += 'hostname=' + encodeURIComponent(detail.host);
+                websshUrl += '&port=' + encodeURIComponent(detail.port);
+                websshUrl += '&username=' + encodeURIComponent(detail.username);
+                
+                // 如果有密码，需要 base64 编码后传递（webssh 官方要求）
+                if (detail.auth_type === 'password' && detail.password) {
+                    // 使用 btoa 进行 base64 编码
+                    var encodedPassword = btoa(encodeURIComponent(detail.password));
+                    websshUrl += '&password=' + encodedPassword;
+                    console.log('Added password parameter (base64 encoded)');
+                }
+                
+                // 如果是密钥认证，传递私钥（也需要 base64 编码）
+                if (detail.auth_type === 'key' && detail.private_key) {
+                    var encodedKey = btoa(encodeURIComponent(detail.private_key));
+                    websshUrl += '&privatekey=' + encodedKey;
+                    console.log('Added privatekey parameter (base64 encoded)');
+                }
+                
+                console.log('Final WebSSH URL:', websshUrl.replace(/password=[^&]+/, 'password=***').replace(/privatekey=[^&]+/, 'privatekey=***'));
+
+                // 在新窗口打开 webssh
+                layer.confirm(
+                    t('server.ssh.hint') + ' <b>' + escapeHtml(detail.name) + '</b> (' + escapeHtml(detail.host) + ')<br><br>' +
+                    '<span style="color:#a0a0a0;font-size:12px;">' +
+                    t('server.ssh.ensure') + '<br>' +
+                    t('server.ssh.openTerminal') + '</span>',
+                    {
+                        icon: 0,
+                        title: t('server.terminal'),
+                        btn: [t('server.ssh.openTerminal'), t('common.cancel')],
+                        area: ['480px']
+                    },
+                    function(index) {
+                        window.open(websshUrl, '_blank');
+                        layer.close(index);
+                    }
+                );
+            } else {
+                layer.msg(res.msg || t('common.fail'), {icon: 2});
+            }
+        });
+    }
+
+    // ==================== 工具栏事件 ====================
+    table.on('toolbar(serverTable)', function(obj) {
+        if (obj.event === 'add') {
+            openServerForm(null);
+        } else if (obj.event === 'refresh') {
+            loadTable();
+        }
+    });
+
+    // ==================== 操作列事件 ====================
+    table.on('tool(serverTable)', function(obj) {
+        var data = obj.data;
+        if (obj.event === 'view') {
+            var content = '<div style="padding: 20px 30px;">' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('server.name') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('server.host') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.host || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('server.port') + '</label><div class="layui-input-block"><input type="text" value="' + (data.port || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('server.username') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.username || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('server.authType') + '</label><div class="layui-input-block"><input type="text" value="' + (data.auth_type === 'key' ? t('server.auth.key') : t('server.auth.password')) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('common.status') + '</label><div class="layui-input-block"><input type="text" value="' + (data.is_active ? t('common.enable') : t('common.disable')) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('server.description') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.description || '') + '" class="layui-input" readonly></div></div>' +
+                '</div>';
+            layer.open({
+                type: 1,
+                title: t('common.view') + ' ' + t('server.title') + ' - ' + data.name,
+                area: ['550px', '450px'],
+                content: content,
+                btn: [t('common.cancel')]
+            });
+        } else if (obj.event === 'edit') {
+            openServerForm(data);
+        } else if (obj.event === 'log') {
+            openLogViewer(data);
+        } else if (obj.event === 'terminal') {
+            openTerminal(data);
+        } else if (obj.event === 'del') {
+            layer.confirm(t('common.confirmDelete') + '<br><b>' + escapeHtml(data.name) + '</b>', {
+                icon: 3,
+                title: t('common.deleteConfirm.title'),
+                btn: [t('common.confirm'), t('common.cancel')]
+            }, function(index) {
+                deleteApi('/admin/api/ops/servers/' + data.id + '/delete/', function(res) {
+                    if (res.code === 200) {
+                        layer.msg(t('common.deleteSuccess'), {icon: 1});
+                        layer.close(index);
+                        loadTable();
+                    } else {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                    }
+                });
+            });
+        }
+    });
+
+    // 初始化
+    loadTable();
+});
+</script>
+</body>
+</html>

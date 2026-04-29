@@ -1,0 +1,84 @@
+# Django Layui Admin - Chinese (Simplified) Translation
+# Copyright (C) 2024
+# This file is distributed under the same license as the django-layui package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: django-layui 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: templates/admin/login.html
+msgid "Username"
+msgstr "用户名"
+
+#: templates/admin/login.html
+msgid "Password"
+msgstr "密码"
+
+#: templates/admin/login.html
+msgid "Log in"
+msgstr "登录"
+
+#: templates/admin/login.html
+msgid "Please correct the error below."
+msgstr "请修正下面的错误。"
+
+#: templates/admin/login.html
+msgid "Please correct the errors below."
+msgstr "请修正下面的错误。"
+
+#: templates/admin/index.html templates/admin/base.html
+msgid "Collapse/Expand"
+msgstr "折叠/展开"
+
+#: templates/admin/index.html templates/admin/base.html
+msgid "Toggle Theme"
+msgstr "切换主题"
+
+#: templates/admin/index.html
+msgid "View site"
+msgstr "查看站点"
+
+#: templates/admin/base.html
+msgid "Frontend"
+msgstr "前端"
+
+#: templates/admin/index.html templates/admin/base.html
+msgid "Fullscreen"
+msgstr "全屏"
+
+#: templates/admin/index.html templates/admin/base.html
+msgid "Change password"
+msgstr "修改密码"
+
+#: templates/admin/index.html templates/admin/base.html
+msgid "Log out"
+msgstr "退出登录"
+
+#: templates/admin/index.html
+msgid "Current password"
+msgstr "当前密码"
+
+#: templates/admin/index.html
+msgid "New password (min 6 chars)"
+msgstr "新密码（至少6位）"
+
+#: templates/admin/index.html
+msgid "Confirm new password"
+msgstr "确认新密码"
+
+#: templates/admin/index.html
+msgid "Nickname"
+msgstr "昵称"
+
+#: templates/admin/index.html
+msgid "Phone"
+msgstr "手机号"

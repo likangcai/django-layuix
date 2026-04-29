@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 模型配置 - 软件测试管理后台</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <style>
+        body { padding: 0; margin: 0; background: var(--bg-primary); }
+        .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
+        .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
+        .layui-card-header { border-bottom: 1px solid var(--card-border); }
+
+        /* 厂商 tag */
+        .provider-tag {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 12px; font-weight: 500;
+        }
+        .provider-openai   { background: rgba(16,163,127,.12); color: #10a37f; }
+        .provider-zhipu    { background: rgba(25,118,210,.12);  color: #1976d2; }
+        .provider-deepseek { background: rgba(99,102,241,.12);  color: #6366f1; }
+        .provider-qwen     { background: rgba(255,104,12,.12);  color: #ff680c; }
+        .provider-moonshot { background: rgba(147,51,234,.12);  color: #9333ea; }
+        .provider-custom   { background: rgba(107,114,128,.12); color: #6b7280; }
+
+        /* 默认标记 */
+        .default-badge {
+            display: inline-block; padding: 1px 7px; border-radius: 10px;
+            font-size: 11px; font-weight: 600;
+            background: rgba(30,159,255,.15); color: var(--primary-color);
+            border: 1px solid rgba(30,159,255,.3);
+        }
+
+        /* 配置表单的 label 宽度 */
+        .ai-form .layui-form-label { width: 100px; padding: 9px 12px 9px 0; }
+        .ai-form .layui-input-block { margin-left: 110px; }
+
+        /* 快速选择卡片 */
+        .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 18px; }
+        .preset-card {
+            background: var(--bg-secondary, #1e2a3a);
+            border: 1px solid var(--card-border, #2a3a4a);
+            border-radius: 6px; padding: 10px 12px; cursor: pointer; transition: all 0.2s;
+        }
+        .preset-card:hover { border-color: var(--primary-color); transform: translateY(-1px); }
+        .preset-card.active { border-color: var(--primary-color); background: rgba(24,144,255,0.1); }
+        .preset-card .pc-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+        .preset-card .pc-model { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                    <i class="layui-icon layui-icon-release" style="color: var(--primary-color);"></i> <span data-i18n="ai.title">AI 模型配置管理</span>
+                </span>
+                <span style="font-size: 12px; color: var(--text-muted);">
+                    <i class="layui-icon layui-icon-tips" style="font-size: 14px;"></i> AI 模型配置主要用于日志智能分析功能
+                </span>
+            </div>
+        </div>
+        <div class="layui-card-body">
+            <!-- 搜索栏 -->
+            <div style="margin-bottom: 16px; display: flex; gap: 10px; align-items: center;">
+                <div style="width: 280px;">
+                    <input type="text" id="searchInput" placeholder="搜索配置名称/厂商/模型" class="layui-input" style="height: 36px;">
+                </div>
+                <button class="layui-btn layui-btn-sm layui-btn-normal" id="searchBtn">
+                    <i class="layui-icon layui-icon-search"></i> 搜索
+                </button>
+                <button class="layui-btn layui-btn-sm layui-btn-primary" id="resetBtn">
+                    <i class="layui-icon layui-icon-refresh"></i> 重置
+                </button>
+            </div>
+            <table id="aiConfigTable" lay-filter="aiConfigTable"></table>
+        </div>
+    </div>
+</div>
+
+<!-- 工具栏模板 -->
+<script type="text/html" id="toolbarTpl">
+    <div class="layui-btn-container">
+        {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
+        {{# if(layui.$.inArray('ai_config:add', perms) > -1){ }}
+        <button class="layui-btn layui-btn-sm layui-btn-normal" lay-event="add">
+            <i class="layui-icon layui-icon-add-1"></i> {{ t('ai.addConfig') }}
+        </button>
+        {{# } }}
+        <button class="layui-btn layui-btn-sm layui-btn-primary" lay-event="refresh">
+            <i class="layui-icon layui-icon-refresh"></i> {{ t('common.refresh') }}
+        </button>
+    </div>
+</script>
+
+<!-- 新增/编辑弹窗模板 -->
+<script type="text/html" id="aiFormTpl">
+<div style="padding:20px 24px 8px;">
+    <!-- 快速选择厂商 -->
+    <div style="margin-bottom:14px;">
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">{{ t('ai.selectProvider') || '快速选择厂商：' }}</div>
+        <div class="preset-grid" id="presetGrid">
+            <div class="preset-card" data-provider="openai">
+                <div class="pc-name">OpenAI</div>
+                <div class="pc-model">gpt-4o-mini</div>
+            </div>
+            <div class="preset-card" data-provider="zhipu">
+                <div class="pc-name">{{ t('ai.provider.zhipu') || '智谱 GLM' }}</div>
+                <div class="pc-model">glm-4-flash</div>
+            </div>
+            <div class="preset-card" data-provider="deepseek">
+                <div class="pc-name">DeepSeek</div>
+                <div class="pc-model">deepseek-chat</div>
+            </div>
+            <div class="preset-card" data-provider="qwen">
+                <div class="pc-name">{{ t('ai.provider.qwen') || '通义千问' }}</div>
+                <div class="pc-model">qwen-turbo</div>
+            </div>
+            <div class="preset-card" data-provider="moonshot">
+                <div class="pc-name">Kimi</div>
+                <div class="pc-model">moonshot-v1-8k</div>
+            </div>
+            <div class="preset-card" data-provider="custom">
+                <div class="pc-name">{{ t('ai.provider.custom') || '自定义' }}</div>
+                <div class="pc-model">{{ t('ai.manualInput') || '手动填写' }}</div>
+            </div>
+        </div>
+    </div>
+    <form class="layui-form ai-form" lay-filter="aiConfigForm">
+        <input type="hidden" name="id">
+        <input type="hidden" name="provider" value="custom">
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('ai.configName') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="name" lay-verify="required" placeholder="{{ t('ai.configNamePlaceholder') }}" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('ai.apiKey') }}</label>
+            <div class="layui-input-block">
+                <input type="password" name="api_key" lay-verify="required" placeholder="{{ t('ai.apiKeyPlaceholder') }}" autocomplete="off" class="layui-input" lay-affix="eye">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('ai.baseUrl') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="base_url" placeholder="{{ t('ai.baseUrlPlaceholder') }}" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('ai.modelName') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="model" lay-verify="required" placeholder="{{ t('ai.modelNamePlaceholder') }}" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('ai.setDefault') }}</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="is_default" lay-skin="switch" lay-text="{{ t('common.yes') }}|{{ t('common.no') }}" title="{{ t('ai.setDefaultHint') }}">
+            </div>
+        </div>
+    </form>
+</div>
+</script>
+
+<!-- 表格操作列模板 -->
+<script type="text/html" id="operateTpl">
+    {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
+    {{# if(layui.$.inArray('ai_config:edit', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
+    <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="test">{{ t('ai.testConnection') }}</a>
+    {{# } }}
+    {{# if(layui.$.inArray('ai_config:set_default', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="setDefault">{{ t('ai.setDefaultShort') || '设默认' }}</a>
+    {{# } }}
+    {{# if(layui.$.inArray('ai_config:delete', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">{{ t('common.delete') }}</a>
+    {{# } }}
+</script>
+
+<script src="/static/layui/lib/layui.js"></script>
+<script src="/static/layui/js/common.js"></script>
+<script src="/static/layui/js/i18n.js"></script>
+<script>
+inheritTheme();
+if (window.parent && window.parent.I18N) {
+    window.I18N = window.parent.I18N;
+    window.t = window.parent.t;
+} else {
+    I18N.getLang();
+}
+
+// 厂商预设
+var PRESETS = {
+    openai:   { base_url: '',                                              model: 'gpt-4o-mini',      placeholder: 'sk-xxx' },
+    zhipu:    { base_url: 'https://open.bigmodel.cn/api/paas/v4/',        model: 'glm-4-flash',      placeholder: 'xxx.xxx' },
+    deepseek: { base_url: 'https://api.deepseek.com/v1/',                 model: 'deepseek-chat',    placeholder: 'sk-xxx' },
+    qwen:     { base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/', model: 'qwen-turbo', placeholder: 'sk-xxx' },
+    moonshot: { base_url: 'https://api.moonshot.cn/v1/',                  model: 'moonshot-v1-8k',   placeholder: 'sk-xxx' },
+    custom:   { base_url: '',                                              model: '',                  placeholder: '' },
+};
+
+var PROVIDER_LABELS = {
+    openai: 'OpenAI', zhipu: '智谱 GLM', deepseek: 'DeepSeek',
+    qwen: '通义千问', moonshot: 'Kimi', custom: '自定义'
+};
+
+layui.use(['form', 'table', 'layer'], function(){
+    var form = layui.form, table = layui.table, layer = layui.layer, $ = layui.$;
+
+    // 初始化 data-i18n 和 {{ t() }} 占位符
+    $('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); $(this).text(t(key)); });
+    renderI18n();
+
+    // 搜索参数
+    var searchParams = { keyword: '' };
+
+    // ---- 渲染表格 ----
+    function loadTable() {
+        table.render({
+            elem: '#aiConfigTable',
+            url: '/admin/api/ops/ai/config/list/',
+            method: 'get',
+            where: searchParams,
+            response: { dataName: 'data', msgName: 'msg' },
+            parseData: function(res){ return { code: res.code === 200 ? 0 : 1, msg: res.msg, count: 0, data: res.data || [] }; },
+            page: false,
+            toolbar: '#toolbarTpl',
+            defaultToolbar: ['filter'],
+            cols: [[
+                { field: 'name', title: '配置名称', minWidth: 120, templet: function(d){
+                    return d.is_default
+                        ? escapeHtml(d.name) + ' <span class="default-badge">默认</span>'
+                        : escapeHtml(d.name);
+                }},
+                { field: 'provider', title: '厂商', width: 110, templet: function(d){
+                    var cls = 'provider-' + (d.provider || 'custom');
+                    var label = PROVIDER_LABELS[d.provider] || d.provider || '自定义';
+                    return '<span class="provider-tag ' + cls + '">' + label + '</span>';
+                }},
+                { field: 'model', title: '模型', minWidth: 140, style: 'font-family:monospace;font-size:13px;' },
+                { field: 'base_url', title: 'API 地址', minWidth: 160, templet: function(d){
+                    return d.base_url
+                        ? '<span style="font-size:12px;color:var(--text-secondary);">' + escapeHtml(d.base_url) + '</span>'
+                        : '<span style="color:var(--text-muted);">默认</span>';
+                }},
+                { field: 'api_key_set', title: 'Key 状态', width: 90, align: 'center', templet: function(d){
+                    return d.api_key_set
+                        ? '<span style="color:#27c93f;">● 已配置</span>'
+                        : '<span style="color:#ff5555;">● 未配置</span>';
+                }},
+                { title: t('common.operation'), width: 320, align: 'center', fixed: 'right', toolbar: '#operateTpl' },
+            ]],
+            done: function(res, curr, count) {
+                // 表格渲染完成后，调整操作按钮对齐
+                $('.layui-table-body .layui-table-cell').css('line-height', '28px');
+            }
+        });
+    }
+
+    loadTable();
+
+    // ---- 搜索功能 ----
+    $('#searchBtn').on('click', function() {
+        var keyword = $('#searchInput').val().trim();
+        searchParams.keyword = keyword;
+        loadTable();
+    });
+
+    $('#resetBtn').on('click', function() {
+        $('#searchInput').val('');
+        searchParams.keyword = '';
+        loadTable();
+    });
+
+    // 回车搜索
+    $('#searchInput').on('keypress', function(e) {
+        if (e.which === 13) {
+            $('#searchBtn').click();
+        }
+    });
+
+    // ---- 工具栏事件 ----
+    table.on('toolbar(aiConfigTable)', function(obj){
+        if (obj.event === 'add') {
+            openForm(null);
+        } else if (obj.event === 'refresh') {
+            loadTable();
+        }
+    });
+
+    // ---- 打开表单弹窗 ----
+    var formLayerIndex = null;
+
+    function openForm(data) {
+        formLayerIndex = layer.open({
+            type: 1,
+            title: data ? t('common.edit') + ' AI ' + t('config.title') : t('ai.addConfig'),
+            area: ['580px', 'auto'],
+            maxHeight: '80vh',
+            content: $('#aiFormTpl').html(),
+            btn: [t('common.save'), t('common.cancel')],
+            btnAlign: 'r',  // 按钮右下角
+            yes: function(idx, layero) { submitForm(layero, idx); },
+            success: function(layero) {
+                // 初始化 data-i18n 和 {{ t() }} 占位符
+                layero.find('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); $(this).text(t(key)); });
+                // 初始化 form
+                form.render(null, 'aiConfigForm');
+                // 绑定预设点击
+                layero.find('.preset-card').on('click', function(){
+                    var provider = $(this).data('provider');
+                    layero.find('.preset-card').removeClass('active');
+                    $(this).addClass('active');
+                    layero.find('[name="provider"]').val(provider);
+                    var p = PRESETS[provider] || {};
+                    if (p.model) form.val('aiConfigForm', { base_url: p.base_url, model: p.model });
+                    if (p.base_url !== undefined) layero.find('[name="base_url"]').val(p.base_url);
+                    if (p.placeholder) layero.find('[name="api_key"]').attr('placeholder', p.placeholder);
+                    form.render('input', 'aiConfigForm');
+                });
+                // 回填编辑数据
+                if (data) {
+                    form.val('aiConfigForm', {
+                        id: data.id,
+                        name: data.name,
+                        provider: data.provider || 'custom',
+                        api_key: data.api_key_masked || '',
+                        base_url: data.base_url || '',
+                        model: data.model || '',
+                        is_default: data.is_default === true ? 'on' : '',  // 确保是布尔值比较
+                    });
+                    form.render(null, 'aiConfigForm');
+                    // 高亮对应厂商
+                    var prov = data.provider || 'custom';
+                    layero.find('.preset-card[data-provider="' + prov + '"]').addClass('active');
+                }
+            }
+        });
+    }
+
+    // ---- 提交表单 ----
+    function submitForm(layero, closeIdx) {
+        var fields = form.val('aiConfigForm');
+        if (!fields.name) { layer.msg('请填写配置名称', {icon:2}); return; }
+        if (!fields.api_key) { layer.msg('请填写 API Key', {icon:2}); return; }
+        if (!fields.model) { layer.msg('请填写模型名称', {icon:2}); return; }
+
+        fields.is_default = layero.find('[name="is_default"]').is(':checked');
+
+        postApi('/admin/api/ops/ai/config/save/', fields, function(res){
+            if (res.code === 200) {
+                layer.msg(res.msg || '保存成功', {icon:1});
+                layer.close(closeIdx);
+                loadTable();
+            } else {
+                layer.msg(res.msg || '保存失败', {icon:2});
+            }
+        });
+    }
+    
+    // ---- 表格行操作 ----
+    table.on('tool(aiConfigTable)', function(obj){
+        var data = obj.data;
+        if (obj.event === 'view') {
+            // 查看详情
+            openViewDialog(data);
+        } else if (obj.event === 'edit') {
+            openForm(data);
+        } else if (obj.event === 'del') {
+            layer.confirm('确认删除配置 <b>' + escapeHtml(data.name) + '</b>？', {
+                icon: 3, title: '删除确认', btn: ['确认删除', '取消']
+            }, function(idx){
+                deleteApi('/admin/api/ops/ai/config/' + data.id + '/delete/', function(res){
+                    if (res.code === 200) {
+                        layer.msg('已删除', {icon:1});
+                        layer.close(idx);
+                        loadTable();
+                    } else {
+                        layer.msg(res.msg || '删除失败', {icon:2});
+                    }
+                });
+            });
+        } else if (obj.event === 'setDefault') {
+            postApi('/admin/api/ops/ai/config/' + data.id + '/set-default/', {}, function(res){
+                if (res.code === 200) {
+                    layer.msg('已设为默认分析模型', {icon:1});
+                    loadTable();
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon:2});
+                }
+            });
+        } else if (obj.event === 'test') {
+            var loadIdx = layer.load(1);
+            postApi('/admin/api/ops/ai/config/test/', {id: data.id}, function(res){
+                layer.close(loadIdx);
+                if (res.code === 200) {
+                    layer.msg('✓ 连接成功，模型: ' + (res.data && res.data.model || '') + '，回复: ' + (res.data && res.data.reply || ''), {icon:1, time:4000});
+                } else {
+                    layer.msg('✗ 失败：' + (res.msg || '连接失败'), {icon:2, time:5000});
+                }
+            });
+        }
+    });
+
+    // ---- 查看详情弹窗 ----
+    function openViewDialog(data) {
+        layer.open({
+            type: 1,
+            title: '查看 AI ' + t('config.title'),
+            area: ['580px', 'auto'],
+            content: '<div style="padding:20px 24px;">' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('ai.configName') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + (t('ai.provider') || '厂商') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(PROVIDER_LABELS[data.provider] || data.provider || '自定义') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('ai.apiKey') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.api_key_masked || '****') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('ai.baseUrl') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.base_url || '默认') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('ai.modelName') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.model || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('ai.setDefault') + '</label><div class="layui-input-block" style="padding-top:8px;"><span style="color:' + (data.is_default ? '#27c93f' : '#999') + ';">' + (data.is_default ? '✓ 是' : '✗ 否') + '</span></div></div>' +
+                '</div>',
+            btn: [t('common.close')],
+            btnAlign: 'r',
+            yes: function(idx) { layer.close(idx); }
+        });
+    }
+
+    // ---- 工具函数 ----
+    function escapeHtml(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,813 @@
+  <!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <!-- ECharts 使用本地文件，避免CDN被浏览器安全策略拦截 -->
+    <script src="/static/layui/js/echarts.min.js"></script>
+    <style>
+        body { background: var(--bg-body); margin: 0; padding: 0; }
+        .dashboard-container { padding: 20px 24px; min-height: 100%; }
+        .dashboard-welcome {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+            border-radius: var(--radius-md); padding: 24px 28px; color: #ffffff;
+            margin-bottom: 20px; position: relative; overflow: hidden;
+        }
+        .dashboard-welcome::before {
+            content: ''; position: absolute; top: -30%; right: -10%;
+            width: 280px; height: 280px; background: rgba(255,255,255,0.08); border-radius: 50%;
+        }
+        .dashboard-welcome::after {
+            content: ''; position: absolute; bottom: -40%; right: 10%;
+            width: 180px; height: 180px; background: rgba(255,255,255,0.05); border-radius: 50%;
+        }
+        .dashboard-welcome h2 { font-size: 20px; font-weight: 600; margin-bottom: 6px; position: relative; z-index: 1; }
+        .dashboard-welcome p { font-size: 13px; opacity: 0.85; position: relative; z-index: 1; }
+        .dashboard-welcome .welcome-time { font-size: 12px; opacity: 0.7; margin-top: 4px; position: relative; z-index: 1; }
+        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+        .stat-card {
+            background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-md);
+            padding: 18px 20px; display: flex; align-items: center; gap: 14px;
+            transition: all 0.3s ease; box-shadow: var(--card-shadow);
+        }
+        .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+        .stat-card .stat-icon {
+            width: 46px; height: 46px; border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; flex-shrink: 0;
+        }
+        .stat-card .stat-icon.blue { background: rgba(30,159,255,0.1); color: #1e9fff; }
+        [data-theme="dark"] .stat-card .stat-icon.blue { background: rgba(30,159,255,0.15); color: #4db8ff; }
+        .stat-card .stat-icon.green { background: rgba(95,184,120,0.1); color: #5FB878; }
+        [data-theme="dark"] .stat-card .stat-icon.green { background: rgba(95,184,120,0.15); color: #7dcea0; }
+        .stat-card .stat-icon.orange { background: rgba(255,184,0,0.1); color: #FFB800; }
+        [data-theme="dark"] .stat-card .stat-icon.orange { background: rgba(255,184,0,0.15); color: #ffc940; }
+        .stat-card .stat-icon.purple { background: rgba(30,159,255,0.1); color: #1e9fff; }
+        [data-theme="dark"] .stat-card .stat-icon.purple { background: rgba(30,159,255,0.15); color: #4db8ff; }
+        .stat-card .stat-info h3 { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
+        .stat-card .stat-info p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+        .quick-links { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .quick-link-item {
+            background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-md);
+            padding: 18px 14px; text-align: center; cursor: pointer;
+            transition: all 0.3s ease; box-shadow: var(--card-shadow);
+        }
+        .quick-link-item:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--primary-color); }
+        .quick-link-item i { font-size: 26px; color: var(--primary-color); margin-bottom: 6px; display: block; }
+        .quick-link-item span { font-size: 12px; color: var(--text-primary); font-weight: 500; }
+        .info-panels { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+        .info-panel {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--card-shadow);
+        }
+        .info-panel .panel-header {
+            padding: 14px 18px; border-bottom: 1px solid var(--card-border);
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 600; color: var(--text-primary);
+        }
+        .info-panel .panel-header i { color: var(--primary-color); font-size: 16px; }
+        .info-panel .panel-body { padding: 14px 18px; }
+        .info-panel .info-row {
+            display: flex; align-items: center; padding: 7px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .info-panel .info-row:last-child { border-bottom: none; }
+        .info-panel .info-row .info-label { width: 100px; color: var(--text-secondary); font-size: 13px; flex-shrink: 0; }
+        .info-panel .info-row .info-value { flex: 1; color: var(--text-primary); font-size: 13px; font-weight: 500; }
+        .chart-panels { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+        .chart-panel {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--card-shadow);
+        }
+        .chart-panel .panel-header {
+            padding: 14px 18px; border-bottom: 1px solid var(--card-border);
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 600; color: var(--text-primary);
+        }
+        .chart-panel .panel-header i { color: var(--primary-color); font-size: 16px; }
+        .chart-container { width: 100%; height: 280px; }
+        @media screen and (max-width: 768px) {
+            .stat-cards { grid-template-columns: repeat(2, 1fr); }
+            .quick-links { grid-template-columns: repeat(2, 1fr); }
+            .info-panels { grid-template-columns: 1fr; }
+            .chart-panels { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Welcome Banner -->
+        <div class="dashboard-welcome">
+            <h2 id="welcomeText">Welcome</h2>
+            <p id="welcomeDesc">Django Layui Admin</p>
+            <div class="welcome-time" id="currentTime"></div>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="stat-cards" id="statCards">
+            <!-- 动态渲染 -->
+        </div>
+
+        <!-- Quick Links -->
+        <div class="quick-links" id="quickLinks">
+            <!-- 动态渲染 -->
+        </div>
+
+        <!-- ECharts Charts -->
+        <div class="chart-panels">
+            <div class="chart-panel">
+                <div class="panel-header">
+                    <i class="layui-icon layui-icon-engine"></i>
+                    <span data-i18n="dashboard.cpuUsage">CPU 使用率</span>
+                    <span id="cpuPercent" style="margin-left:auto;font-size:12px;color:var(--text-secondary);">0%</span>
+                </div>
+                <div class="chart-container" id="cpuChart"></div>
+            </div>
+            <div class="chart-panel">
+                <div class="panel-header">
+                    <i class="layui-icon layui-icon-component"></i>
+                    <span data-i18n="dashboard.memoryUsage">内存使用率</span>
+                    <span id="memPercent" style="margin-left:auto;font-size:12px;color:var(--text-secondary);">0%</span>
+                </div>
+                <div class="chart-container" id="memChart"></div>
+            </div>
+            <div class="chart-panel">
+                <div class="panel-header">
+                    <i class="layui-icon layui-icon-template"></i>
+                    <span data-i18n="dashboard.diskUsage">磁盘使用率</span>
+                    <span id="diskInfo" style="margin-left:auto;font-size:12px;color:var(--text-secondary);">0 GB / 0 GB</span>
+                </div>
+                <div class="chart-container" id="diskChart"></div>
+            </div>
+            <div class="chart-panel">
+                <div class="panel-header">
+                    <i class="layui-icon layui-icon-website"></i>
+                    <span data-i18n="dashboard.networkTraffic">网络流量</span>
+                    <span id="netInfo" style="margin-left:auto;font-size:12px;color:var(--text-secondary);"></span>
+                </div>
+                <div class="chart-container" id="netChart"></div>
+            </div>
+        </div>
+
+        <!-- Info Panels -->
+        <div class="info-panels">
+            <div class="info-panel">
+                <div class="panel-header">
+                    <i class="layui-icon layui-icon-set"></i>
+                    <span data-i18n="dashboard.systemInfo">系统环境信息</span>
+                </div>
+                <div class="panel-body" id="systemInfoBody">
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="dashboard.pythonVersion">Python版本</span>
+                        <span class="info-value" id="pythonVersion">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="dashboard.djangoVersion">Django版本</span>
+                        <span class="info-value" id="djangoVersion">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="dashboard.operatingSystem">操作系统</span>
+                        <span class="info-value" id="osInfo">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="dashboard.cpu">CPU</span>
+                        <span class="info-value" id="cpuInfo">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="dashboard.serverTime">服务器时间</span>
+                        <span class="info-value" id="serverTime">--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="info-panel">
+                <div class="panel-header">
+                    <i class="layui-icon layui-icon-user"></i>
+                    <span data-i18n="dashboard.currentUserInfo">当前用户信息</span>
+                </div>
+                <div class="panel-body" id="userInfoBody">
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="user.username">用户名</span>
+                        <span class="info-value" id="infoUsername">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="user.nickname">昵称</span>
+                        <span class="info-value" id="infoNickname">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="user.phone">手机号</span>
+                        <span class="info-value" id="infoPhone">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="user.role">角色</span>
+                        <span class="info-value" id="infoRoles">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="dashboard.ip">IP</span>
+                        <span class="info-value" id="infoIP">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/layui/lib/layui.js"></script>
+    <script src="/static/layui/js/common.js"></script>
+    <script src="/static/layui/js/i18n.js"></script>
+    <script>
+        // 主题继承：从父窗口读取当前主题并应用
+        (function() {
+            try {
+                if (window.parent && window.parent.document) {
+                    var parentTheme = window.parent.document.documentElement.getAttribute('data-theme');
+                    if (parentTheme) {
+                        document.documentElement.setAttribute('data-theme', parentTheme);
+                        return;
+                    }
+                }
+            } catch(e) {
+                // 跨域或访问失败时忽略
+            }
+            // 如果没有父窗口或获取失败，使用 HTML 标签上的默认值
+        })();
+
+        // Initialize language from parent
+        if (window.parent && window.parent.I18N) {
+            window.I18N = window.parent.I18N;
+            window.t = window.parent.t;
+        } else {
+            I18N.getLang();
+        }
+
+        layui.use(['layer'], function() {
+            var layer = layui.layer;
+            var $ = layui.$;
+
+            // Apply i18n to data-i18n elements
+            $('[data-i18n]').each(function() {
+                var key = $(this).attr('data-i18n');
+                $(this).text(t(key));
+            });
+            renderI18n();
+
+            var user = getParentUser();
+
+            // ECharts instances
+            var cpuChartInstance = null;
+            var memChartInstance = null;
+            var diskChartInstance = null;
+            var netChartInstance = null;
+            var prevNetData = null;
+            var netHistory = { sent: [], recv: [], time: [] };
+            var cpuHistory = { percent: [], time: [] };
+            var memHistory = { percent: [], time: [] };
+
+            // Change password popup
+            window.openChangePassword = function() {
+                layer.open({
+                    type: 1, title: t('header.changePassword'), area: ['420px', '340px'],
+                    content: '<form class="layui-form" lay-filter="changePwdForm" style="padding:20px 30px 0;">' +
+                        '<div class="layui-form-item"><label class="layui-form-label">' + t('profile.oldPassword') + '</label><div class="layui-input-block"><input type="password" name="old_password" lay-verify="required" placeholder="' + t('profile.oldPassword') + '" autocomplete="off" class="layui-input"></div></div>' +
+                        '<div class="layui-form-item"><label class="layui-form-label">' + t('profile.newPassword') + '</label><div class="layui-input-block"><input type="password" name="new_password" lay-verify="required" placeholder="' + t('profile.newPassword') + '" autocomplete="off" class="layui-input"></div></div>' +
+                        '<div class="layui-form-item"><label class="layui-form-label">' + t('profile.confirmPassword') + '</label><div class="layui-input-block"><input type="password" name="confirm_password" lay-verify="required" placeholder="' + t('profile.confirmPassword') + '" autocomplete="off" class="layui-input"></div></div>' +
+                        '<div class="layui-form-item" style="text-align:center;padding-top:10px;"><button type="button" class="layui-btn" id="btnSubmitPwd">' + t('common.confirm') + '</button><button type="button" class="layui-btn layui-btn-primary" id="btnCancelPwd">' + t('common.cancel') + '</button></div>' +
+                        '</form>',
+                    success: function(layero, index) {
+                        layui.form.render(null, 'changePwdForm');
+                        layero.find('#btnCancelPwd').on('click', function() { layer.close(index); });
+                        layero.find('#btnSubmitPwd').on('click', function() {
+                            var oldPwd = layero.find('input[name="old_password"]').val().trim();
+                            var newPwd = layero.find('input[name="new_password"]').val().trim();
+                            var confirmPwd = layero.find('input[name="confirm_password"]').val().trim();
+                            if (!oldPwd) { layer.msg(t('common.inputRequired', [t('profile.oldPassword')]), {icon: 2}); return; }
+                            if (!newPwd || newPwd.length < 6) { layer.msg(t('profile.password.minLen'), {icon: 2}); return; }
+                            if (newPwd !== confirmPwd) { layer.msg(t('profile.password.diff'), {icon: 2}); return; }
+                            putApi('/admin/api/rbac/profile/password/', {
+                                old_password: oldPwd, new_password: newPwd, confirm_password: confirmPwd
+                            }, function(res) {
+                                if (res.code === 200) {
+                                    layer.msg(t('profile.password.success'), {icon: 1, time: 2000}, function() {
+                                        try { window.parent.location.href = window.parent.ADMIN_LOGIN_URL || '/admin/login/'; } catch(e) {}
+                                    });
+                                } else { layer.msg(res.msg || t('common.fail'), {icon: 2}); }
+                            });
+                        });
+                    }
+                });
+            };
+
+            // Set welcome info
+            if (user) {
+                var greeting = getGreeting();
+                var nickname = user.nickname || user.username || '';
+                var lang = (window.I18N && window.I18N.currentLang) || 'zh-hans';
+                $('#welcomeText').text(greeting + (lang === 'en' ? ', ' : '\uff0c') + nickname);
+                $('#infoUsername').text(user.username || '--');
+                $('#infoNickname').text(user.nickname || '--');
+                $('#infoPhone').text(user.phone || '--');
+                var roleNames = (user.roles || []).map(function(r) { return r.name; }).join(', ');
+                $('#infoRoles').text(roleNames || '--');
+            }
+
+            // Update clock
+            function updateTime() {
+                var now = new Date();
+                var lang = (window.I18N && window.I18N.currentLang) || 'zh-hans';
+                var pad = function(n) { return n < 10 ? '0' + n : n; };
+                var weekDaysZh = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+                var weekDaysEn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                var weekDays = lang === 'en' ? weekDaysEn : weekDaysZh;
+                var timeStr = now.getFullYear() + (lang === 'en' ? '-' : '年') +
+                    pad(now.getMonth()+1) + (lang === 'en' ? '-' : '月') +
+                    pad(now.getDate()) + (lang === 'en' ? ' ' : '日 ') +
+                    weekDays[now.getDay()] + ' ' +
+                    pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+                $('#currentTime').text(timeStr);
+            }
+            updateTime();
+            setInterval(updateTime, 1000);
+
+            // Get system config for welcome text
+            getApi('/admin/api/rbac/system/config/', function(res) {
+                if (res.code === 200 && res.data && res.data.system_name) {
+                    $('#welcomeDesc').text(t('dashboard.welcome', [res.data.system_name]));
+                }
+            });
+
+            // HTML 转义函数
+            function escapeHtml(str) {
+                if (!str) return '';
+                var div = document.createElement('div');
+                div.appendChild(document.createTextNode(str));
+                return div.innerHTML;
+            }
+            
+            // 格式化字节数为人类可读格式
+            function formatBytes(bytes) {
+                if (bytes === 0) return '0 B';
+                var k = 1024;
+                var sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                var i = Math.floor(Math.log(bytes) / Math.log(k));
+                return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+            }
+            
+            // Render stat cards from config
+            function renderStatCards() {
+                var $container = $('#statCards');
+                // 从父窗口读取配置
+                var parentConfig = (window.parent && window.parent.LAYUI_CONFIG) || {};
+                var cards = parentConfig.home_stats_cards;
+                
+                // 如果未配置，使用默认配置
+                if (!cards || cards.length === 0) {
+                    cards = [
+                        {title: t('dashboard.systemUsers'), icon: 'layui-icon-user', color: '#1E9FFF', api_field: 'user_count'},
+                        {title: t('dashboard.systemRoles'), icon: 'layui-icon-template-1', color: '#5FB878', api_field: 'role_count'},
+                        {title: t('dashboard.menuCount'), icon: 'layui-icon-app', color: '#FFB800', api_field: 'menu_count'},
+                        {title: t('dashboard.operationLogs'), icon: 'layui-icon-log', color: '#FF5722', api_field: 'log_count'},
+                    ];
+                }
+                
+                var html = '';
+                for (var i = 0; i < cards.length; i++) {
+                    var card = cards[i];
+                    // 生成颜色类名
+                    var colorClass = '';
+                    if (card.color === '#1E9FFF') colorClass = 'blue';
+                    else if (card.color === '#5FB878') colorClass = 'green';
+                    else if (card.color === '#FFB800') colorClass = 'orange';
+                    else if (card.color === '#FF5722') colorClass = 'purple';
+                    else colorClass = 'blue'; // 默认
+                    
+                    html += '<div class="stat-card">';
+                    html += '<div class="stat-icon ' + colorClass + '"><i class="layui-icon ' + card.icon + '"></i></div>';
+                    html += '<div class="stat-info">';
+                    html += '<h3 data-api-field="' + escapeHtml(card.api_field) + '">--</h3>';
+                    html += '<p>' + escapeHtml(card.title) + '</p>';
+                    html += '</div></div>';
+                }
+                $container.html(html);
+            }
+            
+            // 先渲染统计卡片
+            renderStatCards();
+
+            // Get stats and fill data dynamically
+            getApi('/admin/api/rbac/stats/', function(res) {
+                if (res.code === 200 && res.data) {
+                    // 动态填充统计数据
+                    $('[data-api-field]').each(function() {
+                        var apiField = $(this).data('api-field');
+                        if (apiField && res.data[apiField] !== undefined) {
+                            $(this).text(res.data[apiField]);
+                        }
+                    });
+                }
+            });
+
+            // Render quick links from config
+            function renderQuickLinks() {
+                var $container = $('#quickLinks');
+                // 从父窗口读取配置
+                var parentConfig = (window.parent && window.parent.LAYUI_CONFIG) || {};
+                var links = parentConfig.home_quick_links;
+                
+                // 如果未配置，不显示任何链接
+                if (!links || links.length === 0) {
+                    $container.html('');
+                    return;
+                }
+                
+                var html = '';
+                for (var i = 0; i < links.length; i++) {
+                    var link = links[i];
+                    // 使用 data-url 存储链接，避免 onclick 中的引号转义问题
+                    html += '<div class="quick-link-item" data-url="' + escapeHtml(link.url) + '" data-name="' + escapeHtml(link.name) + '">';
+                    html += '<i class="layui-icon ' + link.icon + '"></i>';
+                    html += '<span>' + link.name + '</span>';
+                    html += '</div>';
+                }
+                $container.html(html);
+                
+                // 绑定点击事件
+                $('.quick-link-item').on('click', function() {
+                    var url = $(this).data('url');
+                    var name = $(this).data('name');
+                    handleQuickLinkClick(url, name);
+                });
+            }
+            
+            // 处理快速链接点击
+            function handleQuickLinkClick(url, name) {
+                if (!url) return;
+                
+                // JavaScript 协议：直接执行
+                if (url.indexOf('javascript:') === 0) {
+                    try {
+                        eval(url.substring(11));
+                    } catch(e) {
+                        console.error('执行 JavaScript 失败:', e);
+                    }
+                    return;
+                }
+                
+                // 外部链接：新窗口打开
+                if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+                    window.open(url, '_blank');
+                    return;
+                }
+                
+                // 内部链接：在父窗口中打开 Tab
+                if (window.parent && window.parent.openTab) {
+                    window.parent.openTab(name, url);
+                } else {
+                    // 如果没有父窗口，当前窗口跳转
+                    window.location.href = url;
+                }
+            }
+            
+            renderQuickLinks();
+
+            // ==================== 系统监控图表 ====================
+            
+            // 初始化 ECharts 图表
+            function initCharts() {
+                if (typeof echarts === 'undefined') {
+                    console.warn('ECharts not loaded');
+                    return;
+                }
+                
+                // CPU 使用率图表
+                cpuChartInstance = echarts.init(document.getElementById('cpuChart'));
+                cpuChartInstance.setOption({
+                    tooltip: { trigger: 'axis', formatter: '{b}: {c}%' },
+                    grid: { left: '10%', right: '5%', top: '10%', bottom: '20%' },
+                    xAxis: { type: 'category', data: [], axisLabel: { fontSize: 10 } },
+                    yAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', fontSize: 10 } },
+                    series: [{
+                        name: 'CPU',
+                        type: 'line',
+                        data: [],
+                        smooth: true,
+                        lineStyle: { color: '#1E9FFF', width: 2 },
+                        itemStyle: { color: '#1E9FFF' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(30, 159, 255, 0.3)' },
+                                { offset: 1, color: 'rgba(30, 159, 255, 0.05)' }
+                            ])
+                        }
+                    }]
+                });
+                
+                // 内存使用率图表
+                memChartInstance = echarts.init(document.getElementById('memChart'));
+                memChartInstance.setOption({
+                    tooltip: { trigger: 'axis', formatter: '{b}: {c}%' },
+                    grid: { left: '10%', right: '5%', top: '10%', bottom: '20%' },
+                    xAxis: { type: 'category', data: [], axisLabel: { fontSize: 10 } },
+                    yAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', fontSize: 10 } },
+                    series: [{
+                        name: '内存',
+                        type: 'line',
+                        data: [],
+                        smooth: true,
+                        lineStyle: { color: '#5FB878', width: 2 },
+                        itemStyle: { color: '#5FB878' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(95, 184, 120, 0.3)' },
+                                { offset: 1, color: 'rgba(95, 184, 120, 0.05)' }
+                            ])
+                        }
+                    }]
+                });
+                
+                // 磁盘使用率图表（饼图）
+                diskChartInstance = echarts.init(document.getElementById('diskChart'));
+                diskChartInstance.setOption({
+                    tooltip: { 
+                        trigger: 'item', 
+                        formatter: function(params) {
+                            // 将字节转换为合适的单位
+                            var value = params.value;
+                            var unit = 'B';
+                            if (value >= 1024 * 1024 * 1024 * 1024) {
+                                value = (value / (1024 * 1024 * 1024 * 1024)).toFixed(2);
+                                unit = 'TB';
+                            } else if (value >= 1024 * 1024 * 1024) {
+                                value = (value / (1024 * 1024 * 1024)).toFixed(2);
+                                unit = 'GB';
+                            } else if (value >= 1024 * 1024) {
+                                value = (value / (1024 * 1024)).toFixed(2);
+                                unit = 'MB';
+                            } else if (value >= 1024) {
+                                value = (value / 1024).toFixed(2);
+                                unit = 'KB';
+                            }
+                            return params.name + ': ' + value + ' ' + unit + ' (' + params.percent + '%)';
+                        }
+                    },
+                    legend: {
+                        orient: 'horizontal',
+                        bottom: '5%',
+                        textStyle: { fontSize: 10, color: 'var(--text-secondary)' }
+                    },
+                    series: [{
+                        name: '磁盘使用',
+                        type: 'pie',
+                        radius: ['45%', '70%'],
+                        center: ['50%', '45%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 8,
+                            borderColor: 'var(--card-bg)',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: true,
+                            formatter: '{b}\n{d}%',
+                            fontSize: 11
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: 13,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        data: [
+                            { value: 0, name: '已用', itemStyle: { color: '#FFB800' } },
+                            { value: 100, name: '空闲', itemStyle: { color: '#E8E8E8' } }
+                        ]
+                    }]
+                });
+                
+                // 网络流量图表
+                netChartInstance = echarts.init(document.getElementById('netChart'));
+                netChartInstance.setOption({
+                    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                    grid: { left: '10%', right: '5%', top: '10%', bottom: '20%' },
+                    xAxis: { type: 'category', data: [], axisLabel: { fontSize: 10 } },
+                    yAxis: { type: 'value', axisLabel: { formatter: '{value} KB/s', fontSize: 10 } },
+                    series: [
+                        {
+                            name: '发送',
+                            type: 'bar',
+                            data: [],
+                            barWidth: '30%',
+                            itemStyle: { color: '#FF5722' }
+                        },
+                        {
+                            name: '接收',
+                            type: 'bar',
+                            data: [],
+                            barWidth: '30%',
+                            itemStyle: { color: '#1E9FFF' }
+                        }
+                    ]
+                });
+                
+                // 窗口大小改变时重绘图表
+                window.addEventListener('resize', function() {
+                    cpuChartInstance && cpuChartInstance.resize();
+                    memChartInstance && memChartInstance.resize();
+                    diskChartInstance && diskChartInstance.resize();
+                    netChartInstance && netChartInstance.resize();
+                });
+            }
+            
+            // 更新系统信息
+            function updateSystemInfo(data) {
+                // 更新系统环境信息
+                if (data.python_version) $('#pythonVersion').text(data.python_version);
+                if (data.django_version) $('#djangoVersion').text(data.django_version);
+                if (data.system) $('#osInfo').text(data.system + ' ' + (data.system_release || ''));
+                if (data.processor) $('#cpuInfo').text(data.processor);
+                if (data.server_time) $('#serverTime').text(data.server_time);
+                
+                // 更新图表数据
+                var now = new Date();
+                var timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                              now.getMinutes().toString().padStart(2, '0') + ':' + 
+                              now.getSeconds().toString().padStart(2, '0');
+                
+                // CPU 数据
+                if (data.cpu_percent !== undefined) {
+                    cpuHistory.percent.push(data.cpu_percent);
+                    cpuHistory.time.push(timeStr);
+                    if (cpuHistory.percent.length > 10) {
+                        cpuHistory.percent.shift();
+                        cpuHistory.time.shift();
+                    }
+                    $('#cpuPercent').text(data.cpu_percent + '%');
+                    if (cpuChartInstance) {
+                        cpuChartInstance.setOption({
+                            xAxis: { data: cpuHistory.time },
+                            series: [{ data: cpuHistory.percent }]
+                        });
+                    }
+                }
+                
+                // 内存数据
+                if (data.memory && data.memory.percent !== undefined) {
+                    memHistory.percent.push(data.memory.percent);
+                    memHistory.time.push(timeStr);
+                    if (memHistory.percent.length > 10) {
+                        memHistory.percent.shift();
+                        memHistory.time.shift();
+                    }
+                    $('#memPercent').text(data.memory.percent + '%');
+                    if (memChartInstance) {
+                        memChartInstance.setOption({
+                            xAxis: { data: memHistory.time },
+                            series: [{ data: memHistory.percent }]
+                        });
+                    }
+                }
+                
+                // 磁盘数据（饼图）
+                if (data.disk && data.disk.percent !== undefined) {
+                    // 更新右上角显示：已用 / 总量
+                    if (data.disk.used_human && data.disk.total_human) {
+                        $('#diskInfo').text(data.disk.used_human + ' / ' + data.disk.total_human);
+                    }
+                    
+                    // 更新饼图
+                    if (diskChartInstance && data.disk.total && data.disk.used) {
+                        var total = data.disk.total;
+                        var used = data.disk.used;
+                        var free = total - used;
+                        
+                        diskChartInstance.setOption({
+                            series: [{
+                                data: [
+                                    { value: used, name: '已用', itemStyle: { color: '#FFB800' } },
+                                    { value: free, name: '空闲', itemStyle: { color: '#E8E8E8' } }
+                                ]
+                            }]
+                        });
+                    }
+                }
+                
+                // 网络数据
+                if (data.network) {
+                    var currentSent = data.network.bytes_sent || 0;
+                    var currentRecv = data.network.bytes_recv || 0;
+                    
+                    // 右上角显示总计数据
+                    var totalSent = formatBytes(currentSent);
+                    var totalRecv = formatBytes(currentRecv);
+                    $('#netInfo').html(
+                        '<span style="color:#FF5722;">↑ ' + totalSent + '</span> ' +
+                        '<span style="color:#1E9FFF;">↓ ' + totalRecv + '</span>'
+                    );
+                    
+                    if (prevNetData !== null) {
+                        var sentSpeed = Math.max(0, (currentSent - prevNetData.sent) / 3); // 每秒速率
+                        var recvSpeed = Math.max(0, (currentRecv - prevNetData.recv) / 3);
+                        
+                        netHistory.sent.push((sentSpeed / 1024).toFixed(2)); // KB/s
+                        netHistory.recv.push((recvSpeed / 1024).toFixed(2));
+                        netHistory.time.push(timeStr);
+                        
+                        if (netHistory.sent.length > 10) {
+                            netHistory.sent.shift();
+                            netHistory.recv.shift();
+                            netHistory.time.shift();
+                        }
+                        
+                        if (netChartInstance) {
+                            netChartInstance.setOption({
+                                xAxis: { data: netHistory.time },
+                                series: [
+                                    { data: netHistory.sent },
+                                    { data: netHistory.recv }
+                                ]
+                            });
+                        }
+                    }
+                    
+                    prevNetData = { sent: currentSent, recv: currentRecv };
+                }
+            }
+            
+            // 初始化图表
+            initCharts();
+            
+            // 首次加载系统信息（接口兜底）
+            getApi('/admin/api/rbac/system/info/', function(res) {
+                if (res.code === 200 && res.data) {
+                    updateSystemInfo(res.data);
+                }
+            });
+            
+            // 尝试 SSE 实时推送，失败则使用轮询
+            var sseConnected = false;
+            var usePolling = false; // 优先使用 SSE，失败后自动降级为轮询
+            
+            if (usePolling) {
+                // 轮询模式：每5秒更新一次
+                setInterval(function() {
+                    getApi('/admin/api/rbac/system/info/', function(res) {
+                        if (res.code === 200 && res.data) {
+                            updateSystemInfo(res.data);
+                        }
+                    });
+                }, 5000);
+            } else {
+                // SSE 模式
+                try {
+                    var sseUrl = '/admin/api/rbac/system/info/stream/';
+                    var eventSource = new EventSource(sseUrl);
+                    
+                    eventSource.onopen = function() {
+                        sseConnected = true;
+                        console.log('SSE connected');
+                    };
+                    
+                    eventSource.onmessage = function(event) {
+                        try {
+                            var data = JSON.parse(event.data);
+                            if (data.code === 200 && data.data) {
+                                updateSystemInfo(data.data);
+                            }
+                        } catch(e) {
+                            console.error('SSE parse error:', e);
+                        }
+                    };
+                    
+                    eventSource.onerror = function() {
+                        console.warn('SSE error, fallback to polling');
+                        eventSource.close();
+                        sseConnected = false;
+                        
+                        // 降级为轮询
+                        setInterval(function() {
+                            getApi('/admin/api/rbac/system/info/', function(res) {
+                                if (res.code === 200 && res.data) {
+                                    updateSystemInfo(res.data);
+                                }
+                            });
+                        }, 5000);
+                    };
+                } catch(e) {
+                    console.error('SSE not supported, using polling:', e);
+                    // 降级为轮询
+                    setInterval(function() {
+                        getApi('/admin/api/rbac/system/info/', function(res) {
+                            if (res.code === 200 && res.data) {
+                                updateSystemInfo(res.data);
+                            }
+                        });
+                    }, 5000);
+                }
+            }
+
+        });
+    </script>
+</body>
+</html>

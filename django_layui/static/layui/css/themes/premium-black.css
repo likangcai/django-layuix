@@ -1,0 +1,225 @@
+/* 
+ * Django-Layui Theme: 高端黑
+ * Auto-generated theme CSS
+ */
+
+:root {
+    --theme-primary: #1F2C39;
+    --theme-menu-bg: #FFFFFF;
+    --theme-menu-text: #666666;
+    --theme-header-bg: #1F2C39;
+    --theme-logo-color: #FFFFFF;
+}
+
+/* ---- 顶部导航栏 ---- */
+.layui-layout-admin .layui-header {
+    background: #1F2C39 !important;
+}
+
+.layui-layout-admin .layui-header .layui-logo {
+    color: #FFFFFF !important;
+    background: #FFFFFF !important;
+}
+
+.layui-layout-admin .layui-header .layui-nav .layui-nav-item a {
+    color: #FFFFFF !important;
+}
+
+.layui-layout-admin .layui-header .layui-nav .layui-nav-item a:hover {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+/* ---- 侧边菜单 ---- */
+.layui-layout-admin .layui-side {
+    background-color: #FFFFFF !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-item a {
+    color: #666666 !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-item a:hover {
+    color: #1F2C39 !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-item.layui-this a {
+    color: #1F2C39 !important;
+    background-color: rgba(30, 159, 255, 0.1) !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-child dd.layui-this {
+    background-color: rgba(30, 159, 255, 0.15) !important;
+}
+
+.layui-side-menu .layui-nav .layui-nav-child dd.layui-this a {
+    color: #1F2C39 !important;
+}
+
+.layui-nav-tree .layui-nav-bar {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- 按钮样式 ---- */
+.layui-btn-primary {
+    border-color: #1F2C39 !important;
+    color: #1F2C39 !important;
+}
+
+.layui-btn-primary:hover {
+    border-color: #1F2C39 !important;
+    color: #1F2C39 !important;
+    opacity: 0.8;
+}
+
+.layui-btn-normal {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- 表单元素 ---- */
+.layui-input:focus,
+.layui-textarea:focus {
+    border-color: #1F2C39 !important;
+}
+
+.layui-form-select dl dd.layui-this {
+    background-color: rgba(30, 159, 255, 0.1) !important;
+    color: #1F2C39 !important;
+}
+
+/* ---- 表格样式 ---- */
+.layui-table-view .layui-table-body tr:hover {
+    background-color: rgba(30, 159, 255, 0.05) !important;
+}
+
+.layui-table-page .layui-laypage .layui-laypage-curr .layui-laypage-em {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- Tab标签页 ---- */
+.layui-tab-title li.layui-this {
+    color: #1F2C39 !important;
+}
+
+.layui-tab-title li.layui-this::after {
+    border-bottom-color: #1F2C39 !important;
+}
+
+/* ---- 面包屑导航 ---- */
+.layui-breadcrumb a:hover {
+    color: #1F2C39 !important;
+}
+
+/* ---- 链接样式 ---- */
+a {
+    color: #1F2C39 !important;
+}
+
+a:hover {
+    color: #1F2C39 !important;
+    opacity: 0.8;
+}
+
+/* ---- 徽章样式 ---- */
+.layui-badge-dot {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- 时间线 ---- */
+.layui-timeline-axis {
+    color: #1F2C39 !important;
+}
+
+/* ---- 进度条 ---- */
+.layui-progress-bar {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- 开关按钮 ---- */
+.layui-form-onswitch {
+    background-color: #1F2C39 !important;
+    border-color: #1F2C39 !important;
+}
+
+/* ---- 复选框 ---- */
+.layui-form-checked span,
+.layui-form-checked:hover span {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- 单选框 ---- */
+.layui-form-radioed>i,
+.layui-form-radioed>span {
+    color: #1F2C39 !important;
+}
+
+/* ---- 滑块 ---- */
+.layui-slider-bar {
+    background-color: #1F2C39 !important;
+}
+
+.layui-slider-step.layui-slider-active {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- 评分 ---- */
+.layui-rate li i.layui-icon-rate-solid {
+    color: #1F2C39 !important;
+}
+
+/* ---- 树组件 ---- */
+.layui-tree-set .layui-tree-entry .layui-tree-txt a {
+    color: #1F2C39 !important;
+}
+
+/* ---- 轮播图指示器 ---- */
+.layui-carousel-ind ul.layui-this {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- 流加载按钮 ---- */
+.layui-flow-more a {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- 代码高亮 ---- */
+pre code .layui-code-h3 {
+    border-left-color: #1F2C39 !important;
+}
+
+/* ---- 分割线 ---- */
+.layui-divider.layui-bg-primary {
+    background-color: #1F2C39 !important;
+}
+
+/* ---- 动画效果 ---- */
+@keyframes layui-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.layui-icon-loading {
+    animation: layui-rotate 1s linear infinite;
+}
+
+/* ---- 响应式适配 ---- */
+@media screen and (max-width: 768px) {
+    .layui-layout-admin .layui-header .layui-logo {
+        font-size: 14px;
+    }
+}
+
+/* ---- 深色模式优化 ---- */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #1a1a1a;
+    }
+}
+
+/* ---- 打印样式 ---- */
+@media print {
+    .layui-header,
+    .layui-side,
+    .layui-footer {
+        display: none !important;
+    }
+}

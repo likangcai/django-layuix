@@ -1,0 +1,64 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls admin_modify %}
+{% block extrahead %}
+{{ block.super }}
+{# BUG-16 FIX: 渲染 media 以支持日期选择器、自动完成等组件 #}
+{{ media }}
+{% endblock %}
+{% block content %}
+<div class="page-container" style="padding: 20px 24px;">
+    <div class="admin-card">
+        <div class="card-header">
+            <h3><i class="layui-icon layui-icon-edit"></i> {{ title }}</h3>
+        </div>
+        <div class="card-body">
+            {# BUG-15 FIX: 使用 Django admin 标准的 form 标签属性 #}
+            <form {% if form_url %}action="{{ form_url }}"{% endif %} method="post" enctype="{{ enctype }}" id="{{ form_name }}">
+                {% csrf_token %}
+                {% block form_top %}{% endblock %}
+                <div>
+                    {% if is_popup %}<input type="hidden" name="_popup" value="1">{% endif %}
+                    {# BUG-14 FIX: 删除重复的 submit_buttons_bottom block #}
+                    {% block field_sets %}
+                    {% for fieldset in adminform %}
+                    <fieldset class="module {{ fieldset.classes }}">
+                        {% if fieldset.name %}<h2>{{ fieldset.name }}</h2>{% endif %}
+                        {% if fieldset.description %}
+                        <div class="description">{{ fieldset.description|safe }}</div>
+                        {% endif %}
+                        {% for line in fieldset %}
+                        <div class="form-row{% if line.fields|length == 1 and line.errors %} errors{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% endfor %}">
+                            {% for field in line %}
+                            <div{% if not line.fields|length == 1 %} class="field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.is_hidden %} hidden{% endif %}"{% elif field.is_hidden %} class="hidden"{% endif %}>
+                                {% if not line.fields|length == 1 and not field.is_readonly %}{{ field.errors }}{% endif %}
+                                {% if field.is_readonly %}
+                                <div class="readonly">{{ field.contents }}</div>
+                                {% else %}
+                                {{ field.errors }}
+                                {{ field.field }}
+                                {% endif %}
+                                {% if field.field.help_text %}
+                                <div class="help">{{ field.field.help_text|safe }}</div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </fieldset>
+                    {% endfor %}
+                    {% endblock %}
+                    {% block after_field_sets %}{% endblock %}
+                    {% block inline_field_sets %}
+                    {% for inline_admin_formset in inline_admin_formsets %}
+                    {% include inline_admin_formset.opts.template %}
+                    {% endfor %}
+                    {% endblock %}
+                    {% block after_related_objects %}{% endblock %}
+                    {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+                    {% block extra_submit_buttons %}{% endblock %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,684 @@
+{% load i18n static layui_tags %}
+{% static_version as sv %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% system_name %}</title>
+    {% favicon_url as favicon %}
+    {% if favicon %}
+    <link rel="icon" type="image/x-icon" href="{{ favicon }}">
+    {% else %}
+    <link rel="icon" type="image/x-icon" href="{% static 'layui/favicon.ico' %}?v={{ sv }}">
+    {% endif %}
+    <link rel="stylesheet" href="{% static 'layui/lib/layui.css' %}?v={{ sv }}">
+    <link rel="stylesheet" href="{% static 'layui/css/admin.css' %}?v={{ sv }}">
+    <style>
+        .layui-form-checkbox[lay-skin="primary"] span { color: var(--text-primary); }
+        .layui-form-switch { background: var(--bg-tertiary); border-color: var(--border-color); }
+        .layui-form-switch.layui-form-onswitch { border-color: var(--primary-color); }
+        .layui-form-switch em { color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="header-left">
+                <div class="sidebar-toggle" id="sidebarToggle" title="">
+                    <i class="layui-icon layui-icon-shrink-right"></i>
+                </div>
+                <div class="logo-area">
+                    <div class="logo-icon">
+                        <i class="layui-icon {% logo_icon %}"></i>
+                    </div>
+                    <span class="logo-text">{% system_name %}</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="header-action-btn" id="langBtn" title="中文">
+                    <i class="layui-icon layui-icon-flag"></i>
+                </div>
+                <div class="header-action-btn" id="themeToggle" title="">
+                    <i class="layui-icon layui-icon-light" id="themeIcon"></i>
+                </div>
+                <div class="header-action-btn" id="frontendBtn" title="">
+                    <i class="layui-icon layui-icon-website"></i>
+                </div>
+                <div class="header-action-btn" id="fullscreenBtn" title="">
+                    <i class="layui-icon layui-icon-screen-full"></i>
+                </div>
+                <div class="header-user-area" id="userArea">
+                    <div class="user-avatar" id="userAvatar">
+                        <i class="layui-icon layui-icon-user"></i>
+                    </div>
+                    <span class="user-name" id="userName">{{ user.get_full_name|default:user.username }}</span>
+                    <i class="user-arrow"></i>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="dropdown-item" id="profileBtn">
+                            <i class="layui-icon layui-icon-user"></i>
+                            <span>个人中心</span>
+                        </div>
+                        <div class="dropdown-item" id="changePasswordBtn">
+                            <i class="layui-icon layui-icon-password"></i>
+                            <span>修改密码</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item danger" id="logoutBtn">
+                            <i class="layui-icon layui-icon-logout"></i>
+                            <span>退出登录</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Body -->
+        <div class="admin-body">
+            <aside class="admin-sidebar" id="adminSidebar">
+                <div class="sidebar-menu" id="sidebarMenu">
+                    <div class="empty-state" style="padding: 40px 20px;">
+                        <i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i>
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </aside>
+            <div class="admin-content">
+                <div class="tab-header" id="tabHeader"></div>
+                <div class="tab-content" id="tabContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Popup Template -->
+    <script type="text/html" id="changePasswordTpl">
+        <div style="padding: 20px 20px 10px;">
+            <form class="layui-form" id="changePasswordForm" lay-filter="changePasswordForm">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">原密码</label>
+                    <div class="layui-input-block">
+                        <input type="password" name="old_password" lay-verify="required"
+                               placeholder="" autocomplete="current-password" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">新密码</label>
+                    <div class="layui-input-block">
+                        <input type="password" name="new_password" lay-verify="required"
+                               placeholder="" autocomplete="new-password" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">确认密码</label>
+                    <div class="layui-input-block">
+                        <input type="password" name="confirm_password" lay-verify="required"
+                               placeholder="" autocomplete="new-password" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item" style="text-align: center; margin-top: 10px;">
+                    <button type="button" class="layui-btn layui-btn-normal" id="submitPasswordBtn"
+                            style="width: 160px; border-radius: 6px;">
+                        <span>确认修改</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </script>
+
+    <!-- Profile Popup Template -->
+    <script type="text/html" id="profileTpl">
+        <div style="padding: 30px 20px 10px;">
+            <form class="layui-form" id="profileForm" lay-filter="profileForm">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">用户名</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="username" id="profileUsername" readonly
+                               class="layui-input layui-disabled" style="background: var(--bg-tertiary);">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">昵称</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="nickname" id="profileNickname"
+                               placeholder="" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">手机号</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="phone" id="profilePhone"
+                               placeholder="" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">角色</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="roles" id="profileRoles" readonly
+                               class="layui-input layui-disabled" style="background: var(--bg-tertiary);">
+                    </div>
+                </div>
+                <div class="layui-form-item" style="text-align: center; margin-top: 20px;">
+                    <button type="button" class="layui-btn layui-btn-normal" id="submitProfileBtn"
+                            style="width: 160px; border-radius: 6px;">
+                        <span>保存修改</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </script>
+
+    <script src="{% static 'layui/lib/layui.js' %}?v={{ sv }}"></script>
+    <script src="{% static 'layui/js/common.js' %}?v={{ sv }}"></script>
+    <script src="{% static 'layui/js/i18n.js' %}?v={{ sv }}"></script>
+    {% webssh_url as webssh_url_val %}
+    <script>
+    // Global config
+    window.LAYUI_CONFIG = {
+        webssh_url: '{{ webssh_url_val|escapejs }}',
+        admin_login_url: '{% url "admin:login" %}',
+        // 首页自定义快速链接（从 settings.LAYUI_CONFIG 读取，未配置则使用默认值）
+        home_quick_links: {{ layui_config.home_quick_links|default:"[]"|safe }},
+        // 首页统计卡片（从 settings.LAYUI_CONFIG 读取，未配置则使用默认值）
+        home_stats_cards: {{ layui_config.home_stats_cards|default:"[]"|safe }},
+    };
+    window.ADMIN_LOGIN_URL = '{% url "admin:login" %}';
+
+    // ==================== Global Variables ====================
+    var currentUser = null;
+    var currentTheme = 'dark';
+    var tabs = {};
+    var activeTabUrl = '';
+    var sidebarCollapsed = false;
+
+    // ==================== Initialize ====================
+    layui.use(['form', 'layer', 'element'], function() {
+        var form = layui.form;
+        var layer = layui.layer;
+        var $ = layui.$;
+
+        // Expose to iframe children
+        window.openTab = openTab;
+        window.switchTab = switchTab;
+        window.closeTab = closeTab;
+        window.applyTheme = applyTheme;
+        window.getCurrentTheme = function() { return currentTheme; };
+
+        // Initialize language
+        var currentLang = I18N.getLang();
+        updateLangUI(currentLang);
+        window.I18N = I18N;
+        window.t = t;
+
+        // 保存原始文本（在首次调用前记录，防止翻译失败时丢失）
+        var _originalTexts = {};
+        function updateLangUI(lang) {
+            var label = lang === 'en' ? 'English' : '中文';
+            $('#langBtn').attr('title', label);
+            $('[data-i18n]').each(function() {
+                var $el = $(this);
+                var key = $el.attr('data-i18n');
+                // 首次记录原始文本
+                if (!_originalTexts[key]) {
+                    _originalTexts[key] = $el.text();
+                }
+                var translated = t(key);
+                // 翻译成功则使用翻译，否则使用原始文本
+                if (translated && translated !== key) {
+                    $el.text(translated);
+                } else if (_originalTexts[key]) {
+                    $el.text(_originalTexts[key]);
+                }
+            });
+        }
+
+        // Language switch
+        $(document).on('click', '#langBtn', function() {
+            var current = I18N.getLang();
+            var next = current === 'zh-hans' ? 'en' : 'zh-hans';
+            postApi('/admin/api/rbac/set-language/', {language: next}, function(res) {
+                if (res.code === 200) {
+                    I18N.setLang(next);
+                    updateLangUI(next);
+                    layer.msg(t('common.languageChanged'), {icon: 1});
+                    setTimeout(function() { location.reload(); }, 800);
+                }
+            });
+        });
+
+        // Fetch user info and menus on page load
+        $.get('/admin/api/rbac/userinfo/', function(res) {
+            if (res.code === 200) {
+                currentUser = res.data;
+                window.currentUser = currentUser;
+                currentTheme = res.data.theme || 'dark';
+                renderMenu(res.data.menus);
+                applyTheme(currentTheme);
+                updateUserInfo(res.data);
+                // Default open dashboard
+                openTab(t('header.home'), '/static/layui/pages/dashboard.html');
+
+                // Get system config
+                $.get('/admin/api/rbac/system/config/', function(configRes) {
+                    if (configRes.code === 200 && configRes.data) {
+                        var config = configRes.data;
+                        if (config.system_name) {
+                            $('.logo-text').text(config.system_name);
+                            document.title = config.system_name;
+                        }
+                        if (config.logo_icon) {
+                            $('.logo-icon i').attr('class', 'layui-icon ' + config.logo_icon);
+                        }
+                        if (config.logo_url) {
+                            $('.logo-icon').html('<img src="' + config.logo_url + '" style="width:32px;height:32px;border-radius:6px;">');
+                        }
+                        if (config.frontend_url) {
+                            $('#frontendBtn').show().attr('data-url', config.frontend_url);
+                        }
+                        if (config.favicon_url) {
+                            $('link[rel="icon"]').attr('href', config.favicon_url);
+                        }
+                    }
+                });
+            } else {
+                location.href = window.ADMIN_LOGIN_URL;
+            }
+        }).fail(function() {
+            location.href = window.ADMIN_LOGIN_URL;
+        });
+
+        // ==================== Render Menu Tree ====================
+        function renderMenu(menus) {
+            var html = '';
+            // Dashboard always first
+            html += '<div class="menu-item active" data-url="/static/layui/pages/dashboard.html" data-title="' + t('header.home') + '">' +
+                   '<i class="layui-icon layui-icon-home menu-icon"></i>' +
+                   '<span class="menu-text">' + t('header.home') + '</span>' +
+                   '</div>';
+            menus.forEach(function(menu) {
+                if (menu.menu_type === 1) {
+                    html += renderDirectory(menu);
+                } else if (menu.menu_type === 2) {
+                    html += renderMenuItem(menu);
+                }
+            });
+            $('#sidebarMenu').html(html || '<div class="empty-state"><p>' + t('sidebar.noPermission') + '</p></div>');
+        }
+
+        function renderDirectory(menu) {
+            var children = menu.children || [];
+            var hasVisibleChildren = children.some(function(c) { return c.visible !== false; });
+            if (!hasVisibleChildren) return '';
+            var html = '<div class="menu-group has-children" data-menu-id="' + menu.id + '">';
+            html += '<div class="menu-group-title"><i class="menu-arrow"></i><span>' + escapeHtml(menu.name) + '</span></div>';
+            html += '<div class="sub-menu open">';
+            children.forEach(function(child) {
+                if (child.visible === false) return;
+                if (child.menu_type === 1) {
+                    html += renderDirectory(child);
+                } else if (child.menu_type === 2) {
+                    html += renderMenuItem(child);
+                }
+            });
+            html += '</div></div>';
+            return html;
+        }
+
+        // Menu path to page file mapping
+        var menuPathMap = {
+            '/permission/menu': '/static/layui/pages/menu.html',
+            '/permission/role': '/static/layui/pages/role.html',
+            '/permission/user': '/static/layui/pages/user.html',
+            '/profile': '/static/layui/pages/profile.html',
+            '/system/log': '/static/layui/pages/log.html',
+            '/system/info': '/static/layui/pages/dashboard.html',
+            '/system/config': '/static/layui/pages/config.html',
+            '/ops/server': '/static/layui/pages/server.html',
+            '/ops/ai-config': '/static/layui/pages/ai-config.html',
+        };
+
+        function renderMenuItem(menu) {
+            if (menu.visible === false) return '';
+            var icon = menu.icon || 'layui-icon-app';
+            var rawUrl = menu.path || menu.component || '';
+            var url = menuPathMap[rawUrl] || rawUrl;
+            var title = escapeHtml(menu.name);
+            return '<div class="menu-item" data-url="' + escapeAttr(url) + '" data-title="' + escapeAttr(title) + '">' +
+                   '<i class="layui-icon ' + escapeAttr(icon) + ' menu-icon"></i>' +
+                   '<span class="menu-text">' + title + '</span>' +
+                   '</div>';
+        }
+
+        // ==================== Menu Click Events ====================
+        $(document).on('click', '.menu-item[data-url]', function() {
+            var url = $(this).data('url');
+            var title = $(this).data('title');
+            if (!url) return;
+            $('.menu-item').removeClass('active');
+            $(this).addClass('active');
+            openTab(title, url);
+            if ($(window).width() <= 768) {
+                $('#adminSidebar').removeClass('mobile-show');
+            }
+        });
+
+        // Menu group collapse/expand
+        $(document).on('click', '.menu-group-title', function() {
+            var $title = $(this);
+            var $subMenu = $title.siblings('.sub-menu');
+            $title.toggleClass('collapsed');
+            $subMenu.toggleClass('open');
+        });
+
+        // ==================== Tab Management ====================
+        function openTab(title, url) {
+            if (!url) return;
+            if (tabs[url]) { switchTab(url); return; }
+            tabs[url] = { title: title, url: url, isHome: url.indexOf('dashboard') > -1 };
+            var tabId = 'tab_' + url.replace(/[^a-zA-Z0-9]/g, '_');
+            var isHome = tabs[url].isHome;
+            var tabHtml = '<div class="tab-item' + (isHome ? ' home' : '') + '" data-url="' + escapeAttr(url) + '">' +
+                          '<span>' + escapeHtml(title) + '</span>' +
+                          (isHome ? '' : '<i class="layui-icon layui-icon-close tab-close"></i>') +
+                          '</div>';
+            $('#tabHeader').append(tabHtml);
+            var iframeHtml = '<iframe class="tab-iframe" id="iframe_' + tabId + '" src="' + escapeAttr(url) + '?_v={% now "YmdHi" %}"></iframe>';
+            $('#tabContent').append(iframeHtml);
+            switchTab(url);
+        }
+
+        function switchTab(url) {
+            if (!tabs[url]) return;
+            activeTabUrl = url;
+            $('.tab-item').removeClass('active');
+            $('.tab-item[data-url="' + url + '"]').addClass('active');
+            $('.tab-iframe').removeClass('active');
+            var tabId = 'tab_' + url.replace(/[^a-zA-Z0-9]/g, '_');
+            var iframe = $('#iframe_' + tabId);
+            if (iframe.length) iframe.addClass('active');
+            // Scroll tab into view
+            var activeTab = $('.tab-item.active');
+            if (activeTab.length) {
+                var tabHeader = $('#tabHeader')[0];
+                var tabLeft = activeTab.position().left;
+                var tabWidth = activeTab.outerWidth();
+                var headerWidth = tabHeader.clientWidth;
+                var scrollLeft = tabHeader.scrollLeft;
+                if (tabLeft < 0) { tabHeader.scrollLeft = scrollLeft + tabLeft - 20; }
+                else if (tabLeft + tabWidth > headerWidth) { tabHeader.scrollLeft = scrollLeft + tabLeft + tabWidth - headerWidth + 20; }
+            }
+            // Sync menu highlight
+            $('.menu-item').removeClass('active');
+            $('.menu-item[data-url="' + url + '"]').addClass('active');
+        }
+
+        function closeTab(url) {
+            if (!tabs[url] || tabs[url].isHome) return;
+            $('.tab-item[data-url="' + url + '"]').remove();
+            var tabId = 'tab_' + url.replace(/[^a-zA-Z0-9]/g, '_');
+            $('#iframe_' + tabId).remove();
+            delete tabs[url];
+            if (activeTabUrl === url) {
+                var tabKeys = Object.keys(tabs);
+                if (tabKeys.length > 0) switchTab(tabKeys[tabKeys.length - 1]);
+            }
+        }
+
+        // Tab click
+        $(document).on('click', '.tab-item', function(e) {
+            if ($(e.target).hasClass('tab-close')) { closeTab($(this).data('url')); return; }
+            switchTab($(this).data('url'));
+        });
+
+        // Tab right-click context menu
+        $(document).on('contextmenu', '.tab-item', function(e) {
+            e.preventDefault();
+            var url = $(this).data('url');
+            if (tabs[url] && tabs[url].isHome) return;
+            var menuHtml = '<div style="padding: 4px 0;">' +
+                '<div class="dropdown-item" data-action="close-current" style="padding: 8px 16px;">' + t('common.close') + '</div>' +
+                '<div class="dropdown-item" data-action="close-others" style="padding: 8px 16px;">' + t('common.closeOthers') + '</div>' +
+                '<div class="dropdown-item" data-action="close-all" style="padding: 8px 16px;">' + t('common.closeAll') + '</div>' +
+                '</div>';
+            layer.open({
+                type: 1, title: false, closeBtn: 0, shade: 0, area: ['140px', 'auto'],
+                content: menuHtml, offset: [e.clientY + 'px', e.clientX + 'px'],
+                success: function(layero, menuIndex) {
+                    layero.find('[data-action="close-current"]').on('click', function() { closeTab(url); layer.close(menuIndex); });
+                    layero.find('[data-action="close-others"]').on('click', function() {
+                        Object.keys(tabs).forEach(function(key) { if (key !== url && !tabs[key].isHome) closeTab(key); });
+                        layer.close(menuIndex);
+                    });
+                    layero.find('[data-action="close-all"]').on('click', function() {
+                        Object.keys(tabs).forEach(function(key) { if (!tabs[key].isHome) closeTab(key); });
+                        layer.close(menuIndex);
+                    });
+                }
+            });
+        });
+
+        // ==================== Update User Info ====================
+        function updateUserInfo(data) {
+            var nickname = data.nickname || data.username || '';
+            $('#userName').text(nickname);
+            if (data.avatar) {
+                $('#userAvatar').html('<img src="' + data.avatar + '" alt="avatar">');
+            } else {
+                var initial = nickname.charAt(0).toUpperCase();
+                $('#userAvatar').html(initial || '<i class="layui-icon layui-icon-user"></i>');
+            }
+        }
+
+        // ==================== Theme ====================
+        function applyTheme(theme) {
+            currentTheme = theme || 'dark';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            if (currentTheme === 'dark') {
+                $('#themeIcon').removeClass('layui-icon-moon').addClass('layui-icon-light');
+            } else {
+                $('#themeIcon').removeClass('layui-icon-light').addClass('layui-icon-moon');
+            }
+            // Notify iframes
+            Object.keys(tabs).forEach(function(url) {
+                var tabId = 'tab_' + url.replace(/[^a-zA-Z0-9]/g, '_');
+                var iframe = document.getElementById('iframe_' + tabId);
+                if (iframe && iframe.contentDocument) {
+                    try { iframe.contentDocument.documentElement.setAttribute('data-theme', currentTheme); } catch(e) {}
+                }
+            });
+        }
+
+        // 设置 header 按钮的 title
+        $('#sidebarToggle').attr('title', t('header.toggleSidebar') || '收起/展开');
+        $('#themeToggle').attr('title', t('header.toggleTheme') || '切换主题');
+        $('#frontendBtn').attr('title', t('header.viewSite') || '访问前台');
+        $('#fullscreenBtn').attr('title', t('header.fullscreen') || '全屏');
+
+        $('#themeToggle').on('click', function() {
+            var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+            putApi('/admin/api/rbac/profile/theme/', {theme: newTheme}, function(res) {
+                if (res.code === 200) layer.msg(t('common.success'), {icon: 1, time: 800});
+            });
+        });
+
+        // ==================== Sidebar Toggle ====================
+        $('#sidebarToggle').on('click', function() {
+            sidebarCollapsed = !sidebarCollapsed;
+            var sidebar = $('#adminSidebar');
+            var icon = $(this).find('i');
+            if (sidebarCollapsed) {
+                sidebar.addClass('collapsed');
+                icon.removeClass('layui-icon-shrink-right').addClass('layui-icon-spread-left');
+            } else {
+                sidebar.removeClass('collapsed');
+                icon.removeClass('layui-icon-spread-left').addClass('layui-icon-shrink-right');
+            }
+        });
+
+        // ==================== Fullscreen ====================
+        $('#fullscreenBtn').on('click', function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(function(){});
+                $(this).find('i').removeClass('layui-icon-screen-full').addClass('layui-icon-screen-normal');
+            } else {
+                document.exitFullscreen();
+                $(this).find('i').removeClass('layui-icon-screen-normal').addClass('layui-icon-screen-full');
+            }
+        });
+
+        // ==================== User Dropdown ====================
+        $('#userArea').on('click', function(e) { e.stopPropagation(); $('#userDropdown').toggleClass('show'); });
+        $(document).on('click', function() { $('#userDropdown').removeClass('show'); });
+
+        // ==================== Profile ====================
+        $('#profileBtn').on('click', function(e) {
+            e.stopPropagation();
+            $('#userDropdown').removeClass('show');
+            if (!currentUser) return;
+            layer.open({
+                type: 1, title: t('header.personalCenter'), area: ['480px', 'auto'],
+                content: renderTpl('profileTpl'),
+                success: function(layero) {
+                    // 初始化弹窗中的 data-i18n 元素
+                    layero.find('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); var v = t(key); if(v && v !== key) $(this).text(v); });
+                    // 设置 placeholder
+                    layero.find('#profileNickname').attr('placeholder', t('user.nickname') || '昵称');
+                    layero.find('#profilePhone').attr('placeholder', t('user.phone') || '手机号');
+                    $('#profileUsername').val(currentUser.username);
+                    $('#profileNickname').val(currentUser.nickname || '');
+                    $('#profilePhone').val(currentUser.phone || '');
+                    var roleNames = (currentUser.roles || []).map(function(r) { return r.name; }).join(', ');
+                    $('#profileRoles').val(roleNames || '--');
+                    form.render(null, 'profileForm');
+                    layero.find('#submitProfileBtn').on('click', function() {
+                        var nickname = $('#profileNickname').val().trim();
+                        var phone = $('#profilePhone').val().trim();
+                        putApi('/admin/api/rbac/profile/', {nickname: nickname, phone: phone}, function(res) {
+                            if (res.code === 200) {
+                                layer.msg(t('profile.save.success'), {icon: 1});
+                                currentUser.nickname = nickname;
+                                currentUser.phone = phone;
+                                updateUserInfo(currentUser);
+                                layer.closeAll();
+                            } else {
+                                layer.msg(res.msg || t('common.fail'), {icon: 2});
+                            }
+                        });
+                    });
+                }
+            });
+        });
+
+        // ==================== Change Password ====================
+        $('#changePasswordBtn').on('click', function(e) {
+            e.stopPropagation();
+            $('#userDropdown').removeClass('show');
+            layer.open({
+                type: 1, title: t('header.changePassword'), area: ['480px', 'auto'],
+                content: renderTpl('changePasswordTpl'),
+                success: function(layero) {
+                    // 初始化弹窗中的 data-i18n 元素
+                    layero.find('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); var v = t(key); if(v && v !== key) $(this).text(v); });
+                    // 设置 placeholder
+                    layero.find('input[name="old_password"]').attr('placeholder', t('profile.oldPassword') || '原密码');
+                    layero.find('input[name="new_password"]').attr('placeholder', t('profile.newPassword') || '新密码');
+                    layero.find('input[name="confirm_password"]').attr('placeholder', t('profile.confirmPassword') || '确认密码');
+                    form.render(null, 'changePasswordForm');
+                    layero.find('#submitPasswordBtn').on('click', function() {
+                        var oldPwd = layero.find('input[name="old_password"]').val().trim();
+                        var newPwd = layero.find('input[name="new_password"]').val().trim();
+                        var confirmPwd = layero.find('input[name="confirm_password"]').val().trim();
+                        if (!oldPwd || !newPwd || !confirmPwd) { layer.msg(t('common.inputRequired', [t('login.password')]), {icon: 0}); return; }
+                        if (newPwd.length < 6) { layer.msg(t('profile.password.minLen'), {icon: 0}); return; }
+                        if (newPwd !== confirmPwd) { layer.msg(t('profile.password.diff'), {icon: 0}); return; }
+                        putApi('/admin/api/rbac/profile/password/', {
+                            old_password: oldPwd, new_password: newPwd, confirm_password: confirmPwd
+                        }, function(res) {
+                            if (res.code === 200) {
+                                layer.msg(t('profile.password.success'), {icon: 1, time: 1500}, function() {
+                                    location.href = window.ADMIN_LOGIN_URL;
+                                });
+                            } else {
+                                layer.msg(res.msg || t('common.fail'), {icon: 2});
+                            }
+                        });
+                    });
+                }
+            });
+        });
+
+        // ==================== Frontend Button ====================
+        $(document).on('click', '#frontendBtn', function() {
+            var url = $(this).data('url') || '';
+            if (url) {
+                window.open(url, '_blank');
+            } else {
+                layer.msg(t('common.noFrontendUrl'), {icon: 0, time: 2000});
+            }
+        });
+
+        // ==================== Logout Button ====================
+        // 注意：#logoutBtn 在 #userArea 内部，#userArea 的 click 使用了 stopPropagation
+        // 所以不能在 document 上用事件委托，需要直接绑定
+        $('#logoutBtn').on('click', function(e) {
+            e.stopPropagation();
+            $('#userDropdown').removeClass('show');
+            layer.confirm(t('header.logout.confirm'), {
+                icon: 3,
+                title: t('common.confirm'),
+                btn: [t('common.confirm'), t('common.cancel')]
+            }, function(index) {
+                layer.close(index);
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', '/admin/api/rbac/logout/', true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.withCredentials = true;
+                xhr.onload = function() {
+                    window.location.href = '/admin/login/';
+                };
+                xhr.onerror = function() {
+                    window.location.href = '/admin/login/';
+                };
+                xhr.send(JSON.stringify({}));
+            });
+        });
+
+        // ==================== Utility Functions ====================
+        function escapeHtml(str) {
+            if (!str) return '';
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+
+        // ==================== Session Check (browser back button) ====================
+        // 页面可见时检查 session 是否有效，防止退出后通过浏览器返回按钮进入
+        function checkSession() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/admin/api/rbac/userinfo/', true);
+            xhr.withCredentials = true;
+            xhr.onload = function() {
+                if (xhr.status === 401) {
+                    window.location.replace('/admin/login/');
+                }
+            };
+            xhr.send();
+        }
+        // 监听页面可见性变化（浏览器返回按钮可能触发）
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) checkSession();
+        });
+        // 监听 pageshow 事件（bfcache 恢复时触发）
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) checkSession();
+        });
+
+        function escapeAttr(str) {
+            if (!str) return '';
+            return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+    });
+    </script>
+</body>
+</html>

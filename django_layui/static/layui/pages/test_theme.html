@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>主题测试</title>
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <style>
+        body { padding: 40px; }
+        .test-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--card-shadow);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .info { color: #fff; font-size: 16px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h2>主题测试结果</h2>
+        <p>当前 data-theme: <strong id="currentTheme"></strong></p>
+        <p>--card-bg: <strong id="cardBg"></strong></p>
+        <p>--card-border: <strong id="cardBorder"></strong></p>
+        <p>--card-shadow: <strong id="cardShadow"></strong></p>
+    </div>
+    
+    <div class="test-card">
+        <h3>这是一个测试卡片</h3>
+        <p>如果这个卡片有深色背景、边框和阴影，说明主题工作正常。</p>
+    </div>
+    
+    <script>
+        document.getElementById('currentTheme').textContent = document.documentElement.getAttribute('data-theme');
+        
+        const styles = getComputedStyle(document.body);
+        document.getElementById('cardBg').textContent = styles.getPropertyValue('--card-bg');
+        document.getElementById('cardBorder').textContent = styles.getPropertyValue('--card-border');
+        document.getElementById('cardShadow').textContent = styles.getPropertyValue('--card-shadow');
+    </script>
+</body>
+</html>

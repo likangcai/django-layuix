@@ -1,0 +1,280 @@
+{% load i18n static layui_tags %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} | {% system_name %}</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'layui/favicon.ico' %}">
+    <link rel="stylesheet" href="{% static 'layui/lib/layui.css' %}">
+    <link rel="stylesheet" href="{% static 'layui/css/admin.css' %}">
+    <style>
+        .layui-form-checkbox[lay-skin="primary"] span { color: var(--text-primary); }
+        .layui-form-switch { background: var(--bg-tertiary); border-color: var(--border-color); }
+        .layui-form-switch.layui-form-onswitch { border-color: var(--primary-color); }
+        .layui-form-switch em { color: var(--text-secondary); }
+    </style>
+    {% block extrahead %}{% endblock %}
+    {% block blockbots %}<meta name="robots" content="NONE,NOARCHIVE">{% endblock %}
+</head>
+<body>
+    {% block body %}
+    <div class="admin-layout">
+        <header class="admin-header">
+            <div class="header-left">
+                <div class="sidebar-toggle" id="sidebarToggle" title="{% trans 'Collapse/Expand' %}">
+                    <i class="layui-icon layui-icon-shrink-right"></i>
+                </div>
+                <div class="logo-area">
+                    <div class="logo-icon">
+                        <i class="layui-icon {% logo_icon %}"></i>
+                    </div>
+                    <span class="logo-text">{% system_name %}</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="header-action-btn" id="langBtn" title="Language">
+                    <i class="layui-icon layui-icon-flag"></i>
+                    <span class="lang-label">中文</span>
+                </div>
+                <div class="header-action-btn" id="themeToggle" title="{% trans 'Toggle Theme' %}">
+                    <i class="layui-icon layui-icon-light" id="themeIcon"></i>
+                </div>
+                <div class="header-action-btn" id="themeSelector" title="{% trans 'Select Theme' %}" style="position:relative;">
+                    <i class="layui-icon layui-icon-set"></i>
+                    <div class="theme-dropdown" id="themeDropdown" style="display:none; position:absolute; top:40px; right:0; background:var(--dropdown-bg); border:1px solid var(--border-color); border-radius:4px; box-shadow:var(--shadow-md); min-width:180px; z-index:9999;">
+                        {% for theme in available_themes %}
+                        <div class="theme-option" data-theme="{{ theme.file }}" style="padding:8px 16px; cursor:pointer; color:var(--text-primary); white-space:nowrap;">
+                            {{ theme.name }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% frontend_url as fe_url %}
+                {% if fe_url %}
+                <div class="header-action-btn" id="frontendBtn" title="{% trans 'Frontend' %}" data-url="{{ fe_url }}">
+                    <i class="layui-icon layui-icon-website"></i>
+                </div>
+                {% endif %}
+                <div class="header-action-btn" id="fullscreenBtn" title="{% trans 'Fullscreen' %}">
+                    <i class="layui-icon layui-icon-screen-full"></i>
+                </div>
+                <div class="header-user-area" id="userArea">
+                    <div class="user-avatar" id="userAvatar">
+                        <i class="layui-icon layui-icon-user"></i>
+                    </div>
+                    <span class="user-name" id="userName">{{ user.get_full_name|default:user.username }}</span>
+                    <i class="user-arrow"></i>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a class="dropdown-item" href="{% url 'admin:password_change' %}">
+                            <i class="layui-icon layui-icon-password"></i>
+                            <span>{% trans 'Change password' %}</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item danger" id="logoutBtn" href="javascript:void(0);" data-logout-url="{% url 'admin:logout' %}">
+                            <i class="layui-icon layui-icon-logout"></i>
+                            <span>{% trans 'Log out' %}</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div class="admin-body">
+            <aside class="admin-sidebar" id="adminSidebar">
+                <div class="sidebar-menu" id="sidebarMenu">
+                    {% block sidebar %}
+                    {% endblock %}
+                </div>
+            </aside>
+            <div class="admin-content">
+                {% block messages %}
+                {% if messages %}
+                <div class="messages-container" style="padding: 12px 24px;">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.level_tag }}" style="padding: 8px 16px; margin-bottom: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); color: #e0e0e0;">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endblock %}
+                {% block breadcrumbs %}{% endblock %}
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+    <script src="{% static 'layui/lib/layui.js' %}"></script>
+    <script src="{% static 'layui/js/common.js' %}"></script>
+    <script src="{% static 'layui/js/i18n.js' %}"></script>
+    {% block extrajs %}
+    {# BUG-08 FIX: 加载 Django admin 标准 JS，确保 admin 功能正常 #}
+    <script src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+    <script src="{% static 'admin/js/jquery.init.js' %}"></script>
+    {% endblock %}
+    {% webssh_url as webssh_url_val %}
+    <script>
+    // 全局配置（子页面可通过 window.LAYUI_CONFIG 访问）
+    window.LAYUI_CONFIG = {
+        webssh_url: '{{ webssh_url_val|escapejs }}',
+    };
+    </script>
+    <script>
+    // Theme selector
+    (function(){
+        // 获取可用主题列表
+        var themes = [
+            {% for theme in available_themes %}
+            {name: '{{ theme.name }}', file: '{{ theme.file }}'},
+            {% endfor %}
+        ];
+        
+        var currentTheme = localStorage.getItem('layui_theme') || 'default-dark.css';
+        
+        // 应用主题
+        function applyTheme(themeFile) {
+            // 移除旧的主题样式
+            var oldLink = document.getElementById('theme-css');
+            if (oldLink) {
+                oldLink.remove();
+            }
+            
+            // 创建新的主题样式链接
+            if (themeFile && themeFile !== 'none') {
+                var link = document.createElement('link');
+                link.id = 'theme-css';
+                link.rel = 'stylesheet';
+                link.href = '/static/layui/css/themes/' + themeFile;
+                document.head.appendChild(link);
+            }
+            
+            // 保存主题选择
+            localStorage.setItem('layui_theme', themeFile);
+            currentTheme = themeFile;
+            
+            // 更新下拉菜单选中状态
+            document.querySelectorAll('.theme-option').forEach(function(option) {
+                if (option.getAttribute('data-theme') === themeFile) {
+                    option.style.background = 'var(--bg-hover)';
+                    option.style.fontWeight = '600';
+                } else {
+                    option.style.background = '';
+                    option.style.fontWeight = '';
+                }
+            });
+        }
+        
+        // 初始化主题
+        applyTheme(currentTheme);
+        
+        // 主题选择器按钮
+        var selectorBtn = document.getElementById('themeSelector');
+        var dropdown = document.getElementById('themeDropdown');
+        
+        if (selectorBtn && dropdown) {
+            // 点击显示/隐藏下拉菜单
+            selectorBtn.addEventListener('click', function(e){
+                e.stopPropagation();
+                if (dropdown.style.display === 'none') {
+                    dropdown.style.display = 'block';
+                } else {
+                    dropdown.style.display = 'none';
+                }
+            });
+            
+            // 点击主题选项
+            dropdown.querySelectorAll('.theme-option').forEach(function(option) {
+                option.addEventListener('click', function(e){
+                    e.stopPropagation();
+                    var themeFile = this.getAttribute('data-theme');
+                    applyTheme(themeFile);
+                    dropdown.style.display = 'none';
+                });
+            });
+            
+            // 点击外部关闭下拉菜单
+            document.addEventListener('click', function(){
+                dropdown.style.display = 'none';
+            });
+        }
+        
+        // 原有的主题切换按钮（保留作为快速切换深色/浅色）
+        var icon = document.getElementById('themeIcon');
+        var toggleBtn = document.getElementById('themeToggle');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function(){
+                var newTheme = currentTheme === 'default-dark.css' ? 'default-light.css' : 'default-dark.css';
+                applyTheme(newTheme);
+            });
+        }
+        
+        // Sidebar toggle
+        var sidebarBtn = document.getElementById('sidebarToggle');
+        var sidebar = document.getElementById('adminSidebar');
+        var content = document.querySelector('.admin-content');
+        if (sidebarBtn && sidebar) {
+            sidebarBtn.addEventListener('click', function(){
+                sidebar.classList.toggle('collapsed');
+                if (content) content.classList.toggle('sidebar-collapsed');
+                var icon = sidebarBtn.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('layui-icon-shrink-right');
+                    icon.classList.toggle('layui-icon-spread-left');
+                }
+            });
+        }
+        // Fullscreen
+        var fsBtn = document.getElementById('fullscreenBtn');
+        if (fsBtn) {
+            fsBtn.addEventListener('click', function(){
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(function(){});
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+        }
+        // User dropdown
+        var userArea = document.getElementById('userArea');
+        var userDropdown = document.getElementById('userDropdown');
+        if (userArea && userDropdown) {
+            userArea.addEventListener('click', function(e){
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+            document.addEventListener('click', function(){
+                userDropdown.classList.remove('show');
+            });
+        }
+        // Frontend button
+        var feBtn = document.getElementById('frontendBtn');
+        if (feBtn) {
+            feBtn.addEventListener('click', function(){
+                var url = feBtn.getAttribute('data-url');
+                if (url) window.open(url, '_blank');
+            });
+        }
+        // Logout — Django logout 必须用 POST + CSRF token
+        var logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function(e){
+                e.preventDefault();
+                var logoutUrl = logoutBtn.getAttribute('data-logout-url') || '/admin/logout/';
+                // 动态构造一个隐藏 form 提交 POST 请求
+                var csrfToken = '';
+                var match = document.cookie.match(/csrftoken=([^;]+)/);
+                if (match) csrfToken = match[1];
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = logoutUrl;
+                var csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+                document.body.appendChild(form);
+                form.submit();
+            });
+        }
+    })();
+    </script>
+</body>
+</html>

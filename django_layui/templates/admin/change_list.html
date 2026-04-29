@@ -1,0 +1,23 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_list %}
+{% block content %}
+<div class="page-container" style="padding: 20px 24px;">
+    <div class="admin-card">
+        <div class="card-header">
+            <h3><i class="layui-icon layui-icon-table"></i> {{ title }}</h3>
+            {% block object-tools %}{% endblock %}
+        </div>
+        <div class="card-body">
+            {% block search %}{% search_form cl %}{% endblock %}
+            {% block date_hierarchy %}{% date_hierarchy cl %}{% endblock %}
+            {% block filters %}{% endblock %}
+            <div id="content-main">
+                {% block result_list %}
+                    {% result_list cl %}
+                {% endblock %}
+            </div>
+            {% block pagination %}{% pagination cl %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
