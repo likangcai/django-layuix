@@ -61,6 +61,8 @@ function api(method, url, data, callback) {
         method: method,
         url: url,
         dataType: 'json',
+        contentType: 'application/json',
+        data: data ? JSON.stringify(data) : null,
         beforeSend: function(xhr) {
             // Token认证（优先级更高）
             var token = getToken();

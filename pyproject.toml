@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-layui"
-version = "1.0.3"
+version = "1.0.4"
 description = "A Layui-based Django admin theme"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -48,10 +48,10 @@ all = ["paramiko>=2.0", "webssh>=1.6.0", "openai>=1.0"]
 dev = ["build", "twine", "django-layui[all]"]
 
 [project.urls]
-Homepage = "https://github.com/django-layui/django-layui"
-Documentation = "https://github.com/django-layui/django-layui#readme"
-Repository = "https://github.com/django-layui/django-layui"
-"Bug Tracker" = "https://github.com/django-layui/django-layui/issues"
+Homepage = "https://github.com/likangcai/django-layui"
+Documentation = "https://github.com/likangcai/django-layui#readme"
+Repository = "https://github.com/likangcai/django-layui"
+"Bug Tracker" = "https://github.com/likangcai/django-layui/issues"
 
 [tool.setuptools]
 include-package-data = true

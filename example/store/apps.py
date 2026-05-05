@@ -16,6 +16,13 @@ class StoreConfig(AppConfig):
         """
         try:
             from django_layui.rbac import auto_register_admin_apps, register_menus
+            from django_layui.rbac.models import Menu
+            
+            # 检查是否已经存在完整的菜单结构（如权限管理）
+            # 如果已存在，则跳过自动注册，避免覆盖 init_menu 创建的完整菜单
+            if Menu.objects.filter(name='权限管理').exists():
+                print(f"[StoreConfig.ready] Full menu structure exists, skipping auto registration.")
+                return
             
             # 重要：在调用 auto_register_admin_apps 之前，必须先导入 admin.py
             # 否则 @admin.register 装饰器不会生效，模型不会被注册到 Admin

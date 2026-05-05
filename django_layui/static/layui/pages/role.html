@@ -1,11 +1,28 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>角色管理 - 软件测试管理后台</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
     <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <script>
+        function syncParentTheme() {
+            var theme = 'light';
+            try {
+                if (window.parent && window.parent.document) {
+                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'light';
+                }
+            } catch(e) {}
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        syncParentTheme();
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'themeChange') {
+                document.documentElement.setAttribute('data-theme', e.data.theme);
+            }
+        });
+    </script>
     <style>
         body { padding: 0; margin: 0; background: var(--bg-primary); }
         .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }

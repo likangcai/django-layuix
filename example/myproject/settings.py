@@ -76,6 +76,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -95,11 +99,13 @@ LAYUI_CONFIG = {
     'system_version': '1.0.3',
     'system_description': 'django-layui 功能演示项目',
     'logo_icon': 'layui-icon-code-circle',
+    # 使用自定义图片
+    # 'logo_url': '/static/your-logo.png',
     'login_bg_type': 'gradient',                    # gradient / color / image
     'login_bg_value': 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
     'copyright': 'Copyright © 2025 django-layui Demo',
     
-    # 首页自定义链接（类似 django-simpleui 的 SIMPLEUI_HOME_QUICK）
+    # 首页自定义链接
     'home_quick_links': [
         {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
         {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
@@ -116,7 +122,7 @@ LAYUI_CONFIG = {
     ],
     
     # 'frontend_url': 'http://localhost:3000/',     # 前端项目地址（顶部"访问前台"按钮）
-    'webssh_url': 'http://localhost:8889/',        # WebSSH 服务地址（可选）
+    'webssh_url': 'http://localhost:8897/',        # WebSSH 服务地址（可选）
 }
 
 # ============================================================

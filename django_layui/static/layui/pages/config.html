@@ -1,11 +1,28 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>系统配置 - 软件测试管理后台</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
     <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <script>
+        function syncParentTheme() {
+            var theme = 'light';
+            try {
+                if (window.parent && window.parent.document) {
+                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'light';
+                }
+            } catch(e) {}
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        syncParentTheme();
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'themeChange') {
+                document.documentElement.setAttribute('data-theme', e.data.theme);
+            }
+        });
+    </script>
     <style>
         body { padding: 0; margin: 0; background: var(--bg-primary); }
         .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
@@ -488,6 +505,45 @@ layui.use(['table', 'form', 'layer'], function(){
                 if (res.code === 200) {
                     layer.msg(t('common.updateSuccess'), {icon: 1});
                     layer.closeAll();
+                    // 更新父窗口的全局配置和UI
+                    if (window.parent && window.parent.LAYUI_CONFIG) {
+                        var key = field.key;
+                        if (key === 'webssh_url') {
+                            window.parent.LAYUI_CONFIG.webssh_url = submitData.value;
+                        }
+                        // 更新实时生效的UI配置
+                        if (window.parent.jQuery || window.parent.$) {
+                            var $ = window.parent.jQuery || window.parent.$;
+                            switch(key) {
+                                case 'system_name':
+                                    $('.logo-text').text(submitData.value);
+                                    document.title = submitData.value;
+                                    break;
+                                case 'logo_icon':
+                                    $('.logo-icon i').attr('class', 'layui-icon ' + submitData.value);
+                                    break;
+                                case 'logo_url':
+                                    if (submitData.value) {
+                                        $('.logo-icon').html('<img src="' + submitData.value + '" style="width:32px;height:32px;border-radius:6px;">');
+                                    } else {
+                                        $('.logo-icon').html('<i class="layui-icon layui-icon-code-circle"></i>');
+                                    }
+                                    break;
+                                case 'frontend_url':
+                                    if (submitData.value) {
+                                        $('#frontendBtn').show().attr('data-url', submitData.value);
+                                    } else {
+                                        $('#frontendBtn').hide();
+                                    }
+                                    break;
+                                case 'favicon_url':
+                                    if (submitData.value) {
+                                        $('link[rel="icon"]').attr('href', submitData.value);
+                                    }
+                                    break;
+                            }
+                        }
+                    }
                     loadTable();
                 } else {
                     layer.msg(res.msg || t('common.fail'), {icon: 2});

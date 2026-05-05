@@ -1,11 +1,31 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>菜单管理 - 软件测试管理后台</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
     <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <script>
+        // 同步父页面主题
+        function syncParentTheme() {
+            var theme = 'dark';
+            try {
+                if (window.parent && window.parent.document) {
+                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'dark';
+                }
+            } catch(e) {}
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        // 页面加载时同步主题
+        syncParentTheme();
+        // 监听主题变化
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'themeChange') {
+                document.documentElement.setAttribute('data-theme', e.data.theme);
+            }
+        });
+    </script>
     <style>
         body { padding: 0; margin: 0; background: var(--bg-primary); }
         .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
@@ -115,21 +135,21 @@
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">英文名称</label>
+            <label class="layui-form-label">{{ t('menu.name_en') }}</label>
             <div class="layui-input-block">
                 <input type="text" name="name_en" placeholder="Menu Name (English)" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">简体中文</label>
+            <label class="layui-form-label">{{ t('menu.name_zh_hans') }}</label>
             <div class="layui-input-block">
                 <input type="text" name="name_zh_hans" placeholder="菜单名称（简体中文）" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">繁体中文</label>
+            <label class="layui-form-label">{{ t('menu.name_zh_hant') }}</label>
             <div class="layui-input-block">
-                <input type="text" name="name_zh_hant" placeholder="菜單名稱（繁體中文）" autocomplete="off" class="layui-input">
+                <input type="text" name="name_zh_hant" placeholder="選單名稱（繁體中文）" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
@@ -401,6 +421,9 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                             parent_id: menuData.parent_id || '',
                             menu_type: String(menuData.menu_type),
                             name: menuData.name,
+                            name_en: menuData.name_en || '',
+                            name_zh_hans: menuData.name_zh_hans || '',
+                            name_zh_hant: menuData.name_zh_hant || '',
                             icon: menuData.icon || '',
                             path: menuData.path || '',
                             component: menuData.component || '',
@@ -450,6 +473,9 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             var id = field.id;
             var submitData = {
                 name: field.name,
+                name_en: field.name_en || '',
+                name_zh_hans: field.name_zh_hans || '',
+                name_zh_hant: field.name_zh_hant || '',
                 icon: field.icon || 'layui-icon-app',
                 path: field.path || '',
                 component: field.component || '',

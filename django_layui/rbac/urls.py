@@ -15,6 +15,7 @@ urlpatterns = [
     path('profile/password/', views.profile_password, name='rbac_profile_password'),
     path('profile/theme/', views.profile_theme, name='rbac_profile_theme'),
     path('profile/avatar/', views.profile_avatar, name='rbac_profile_avatar'),
+    path('available-themes/', views.available_themes, name='rbac_available_themes'),
 
     # Upload
     path('upload/image/', views.upload_image, name='rbac_upload_image'),

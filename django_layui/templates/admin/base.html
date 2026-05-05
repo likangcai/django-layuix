@@ -1,6 +1,6 @@
 {% load i18n static layui_tags %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}" data-theme="dark">
+<html lang="{{ LANGUAGE_CODE }}" data-theme="light" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -91,7 +91,7 @@
                 {% if messages %}
                 <div class="messages-container" style="padding: 12px 24px;">
                     {% for message in messages %}
-                    <div class="alert alert-{{ message.level_tag }}" style="padding: 8px 16px; margin-bottom: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); color: #e0e0e0;">{{ message }}</div>
+                    <div class="alert alert-{{ message.level_tag }}" style="padding: 8px 16px; margin-bottom: 8px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">{{ message }}</div>
                     {% endfor %}
                 </div>
                 {% endif %}
@@ -149,6 +149,22 @@
             // 保存主题选择
             localStorage.setItem('layui_theme', themeFile);
             currentTheme = themeFile;
+            
+            // 根据主题文件名自动更新 data-theme 属性（关键修复！）
+            var isLightTheme = themeFile && (themeFile.indexOf('light') !== -1 || 
+                           themeFile.indexOf('Light') !== -1 || 
+                           themeFile.indexOf('cyan-light') !== -1 || 
+                           themeFile.indexOf('green-light') !== -1 ||
+                           themeFile.indexOf('purple-light') !== -1 ||
+                           themeFile.indexOf('pink-light') !== -1 ||
+                           themeFile.indexOf('yellow-light') !== -1 ||
+                           themeFile.indexOf('indigo-light') !== -1);
+            
+            if (isLightTheme) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
             
             // 更新下拉菜单选中状态
             document.querySelectorAll('.theme-option').forEach(function(option) {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -40,14 +40,16 @@
         /* 快速选择卡片 */
         .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 18px; }
         .preset-card {
-            background: var(--bg-secondary, #1e2a3a);
-            border: 1px solid var(--card-border, #2a3a4a);
-            border-radius: 6px; padding: 10px 12px; cursor: pointer; transition: all 0.2s;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 12px 14px; cursor: pointer; transition: all 0.25s;
         }
-        .preset-card:hover { border-color: var(--primary-color); transform: translateY(-1px); }
-        .preset-card.active { border-color: var(--primary-color); background: rgba(24,144,255,0.1); }
-        .preset-card .pc-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
-        .preset-card .pc-model { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+        .preset-card:hover { border-color: var(--primary-color); background: var(--card-hover-bg, var(--card-bg)); transform: translateY(-2px); }
+        .preset-card.active { border-color: var(--primary-color); background: var(--primary-light-bg, rgba(24,144,255,0.15)); box-shadow: 0 0 12px rgba(24,144,255,0.2); }
+        .preset-card.active .pc-name { color: var(--primary-color); }
+        .preset-card.active .pc-model { color: var(--text-secondary); }
+        .preset-card .pc-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+        .preset-card .pc-model { font-size: 12px; color: var(--text-secondary); font-family: monospace; }
     </style>
 </head>
 <body>
@@ -227,7 +229,15 @@ layui.use(['form', 'table', 'layer'], function(){
             method: 'get',
             where: searchParams,
             response: { dataName: 'data', msgName: 'msg' },
-            parseData: function(res){ return { code: res.code === 200 ? 0 : 1, msg: res.msg, count: 0, data: res.data || [] }; },
+            parseData: function(res){ 
+                var data = res.data || [];
+                return { 
+                    code: res.code === 200 ? 0 : 1, 
+                    msg: res.msg, 
+                    count: data.length, 
+                    data: data
+                }; 
+            },
             page: false,
             toolbar: '#toolbarTpl',
             defaultToolbar: ['filter'],
@@ -356,7 +366,7 @@ layui.use(['form', 'table', 'layer'], function(){
             if (res.code === 200) {
                 layer.msg(res.msg || '保存成功', {icon:1});
                 layer.close(closeIdx);
-                loadTable();
+                setTimeout(function(){ loadTable(); }, 100);
             } else {
                 layer.msg(res.msg || '保存失败', {icon:2});
             }

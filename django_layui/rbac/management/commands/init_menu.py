@@ -11,20 +11,39 @@ from django_layui.rbac.models import Menu, Role, SystemConfig
 class Command(BaseCommand):
     help = '初始化默认菜单和角色数据'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            dest='force',
+            default=False,
+            help='强制重新初始化菜单数据（会删除现有菜单）',
+        )
+
     def handle(self, *args, **options):
-        # 如果已有菜单数据则跳过
-        if Menu.objects.exists():
+        force = options.get('force', False)
+        
+        # 如果已有菜单数据且不强制重新初始化，则跳过
+        if Menu.objects.exists() and not force:
             self._init_default_configs()
-            self.stdout.write(self.style.WARNING('菜单数据已存在，跳过初始化。如需重新初始化，请先清空 sys_menu 表。'))
+            self.stdout.write(self.style.WARNING('菜单数据已存在，跳过初始化。如需重新初始化，请使用 --force 参数。'))
             return
+        
+        # 如果强制重新初始化，清空现有菜单
+        if force and Menu.objects.exists():
+            Menu.objects.all().delete()
+            self.stdout.write(self.style.WARNING('已清空现有菜单数据'))
 
         # 创建菜单
         # (name, icon, path, menu_type, sort, parent_name_or_None)
         # menu_type: 1=目录, 2=菜单
         menus_data = [
+            # ---- 仪表盘 ----
+            ('仪表盘', 'layui-icon-chart', '/static/layui/pages/dashboard.html', 2, 0, None),
+
             # ---- 权限管理 ----
             ('权限管理', 'layui-icon-auz', '', 1, 1, None),
-            ('菜单管理', 'layui-icon-menu', '/permission/menu', 2, 1, '权限管理'),
+            ('菜单管理', 'layui-icon-menu-fill', '/permission/menu', 2, 1, '权限管理'),
             ('角色管理', 'layui-icon-group', '/permission/role', 2, 2, '权限管理'),
             ('用户管理', 'layui-icon-username', '/permission/user', 2, 3, '权限管理'),
 
@@ -35,9 +54,15 @@ class Command(BaseCommand):
             ('系统配置', 'layui-icon-set-sm', '/system/config', 2, 3, '系统管理'),
 
             # ---- 运维管理 ----
-            ('运维管理', 'layui-icon-engine', '', 1, 3, None),
-            ('服务器管理', 'layui-icon-host', '/ops/server', 2, 1, '运维管理'),
-            ('AI 配置', 'layui-icon-theme', '/ops/ai-config', 2, 2, '运维管理'),
+            ('运维管理', 'layui-icon-console', '', 1, 3, None),
+            ('服务器管理', 'layui-icon-console', '/ops/server', 2, 1, '运维管理'),
+            ('AI 配置', 'layui-icon-light', '/ops/ai-config', 2, 2, '运维管理'),
+
+            # ---- 业务示例 ----
+            ('业务示例', 'layui-icon-cart', '', 1, 4, None),
+            ('商品管理', 'layui-icon-file', '/admin/store/product/', 2, 1, '业务示例'),
+            ('订单管理', 'layui-icon-form', '/admin/store/order/', 2, 2, '业务示例'),
+            ('分类管理', 'layui-icon-folder', '/admin/store/category/', 2, 3, '业务示例'),
         ]
 
         created = {}

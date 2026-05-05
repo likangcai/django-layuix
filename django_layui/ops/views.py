@@ -316,7 +316,7 @@ def _save_ai_configs(configs):
             if config_id:
                 try:
                     cfg_obj = AIModelConfig.objects.get(id=config_id)
-                except AIModelConfig.DoesNotExist:
+                except (AIModelConfig.DoesNotExist, ValueError):
                     cfg_obj = AIModelConfig()
             else:
                 cfg_obj = AIModelConfig()
@@ -332,6 +332,11 @@ def _save_ai_configs(configs):
             
             # 保存（save()方法会自动处理 is_default 的唯一性）
             cfg_obj.save()
+            
+            # 将数据库生成的真实ID更新回configs列表（解决新建时ID不匹配的问题）
+            if not config_id or config_id != str(cfg_obj.id):
+                cfg_data['id'] = str(cfg_obj.id)
+                
     except Exception as e:
         print(f"Error: Failed to save AI configs to database: {e}")
 
@@ -531,7 +536,8 @@ def ai_config_save(request):
         }
         configs.append(new_entry)
         _save_ai_configs(configs)
-        return success_response({'id': new_id}, msg='配置添加成功')
+        # 返回数据库生成的真实ID（_save_ai_configs已更新new_entry的id）
+        return success_response({'id': new_entry.get('id', new_id)}, msg='配置添加成功')
 
 
 @csrf_exempt

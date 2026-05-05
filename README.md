@@ -652,6 +652,28 @@ django_layui/templates/admin/change_form.html → 模型编辑页
 | **OperationLog** | `sys_operation_log` | 自动记录用户操作日志 |
 | **SystemConfig** | `sys_config` | 系统配置键值对，支持多种值类型 |
 
+### Menu 模型字段详解
+
+| 字段名 | 类型 | 必填 | 说明 | 示例 |
+|--------|------|------|------|------|
+| `name` | CharField(50) | ✅ | 菜单名称（中文） | `'菜单管理'` |
+| `name_en` | CharField(50) | ❌ | 英文名称（国际化） | `'Menu Management'` |
+| `name_zh_hans` | CharField(50) | ❌ | 简体中文名称 | `'菜单管理'` |
+| `icon` | CharField(50) | ❌ | Layui 图标类名 | `'layui-icon-menu-fill'` |
+| `path` | CharField(200) | ⚠️ | 路由地址（**核心字段**） | `'/permission/menu'` |
+| `component` | CharField(200) | ❌ | 组件路径（预留字段） | `'/pages/menu.vue'` |
+| `menu_type` | IntegerField | ✅ | 类型：1=目录, 2=菜单, 3=按钮 | `2` |
+| `permission` | CharField(100) | ⚠️ | 权限标识（**按钮必填**） | `'menu:add'` |
+| `sort` | IntegerField | ❌ | 排序号 | `1` |
+| `visible` | BooleanField | ❌ | 是否显示 | `True` |
+| `status` | BooleanField | ❌ | 是否启用 | `True` |
+
+> 📖 **详细文档**: [权限系统使用指南](docs/PERMISSION_SYSTEM_GUIDE.md)
+> - 权限标识命名规范
+> - 前端权限控制示例
+> - 实战案例：创建新业务模块
+> - 常见问题解答
+
 ---
 
 ## 管理命令
@@ -772,6 +794,7 @@ python manage.py runserver
 - [首页自定义快速链接配置](docs/HOME_QUICK_LINKS_GUIDE.md) - 仪表盘的快速入口配置
 - [首页快速链接速查表](docs/HOME_QUICK_LINKS_QUICKREF.md) - 快速参考和常用示例
 - [菜单扩展指南](docs/MENU_EXTENSION_GUIDE.md) - 如何添加自定义应用菜单
+- [**权限系统使用指南**](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例 ⭐ **新增**
 - [AJAX Admin 使用指南](docs/AJAX_ADMIN_GUIDE.md) - AJAX 增强功能
 - [**国际化 (i18n) 使用指南**](docs/I18N_GUIDE.md) - 中英文双语切换与多语言开发
 - [**国际化 (i18n) 快速参考**](docs/I18N_QUICKREF.md) - i18n 翻译键速查表

@@ -27,12 +27,21 @@ def api_login_required(view_func):
 
 
 def get_request_body(request):
-    """Get parsed request body"""
+    """Get parsed request body - supports JSON and form data for all HTTP methods"""
     try:
         if request.content_type == 'application/json':
             return json.loads(request.body)
-        return dict(request.POST)
-    except (json.JSONDecodeError, ValueError):
+        # For form data (application/x-www-form-urlencoded), try POST first, then parse body for PUT/PATCH
+        if request.POST:
+            return dict(request.POST)
+        # Try to parse form data from body for PUT/PATCH requests
+        if request.body:
+            from urllib.parse import parse_qs
+            data = parse_qs(request.body.decode('utf-8'))
+            # parse_qs returns lists, convert single-item lists to values
+            return {k: v[0] if len(v) == 1 else v for k, v in data.items()}
+        return {}
+    except (json.JSONDecodeError, ValueError, Exception):
         return {}
 
 
@@ -75,6 +84,14 @@ def user_info(request):
         user = request.user
 
     # Build user data
+    def get_client_ip(request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip = request.META.get('REMOTE_ADDR', '')
+        return ip
+
     user_data = {
         'id': user.id,
         'username': user.username,
@@ -84,14 +101,15 @@ def user_info(request):
         'email': getattr(user, 'email', ''),
         'is_superuser': user.is_superuser,
         'is_active': user.is_active,
-        'theme': getattr(user, 'theme', 'dark'),
+        'theme': getattr(user, 'theme', '默认深色'),
         'language': getattr(user, 'language', 'zh-hans'),
+        'ip': get_client_ip(request),
     }
 
     # Get roles
     roles = []
     if hasattr(user, 'roles'):
-        roles = [{'id': r.id, 'name': r.name, 'code': r.code} for r in user.roles.filter(status=True)]
+        roles = [{'id': r.id, 'name': r.name, 'code': r.code, 'description': r.description or ''} for r in user.roles.filter(status=True)]
     user_data['roles'] = roles
 
     # Get menus based on permissions
@@ -602,15 +620,18 @@ def profile_password(request):
 @csrf_exempt
 @api_login_required
 def profile_theme(request):
-    """Update user theme preference"""
+    """Update user theme preference - supports all 25 themes from themes.py"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
 
     body = get_request_body(request)
-    theme = body.get('theme', 'dark')
+    theme = body.get('theme', '默认深色')
 
-    if theme not in ('dark', 'light'):
-        return error_response('无效的主题值', 400)
+    # Validate theme against available themes from themes.py
+    from .themes import get_all_themes
+    valid_themes = [t['name'] for t in get_all_themes()]
+    if theme not in valid_themes:
+        return error_response(f'无效的主题值。允许的主题：{", ".join(valid_themes)}', 400)
 
     user = request.user
     if hasattr(user, 'theme'):
@@ -618,6 +639,19 @@ def profile_theme(request):
         user.save(update_fields=['theme'])
 
     return success_response(msg='主题已切换')
+
+
+@csrf_exempt
+@api_login_required
+def available_themes(request):
+    """GET /api/rbac/available-themes/ - Get all available themes for frontend selection"""
+    from .themes import get_all_themes
+    
+    themes = get_all_themes()
+    # Return theme names for frontend dropdown/list
+    data = [{'name': t['name'], 'file': t['file']} for t in themes]
+    
+    return success_response(data)
 
 
 @csrf_exempt
@@ -769,6 +803,9 @@ def menu_tree(request):
             'id': m.id,
             'parent_id': m.parent_id,
             'name': m.name,
+            'name_en': m.name_en,
+            'name_zh_hans': m.name_zh_hans,
+            'name_zh_hant': m.name_zh_hant,
             'icon': m.icon,
             'path': m.path,
             'component': m.component,
@@ -802,6 +839,9 @@ def menu_detail(request, pk):
             'id': menu.id,
             'parent_id': menu.parent_id,
             'name': menu.name,
+            'name_en': menu.name_en,
+            'name_zh_hans': menu.name_zh_hans,
+            'name_zh_hant': menu.name_zh_hant,
             'icon': menu.icon,
             'path': menu.path,
             'component': menu.component,
@@ -820,6 +860,12 @@ def menu_detail(request, pk):
         body = get_request_body(request)
         if 'name' in body:
             menu.name = body['name']
+        if 'name_en' in body:
+            menu.name_en = body['name_en']
+        if 'name_zh_hans' in body:
+            menu.name_zh_hans = body['name_zh_hans']
+        if 'name_zh_hant' in body:
+            menu.name_zh_hant = body['name_zh_hant']
         if 'parent_id' in body:
             menu.parent_id = body['parent_id'] if body['parent_id'] else None
         if 'icon' in body:
@@ -868,6 +914,9 @@ def menu_create(request):
     parent_id = body.get('parent_id')
     menu = Menu(
         name=name,
+        name_en=body.get('name_en', ''),
+        name_zh_hans=body.get('name_zh_hans', ''),
+        name_zh_hant=body.get('name_zh_hant', ''),
         parent_id=parent_id if parent_id else None,
         icon=body.get('icon', 'layui-icon-app'),
         path=body.get('path', ''),

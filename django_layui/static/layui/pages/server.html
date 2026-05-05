@@ -1,39 +1,56 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服务器管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
     <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <script>
+        function syncParentTheme() {
+            var theme = 'light';
+            try {
+                if (window.parent && window.parent.document) {
+                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'light';
+                }
+            } catch(e) {}
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        syncParentTheme();
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'themeChange') {
+                document.documentElement.setAttribute('data-theme', e.data.theme);
+            }
+        });
+    </script>
     <style>
         body { padding: 0; margin: 0; background: var(--bg-primary); }
         .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
         .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
         .layui-card-header { border-bottom: 1px solid var(--card-border); }
         .auth-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
-        .auth-tag.password { background: rgba(30, 159, 255, 0.1); color: #1e9fff; }
-        .auth-tag.key { background: rgba(24, 144, 255, 0.1); color: #1890ff; }
+        .auth-tag.password { background: rgba(30, 159, 255, 0.1); color: var(--primary-color); }
+        .auth-tag.key { background: rgba(24, 144, 255, 0.1); color: var(--primary-color); }
 
         /* 日志查看器样式 */
         .log-viewer {
-            background: #1a1a2e;
+            background: var(--bg-secondary);
             border-radius: 8px;
             overflow: hidden;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
         }
         .log-viewer-header {
-            background: #16213e;
+            background: var(--bg-tertiary, var(--bg-secondary));
             padding: 8px 14px;
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #a0a0a0;
+            color: var(--text-secondary);
             font-size: 13px;
         }
         .log-viewer-body {
             padding: 14px;
-            color: #00ff88;
+            color: var(--success-color, #27c93f);
             font-size: 13px;
             line-height: 1.6;
             max-height: 480px;
@@ -43,51 +60,51 @@
             word-break: break-all;
         }
         .log-viewer-body::-webkit-scrollbar { width: 6px; }
-        .log-viewer-body::-webkit-scrollbar-track { background: #1a1a2e; }
-        .log-viewer-body::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        .log-viewer-body .log-empty { color: #666; text-align: center; padding: 40px 0; }
+        .log-viewer-body::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        .log-viewer-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        .log-viewer-body .log-empty { color: var(--text-muted); text-align: center; padding: 40px 0; }
 
         /* AI 分析结果样式 */
         .ai-analysis-panel {
-            background: var(--bg-secondary, #1e2a3a);
+            background: var(--bg-secondary);
             border-radius: 8px;
             overflow: hidden;
             margin-top: 12px;
-            border: 1px solid var(--card-border, #2a3a4a);
+            border: 1px solid var(--card-border);
         }
         .ai-analysis-header {
-            background: #16213e;
+            background: var(--bg-tertiary, var(--bg-secondary));
             padding: 8px 14px;
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #a0a0a0;
+            color: var(--text-secondary);
             font-size: 13px;
         }
         .ai-analysis-body {
             padding: 16px;
-            color: var(--text-primary, #e0e0e0);
+            color: var(--text-primary);
             font-size: 13px;
             line-height: 1.8;
             max-height: 400px;
             overflow-y: auto;
         }
         .ai-analysis-body::-webkit-scrollbar { width: 6px; }
-        .ai-analysis-body::-webkit-scrollbar-track { background: var(--bg-secondary, #1e2a3a); }
-        .ai-analysis-body::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        .ai-analysis-body h2 { color: #1890ff; margin: 12px 0 8px; font-size: 15px; }
-        .ai-analysis-body h3 { color: #40a9ff; margin: 10px 0 6px; font-size: 14px; }
+        .ai-analysis-body::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        .ai-analysis-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        .ai-analysis-body h2 { color: var(--primary-color); margin: 12px 0 8px; font-size: 15px; }
+        .ai-analysis-body h3 { color: var(--primary-light, var(--primary-color)); margin: 10px 0 6px; font-size: 14px; }
         .ai-analysis-body p { margin: 6px 0; }
         .ai-analysis-body code {
-            background: rgba(0,0,0,0.3);
+            background: var(--code-bg, rgba(0,0,0,0.2));
             padding: 2px 6px;
             border-radius: 3px;
             font-family: 'Consolas', monospace;
             font-size: 12px;
-            color: #00ff88;
+            color: var(--success-color, #27c93f);
         }
         .ai-analysis-body pre {
-            background: rgba(0,0,0,0.4);
+            background: var(--code-bg, rgba(0,0,0,0.3));
             padding: 10px 14px;
             border-radius: 6px;
             overflow-x: auto;
@@ -102,7 +119,7 @@
             margin: 6px 0;
         }
         .ai-analysis-body li { margin: 4px 0; }
-        .ai-analysis-body strong { color: #ffd700; }
+        .ai-analysis-body strong { color: var(--warning-color, #ffd700); }
     </style>
 </head>
 <body>
@@ -697,19 +714,15 @@ layui.use(['table', 'form', 'layer'], function(){
         getApi('/admin/api/ops/servers/' + serverData.id + '/detail/', function(res) {
             if (res.code === 200 && res.data) {
                 var detail = res.data;
-                
-                console.log('=== WebSSH Debug Info ===');
-                console.log('Server ID:', detail.id);
-                console.log('Host:', detail.host);
-                console.log('Port:', detail.port);
-                console.log('Username:', detail.username);
-                console.log('Auth Type:', detail.auth_type);
-                console.log('Has Password:', !!detail.password);
-                console.log('Password Length:', detail.password ? detail.password.length : 0);
-                console.log('Has Private Key:', !!detail.private_key);
+
+                // 动态获取最新的 webssh_url 配置（确保使用最新值）
+                var currentWebsshUrl = WEBSSH_URL;
+                if (window.parent && window.parent.LAYUI_CONFIG && window.parent.LAYUI_CONFIG.webssh_url) {
+                    currentWebsshUrl = window.parent.LAYUI_CONFIG.webssh_url;
+                }
                 
                 // 构建 webssh URL，支持自动填入连接信息
-                var websshUrl = WEBSSH_URL;
+                var websshUrl = currentWebsshUrl;
                 if (websshUrl.indexOf('?') === -1) {
                     websshUrl += '?';
                 } else {
@@ -721,20 +734,15 @@ layui.use(['table', 'form', 'layer'], function(){
                 
                 // 如果有密码，需要 base64 编码后传递（webssh 官方要求）
                 if (detail.auth_type === 'password' && detail.password) {
-                    // 使用 btoa 进行 base64 编码
                     var encodedPassword = btoa(encodeURIComponent(detail.password));
                     websshUrl += '&password=' + encodedPassword;
-                    console.log('Added password parameter (base64 encoded)');
                 }
                 
                 // 如果是密钥认证，传递私钥（也需要 base64 编码）
                 if (detail.auth_type === 'key' && detail.private_key) {
                     var encodedKey = btoa(encodeURIComponent(detail.private_key));
                     websshUrl += '&privatekey=' + encodedKey;
-                    console.log('Added privatekey parameter (base64 encoded)');
                 }
-                
-                console.log('Final WebSSH URL:', websshUrl.replace(/password=[^&]+/, 'password=***').replace(/privatekey=[^&]+/, 'privatekey=***'));
 
                 // 在新窗口打开 webssh
                 layer.confirm(

@@ -1,11 +1,29 @@
 {% load i18n static layui_tags %}
 {% static_version as sv %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}" data-theme="dark">
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% system_name %}</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme') || 'light';
+            var themeMap = {
+                '默认深色': 'dark', '默认浅色': 'light', 'Element蓝': 'light',
+                'Ant Design黑': 'dark', 'AdminLTE蓝': 'dark', '企业紫': 'dark-violet',
+                '企业红': 'dark-coral', '清新绿': 'light-forest', '科技橙': 'dark-amber',
+                '深邃黑': 'dark', '优雅灰': 'dark', '天空蓝': 'light-ocean',
+                '樱花粉': 'light-rose', '极光紫': 'dark-violet', '暗夜蓝': 'dark-ocean',
+                '薄荷青': 'dark-forest', '烈焰红': 'dark-coral', '商务蓝': 'dark-ocean',
+                '高端黑': 'dark', '活力橙': 'dark-amber', '森林绿': 'dark-forest',
+                '深海蓝': 'dark-ocean', '玫瑰金': 'light-rose', '极客绿': 'dark-forest',
+                '赛博朋克': 'dark-amber'
+            };
+            var cssTheme = themeMap[theme] || theme;
+            document.documentElement.setAttribute('data-theme', cssTheme);
+        })();
+    </script>
     {% favicon_url as favicon %}
     {% if favicon %}
     <link rel="icon" type="image/x-icon" href="{{ favicon }}">
@@ -40,10 +58,57 @@
                 <div class="header-action-btn" id="langBtn" title="中文">
                     <i class="layui-icon layui-icon-flag"></i>
                 </div>
-                <div class="header-action-btn" id="themeToggle" title="">
+                <div class="header-action-btn theme-btn" id="themeBtn" title="主题选择">
+                    <i class="layui-icon layui-icon-theme" id="themeBtnIcon"></i>
+                    <i class="layui-icon layui-icon-down theme-arrow"></i>
+                    <div class="theme-dropdown" id="themeDropdown">
+                        <div class="theme-group">
+                            <div class="theme-group-title" data-translate="theme.uiFrameworks">UI框架风格</div>
+                            <div class="theme-item" data-theme="Element蓝"><span class="theme-color" style="background:#409EFF;"></span><span data-translate="theme.elementBlue">Element蓝</span></div>
+                            <div class="theme-item" data-theme="Ant Design黑"><span class="theme-color" style="background:#1890FF;"></span><span data-translate="theme.antDesignDark">Ant Design黑</span></div>
+                            <div class="theme-item" data-theme="AdminLTE蓝"><span class="theme-color" style="background:#3C8DBC;"></span><span data-translate="theme.adminlteBlue">AdminLTE蓝</span></div>
+                        </div>
+                        <div class="theme-group">
+                            <div class="theme-group-title" data-translate="theme.enterprise">企业色系</div>
+                            <div class="theme-item" data-theme="企业紫"><span class="theme-color" style="background:#8263B1;"></span><span data-translate="theme.enterprisePurple">企业紫</span></div>
+                            <div class="theme-item" data-theme="企业红"><span class="theme-color" style="background:#C9333E;"></span><span data-translate="theme.enterpriseRed">企业红</span></div>
+                            <div class="theme-item" data-theme="商务蓝"><span class="theme-color" style="background:#3BA1DF;"></span><span data-translate="theme.businessBlue">商务蓝</span></div>
+                            <div class="theme-item" data-theme="高端黑"><span class="theme-color" style="background:#1F2C39;"></span><span data-translate="theme.premiumBlack">高端黑</span></div>
+                        </div>
+                        <div class="theme-group">
+                            <div class="theme-group-title" data-translate="theme.natural">自然色系</div>
+                            <div class="theme-item" data-theme="清新绿"><span class="theme-color" style="background:#27AD60;"></span><span data-translate="theme.freshGreen">清新绿</span></div>
+                            <div class="theme-item" data-theme="森林绿"><span class="theme-color" style="background:#19A97B;"></span><span data-translate="theme.forestGreen">森林绿</span></div>
+                            <div class="theme-item" data-theme="天空蓝"><span class="theme-color" style="background:#02C0CE;"></span><span data-translate="theme.skyBlue">天空蓝</span></div>
+                            <div class="theme-item" data-theme="深海蓝"><span class="theme-color" style="background:#00695C;"></span><span data-translate="theme.deepSeaBlue">深海蓝</span></div>
+                        </div>
+                        <div class="theme-group">
+                            <div class="theme-group-title" data-translate="theme.vibrant">活力色系</div>
+                            <div class="theme-item" data-theme="科技橙"><span class="theme-color" style="background:#FF6B35;"></span><span data-translate="theme.techOrange">科技橙</span></div>
+                            <div class="theme-item" data-theme="活力橙"><span class="theme-color" style="background:#F57C00;"></span><span data-translate="theme.vibrantOrange">活力橙</span></div>
+                            <div class="theme-item" data-theme="樱花粉"><span class="theme-color" style="background:#FF6B9D;"></span><span data-translate="theme.cherryBlossom">樱花粉</span></div>
+                            <div class="theme-item" data-theme="玫瑰金"><span class="theme-color" style="background:#B76E79;"></span><span data-translate="theme.roseGold">玫瑰金</span></div>
+                        </div>
+                        <div class="theme-group">
+                            <div class="theme-group-title" data-translate="theme.darkThemes">暗色主题</div>
+                            <div class="theme-item" data-theme="深邃黑"><span class="theme-color" style="background:#00BCD4;"></span><span data-translate="theme.deepBlack">深邃黑</span></div>
+                            <div class="theme-item" data-theme="暗夜蓝"><span class="theme-color" style="background:#3E4295;"></span><span data-translate="theme.nightBlue">暗夜蓝</span></div>
+                            <div class="theme-item" data-theme="薄荷青"><span class="theme-color" style="background:#2F9688;"></span><span data-translate="theme.mintGreen">薄荷青</span></div>
+                            <div class="theme-item" data-theme="烈焰红"><span class="theme-color" style="background:#AA3130;"></span><span data-translate="theme.blazingRed">烈焰红</span></div>
+                            <div class="theme-item" data-theme="极光紫"><span class="theme-color" style="background:#667eea;"></span><span data-translate="theme.auroraPurple">极光紫</span></div>
+                        </div>
+                        <div class="theme-group">
+                            <div class="theme-group-title" data-translate="theme.unique">个性主题</div>
+                            <div class="theme-item" data-theme="优雅灰"><span class="theme-color" style="background:#213A53;"></span><span data-translate="theme.elegantGray">优雅灰</span></div>
+                            <div class="theme-item" data-theme="极客绿"><span class="theme-color" style="background:#00FF00;"></span><span data-translate="theme.techGeekGreen">极客绿</span></div>
+                            <div class="theme-item" data-theme="赛博朋克"><span class="theme-color" style="background:#FCEE0A;"></span><span data-translate="theme.cyberpunk">赛博朋克</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-action-btn" id="themeToggle" title="深色/浅色切换">
                     <i class="layui-icon layui-icon-light" id="themeIcon"></i>
                 </div>
-                <div class="header-action-btn" id="frontendBtn" title="">
+                <div class="header-action-btn" id="frontendBtn" title="访问前台">
                     <i class="layui-icon layui-icon-website"></i>
                 </div>
                 <div class="header-action-btn" id="fullscreenBtn" title="">
@@ -469,37 +534,106 @@
             }
         }
 
+        // Dark theme names for quick toggle
+        var darkThemes = ['dark', '默认深色', 'Ant Design黑', 'AdminLTE蓝', '企业紫', '企业红', '深邃黑', '暗夜蓝', '薄荷青', '烈焰红', '极光紫', '极客绿', '赛博朋克'];
+        
+        // Theme name mapping: Chinese name -> CSS data-theme value
+        var themeNameMap = {
+            '默认深色': 'dark',
+            '默认浅色': 'light',
+            'Element蓝': 'light',
+            'Ant Design黑': 'dark',
+            'AdminLTE蓝': 'dark',
+            '企业紫': 'dark-violet',
+            '企业红': 'dark-coral',
+            '清新绿': 'light-forest',
+            '科技橙': 'dark-amber',
+            '深邃黑': 'dark',
+            '优雅灰': 'dark',
+            '天空蓝': 'light-ocean',
+            '樱花粉': 'light-rose',
+            '极光紫': 'dark-violet',
+            '暗夜蓝': 'dark-ocean',
+            '薄荷青': 'dark-forest',
+            '烈焰红': 'dark-coral',
+            '商务蓝': 'dark-ocean',
+            '高端黑': 'dark',
+            '活力橙': 'dark-amber',
+            '森林绿': 'dark-forest',
+            '深海蓝': 'dark-ocean',
+            '玫瑰金': 'light-rose',
+            '极客绿': 'dark-forest',
+            '赛博朋克': 'dark-amber'
+        };
+        
         // ==================== Theme ====================
         function applyTheme(theme) {
-            currentTheme = theme || 'dark';
-            document.documentElement.setAttribute('data-theme', currentTheme);
-            if (currentTheme === 'dark') {
+            currentTheme = theme || '默认深色';
+            // Map Chinese theme name to CSS data-theme value
+            var cssTheme = themeNameMap[currentTheme] || currentTheme;
+            document.documentElement.setAttribute('data-theme', cssTheme);
+            
+            // Update theme icon based on dark/light category
+            if (darkThemes.includes(currentTheme)) {
                 $('#themeIcon').removeClass('layui-icon-moon').addClass('layui-icon-light');
             } else {
                 $('#themeIcon').removeClass('layui-icon-light').addClass('layui-icon-moon');
             }
+            
+            // Update active theme item
+            $('.theme-item').removeClass('active');
+            $('.theme-item[data-theme="' + currentTheme + '"]').addClass('active');
+            
             // Notify iframes
             Object.keys(tabs).forEach(function(url) {
                 var tabId = 'tab_' + url.replace(/[^a-zA-Z0-9]/g, '_');
                 var iframe = document.getElementById('iframe_' + tabId);
                 if (iframe && iframe.contentDocument) {
-                    try { iframe.contentDocument.documentElement.setAttribute('data-theme', currentTheme); } catch(e) {}
+                    try { iframe.contentDocument.documentElement.setAttribute('data-theme', cssTheme); } catch(e) {}
                 }
             });
         }
 
         // 设置 header 按钮的 title
         $('#sidebarToggle').attr('title', t('header.toggleSidebar') || '收起/展开');
-        $('#themeToggle').attr('title', t('header.toggleTheme') || '切换主题');
+        $('#themeToggle').attr('title', t('header.toggleTheme') || '切换深浅色');
+        $('#themeBtn').attr('title', t('header.selectTheme') || '主题选择');
         $('#frontendBtn').attr('title', t('header.viewSite') || '访问前台');
         $('#fullscreenBtn').attr('title', t('header.fullscreen') || '全屏');
 
+        // Quick dark/light toggle
         $('#themeToggle').on('click', function() {
-            var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            var newTheme = darkThemes.includes(currentTheme) ? '默认浅色' : '默认深色';
             applyTheme(newTheme);
             putApi('/admin/api/rbac/profile/theme/', {theme: newTheme}, function(res) {
                 if (res.code === 200) layer.msg(t('common.success'), {icon: 1, time: 800});
             });
+        });
+        
+        // Theme dropdown toggle
+        $('#themeBtn').on('click', function(e) {
+            e.stopPropagation();
+            $('#themeDropdown').toggleClass('show');
+            $('#themeBtn').toggleClass('open');
+        });
+        
+        // Theme item click
+        $(document).on('click', '.theme-item', function() {
+            var newTheme = $(this).data('theme');
+            if (newTheme && newTheme !== currentTheme) {
+                applyTheme(newTheme);
+                putApi('/admin/api/rbac/profile/theme/', {theme: newTheme}, function(res) {
+                    if (res.code === 200) layer.msg(t('common.success'), {icon: 1, time: 800});
+                });
+            }
+            $('#themeDropdown').removeClass('show');
+            $('#themeBtn').removeClass('open');
+        });
+        
+        // Close theme dropdown when clicking elsewhere
+        $(document).on('click', function() {
+            $('#themeDropdown').removeClass('show');
+            $('#themeBtn').removeClass('open');
         });
 
         // ==================== Sidebar Toggle ====================
