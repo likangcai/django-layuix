@@ -1,33 +1,24 @@
 # -*- coding: utf-8 -*-
 """
 Django-Layui Theme System
-参考 django-simpleui 的主题机制,为 Layui 打造的多主题系统
-
-支持28+种主题切换,包括:
-- 经典色系 (深色/浅色)
-- Element UI风格
-- Ant Design风格  
-- Admin LTE风格
-- 自定义渐变主题
-等...
+Supports 26+ theme colors including:
+- Classic themes (dark/light)
+- Element UI style
+- Ant Design style
+- Admin LTE style
+- Custom gradient themes
 """
-
-# Django-Layui 主题配置
-# 每个主题包含:
-# - name: 主题名称(显示给用户)
-# - file: CSS文件名
-# - colors: 配色方案字典
 
 DJANGO_LAYUI_THEMES = [
     {
         'name': '默认深色',
         'file': 'default-dark.css',
         'colors': {
-            'primary': '#1E9FFF',      # 主色调
-            'menu_bg': '#232935',      # 菜单背景
-            'menu_text': '#BFCBD9',    # 菜单文字
-            'header_bg': '#232935',    # 顶部栏背景
-            'logo_color': '#FFFFFF',   # Logo颜色
+            'primary': '#1E9FFF',
+            'menu_bg': '#232935',
+            'menu_text': '#BFCBD9',
+            'header_bg': '#232935',
+            'logo_color': '#FFFFFF',
         }
     },
     {
@@ -36,9 +27,9 @@ DJANGO_LAYUI_THEMES = [
         'colors': {
             'primary': '#1E9FFF',
             'menu_bg': '#FFFFFF',
-            'menu_text': '#666666',
+            'menu_text': '#646a73',
             'header_bg': '#FFFFFF',
-            'logo_color': '#333333',
+            'logo_color': '#1E9FFF',
         }
     },
     {
@@ -59,7 +50,7 @@ DJANGO_LAYUI_THEMES = [
             'primary': '#1890FF',
             'menu_bg': '#001529',
             'menu_text': 'rgba(255,255,255,0.65)',
-            'header_bg': '#FFFFFF',
+            'header_bg': '#001529',
             'logo_color': '#FFFFFF',
         }
     },
@@ -90,7 +81,7 @@ DJANGO_LAYUI_THEMES = [
         'file': 'enterprise-red.css',
         'colors': {
             'primary': '#C9333E',
-            'menu_bg': '#263238',
+            'menu_bg': '#1a1a1a',
             'menu_text': '#B0BEC5',
             'header_bg': '#C9333E',
             'logo_color': '#FFFFFF',
@@ -126,7 +117,7 @@ DJANGO_LAYUI_THEMES = [
             'menu_bg': '#333333',
             'menu_text': '#B0BEC5',
             'header_bg': '#333333',
-            'logo_color': '#FFFFFF',
+            'logo_color': '#E0F7FA',
         }
     },
     {
@@ -181,7 +172,7 @@ DJANGO_LAYUI_THEMES = [
             'menu_bg': '#E0E0E0',
             'menu_text': '#666666',
             'header_bg': '#FFFFFF',
-            'logo_color': '#FFFFFF',
+            'logo_color': '#3E4295',
         }
     },
     {
@@ -291,49 +282,33 @@ DJANGO_LAYUI_THEMES = [
             'menu_bg': '#000000',
             'menu_text': '#00F0FF',
             'header_bg': 'linear-gradient(90deg, #FCEE0A 0%, #00F0FF 100%)',
-            'logo_color': '#FCEE0A',
+            'logo_color': '#000000',
         }
     },
 ]
 
 
-def get_theme_by_name(theme_name):
-    """
-    根据主题名称获取主题配置
-    
-    Args:
-        theme_name: 主题名称
-        
-    Returns:
-        dict: 主题配置字典,未找到返回None
-    """
+def get_theme_by_name(name):
+    """Get theme configuration by display name"""
     for theme in DJANGO_LAYUI_THEMES:
-        if theme['name'] == theme_name:
+        if theme['name'] == name:
             return theme
     return None
 
 
 def get_all_themes():
-    """
-    获取所有可用主题列表
-    
-    Returns:
-        list: 主题列表
-    """
+    """Get all available themes"""
     return DJANGO_LAYUI_THEMES
 
 
-def get_theme_colors(theme_name):
-    """
-    获取主题的配色方案
-    
-    Args:
-        theme_name: 主题名称
-        
-    Returns:
-        dict: 配色方案字典
-    """
-    theme = get_theme_by_name(theme_name)
+def get_theme_names():
+    """Get all theme display names"""
+    return [theme['name'] for theme in DJANGO_LAYUI_THEMES]
+
+
+def get_theme_colors(name):
+    """Get color configuration for a specific theme"""
+    theme = get_theme_by_name(name)
     if theme:
         return theme.get('colors', {})
     return {}

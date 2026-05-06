@@ -1,0 +1,279 @@
+{% load i18n static layui_tags %}
+{% static_version as sv %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans 'Log in' %} | {% system_name %}</title>
+    {% favicon_url as favicon %}
+    {% if favicon %}
+    <link rel="icon" type="image/x-icon" href="{{ favicon }}">
+    {% else %}
+    <link rel="icon" type="image/x-icon" href="{% static 'layui/favicon.ico' %}?v={{ sv }}">
+    {% endif %}
+    <link rel="stylesheet" href="{% static 'layui/lib/layui.css' %}?v={{ sv }}">
+    <link rel="stylesheet" href="{% static 'layui/css/admin.css' %}?v={{ sv }}">
+    <style>
+        /* 粒子画布铺满登录背景 */
+        #login-particles {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        /* 登录卡片浮在画布上 */
+        .login-page { background: transparent !important; }
+        .login-page::before { display: none; }
+
+        /* Layui input-wrap 在登录卡片内的样式微调 */
+        .login-card .layui-input-wrap .layui-input-prefix {
+            color: #999;
+        }
+        .login-card .layui-input-wrap .layui-input-prefix i {
+            font-size: 17px;
+        }
+        /* 覆盖 layui-input-wrap 内 input 的 padding，与卡片风格保持一致 */
+        .login-card .layui-input-wrap .layui-input {
+            height: 42px;
+            line-height: 42px;
+            background: #f6f7f9;
+            border: 1px solid #e6e6e6;
+            border-radius: 6px;
+            padding-left: 42px;
+            transition: all 0.3s ease;
+        }
+        .login-card .layui-input-wrap .layui-input:focus {
+            border-color: #1e9fff;
+            box-shadow: 0 0 0 3px rgba(30, 159, 255, 0.1);
+            background: #ffffff;
+        }
+        .login-card .layui-input-wrap .layui-input::placeholder {
+            color: #c0c4cc;
+        }
+        /* lay-affix 生成的眼睛图标颜色调淡 */
+        .login-card .layui-input-wrap .layui-input-affix .layui-icon {
+            color: #aaa;
+        }
+        .login-card .layui-input-wrap .layui-input-affix .layui-icon:hover {
+            color: #1e9fff;
+        }
+    </style>
+</head>
+<body>
+    <!-- 粒子背景画布 -->
+    <canvas id="login-particles"></canvas>
+
+    <div class="login-page" id="loginPage" style="background: {% login_bg_value %};">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="logo-icon login-logo-icon">
+                    <i class="layui-icon {% logo_icon %}"></i>
+                </div>
+                <h2 class="login-title">{% system_name %}</h2>
+                <p>{% system_version %}</p>
+            </div>
+            <div id="loginError" class="errornote" style="display:none;"></div>
+            <form class="layui-form" id="loginForm" lay-filter="loginForm">
+                <!-- 用户名：Layui 官方 input-wrap 结构，前缀图标 + lay-affix clear -->
+                <div class="layui-form-item">
+                    <div class="layui-input-wrap">
+                        <div class="layui-input-prefix">
+                            <i class="layui-icon layui-icon-username"></i>
+                        </div>
+                        <input type="text" name="username" id="id_username"
+                               value="{{ username }}"
+                               placeholder="{% trans 'Username' %}" autocomplete="username"
+                               class="layui-input" lay-affix="clear">
+                    </div>
+                </div>
+                <!-- 密码：前缀锁图标 + lay-affix=eye（Layui 官方眼睛，不再手写 SVG） -->
+                <div class="layui-form-item">
+                    <div class="layui-input-wrap">
+                        <div class="layui-input-prefix">
+                            <i class="layui-icon layui-icon-password"></i>
+                        </div>
+                        <input type="password" name="password" id="id_password"
+                               placeholder="{% trans 'Password' %}" autocomplete="current-password"
+                               class="layui-input" lay-affix="eye">
+                    </div>
+                </div>
+                <input type="hidden" name="next" value="{{ next }}">
+                <div class="layui-form-item">
+                    <button type="submit" class="login-btn" id="loginBtn">
+                        {% trans 'Log in' %}
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="login-footer">{% copyright_text %}</div>
+    </div>
+    <script src="{% static 'layui/lib/layui.js' %}"></script>
+    <script src="{% static 'layui/js/i18n.js' %}"></script>
+    <script>
+        // ---- i18n 占位符 ----
+        document.getElementById('id_username').placeholder = t('login.username') || '用户名';
+        document.getElementById('id_password').placeholder = t('login.password') || '密码';
+        document.getElementById('loginBtn').textContent = t('login.submit') || '登录';
+
+        // ---- Layui form.render：激活 lay-affix（eye 眼睛 + clear 清除） ----
+        layui.use('form', function() {
+            layui.form.render('input');
+        });
+
+        // ---- 登录表单提交 ----
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var username = document.getElementById('id_username').value.trim();
+            var password = document.getElementById('id_password').value;
+            var nextUrl = '{{ next|escapejs }}' || '/admin/';
+            var errorEl = document.getElementById('loginError');
+            var btn = document.getElementById('loginBtn');
+
+            if (!username || !password) {
+                errorEl.textContent = t('login.username.placeholder') || '请输入用户名和密码';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = t('login.loading') || '登录中...';
+            errorEl.style.display = 'none';
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/admin/api/rbac/login/', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.withCredentials = true;
+            xhr.onload = function() {
+                btn.disabled = false;
+                btn.textContent = t('login.submit') || '登录';
+                try {
+                    var res = JSON.parse(xhr.responseText);
+                    if (xhr.status === 200 && res.code === 200) {
+                        // 保存token（用于SSE认证）
+                        if (res.data && res.data.token) {
+                            if (window.setToken) {
+                                window.setToken(res.data.token);
+                            }
+                        }
+                        window.location.href = nextUrl;
+                    } else {
+                        errorEl.textContent = res.msg || (t('login.error') || '用户名或密码错误');
+                        errorEl.style.display = 'block';
+                    }
+                } catch(ex) {
+                    errorEl.textContent = t('login.error') || '登录失败，请重试';
+                    errorEl.style.display = 'block';
+                }
+            };
+            xhr.onerror = function() {
+                btn.disabled = false;
+                btn.textContent = t('login.submit') || '登录';
+                errorEl.textContent = t('login.error') || '登录失败，请重试';
+                errorEl.style.display = 'block';
+            };
+            xhr.send(JSON.stringify({username: username, password: password}));
+        });
+
+        // ---- 粒子背景（纯 Canvas，无依赖）----
+        (function() {
+            var canvas = document.getElementById('login-particles');
+            var ctx = canvas.getContext('2d');
+            var W, H, particles = [], mouse = {x: -9999, y: -9999};
+            var COUNT = 80;         // 粒子数量
+            var MAX_DIST = 120;     // 连线最大距离
+            var MOUSE_DIST = 160;   // 鼠标吸引距离
+
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+            }
+
+            function randBetween(a, b) { return a + Math.random() * (b - a); }
+
+            function createParticle() {
+                return {
+                    x: randBetween(0, W),
+                    y: randBetween(0, H),
+                    vx: randBetween(-0.4, 0.4),
+                    vy: randBetween(-0.4, 0.4),
+                    r: randBetween(1.5, 3),
+                    opacity: randBetween(0.4, 0.9)
+                };
+            }
+
+            function init() {
+                particles = [];
+                for (var i = 0; i < COUNT; i++) particles.push(createParticle());
+            }
+
+            function drawParticle(p) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(147,197,253,' + p.opacity + ')';
+                ctx.fill();
+            }
+
+            function drawLine(p1, p2, dist) {
+                var alpha = (1 - dist / MAX_DIST) * 0.4;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.strokeStyle = 'rgba(147,197,253,' + alpha + ')';
+                ctx.lineWidth = 0.6;
+                ctx.stroke();
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, W, H);
+
+                // 移动粒子
+                for (var i = 0; i < particles.length; i++) {
+                    var p = particles[i];
+                    // 鼠标轻微吸引
+                    var dx = mouse.x - p.x, dy = mouse.y - p.y;
+                    var md = Math.sqrt(dx * dx + dy * dy);
+                    if (md < MOUSE_DIST) {
+                        p.vx += dx / md * 0.015;
+                        p.vy += dy / md * 0.015;
+                    }
+                    // 速度限制
+                    var speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                    if (speed > 1.2) { p.vx = p.vx / speed * 1.2; p.vy = p.vy / speed * 1.2; }
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    // 边界回弹
+                    if (p.x < 0 || p.x > W) p.vx *= -1;
+                    if (p.y < 0 || p.y > H) p.vy *= -1;
+                    p.x = Math.max(0, Math.min(W, p.x));
+                    p.y = Math.max(0, Math.min(H, p.y));
+
+                    drawParticle(p);
+                }
+
+                // 连线
+                for (var i = 0; i < particles.length; i++) {
+                    for (var j = i + 1; j < particles.length; j++) {
+                        var dx = particles[i].x - particles[j].x;
+                        var dy = particles[i].y - particles[j].y;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < MAX_DIST) drawLine(particles[i], particles[j], dist);
+                    }
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', function() { resize(); init(); });
+            document.addEventListener('mousemove', function(e) { mouse.x = e.clientX; mouse.y = e.clientY; });
+            document.addEventListener('mouseleave', function() { mouse.x = -9999; mouse.y = -9999; });
+
+            resize();
+            init();
+            animate();
+        })();
+    </script>
+</body>
+</html>

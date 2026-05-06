@@ -1,6 +1,6 @@
 {% load i18n static layui_tags %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}" data-theme="light" id="htmlRoot">
+<html lang="{{ LANGUAGE_CODE }}" data-theme="theme-default-dark" data-theme-mode="dark" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -120,7 +120,6 @@
     <script>
     // Theme selector
     (function(){
-        // 获取可用主题列表
         var themes = [
             {% for theme in available_themes %}
             {name: '{{ theme.name }}', file: '{{ theme.file }}'},
@@ -129,44 +128,63 @@
         
         var currentTheme = localStorage.getItem('layui_theme') || 'default-dark.css';
         
-        // 应用主题
+        var themeFileMap = {
+            'default-dark.css': 'theme-default-dark',
+            'default-light.css': 'theme-default-light',
+            'element-blue.css': 'theme-element-blue',
+            'ant-design-black.css': 'theme-ant-design-black',
+            'adminlte-blue.css': 'theme-adminlte-blue',
+            'enterprise-purple.css': 'theme-enterprise-purple',
+            'enterprise-red.css': 'theme-enterprise-red',
+            'fresh-green.css': 'theme-fresh-green',
+            'tech-orange.css': 'theme-tech-orange',
+            'deep-black.css': 'theme-deep-black',
+            'elegant-gray.css': 'theme-elegant-gray',
+            'sky-blue.css': 'theme-sky-blue',
+            'sakura-pink.css': 'theme-sakura-pink',
+            'aurora-purple.css': 'theme-aurora-purple',
+            'midnight-blue.css': 'theme-midnight-blue',
+            'mint-cyan.css': 'theme-mint-cyan',
+            'flame-red.css': 'theme-flame-red',
+            'business-blue.css': 'theme-business-blue',
+            'premium-black.css': 'theme-premium-black',
+            'vibrant-orange.css': 'theme-vibrant-orange',
+            'forest-green.css': 'theme-forest-green',
+            'deep-sea.css': 'theme-deep-sea',
+            'rose-gold.css': 'theme-rose-gold',
+            'geek-green.css': 'theme-geek-green',
+            'cyberpunk.css': 'theme-cyberpunk'
+        };
+        
+        var darkThemeFiles = [
+            'default-dark.css', 'ant-design-black.css', 'adminlte-blue.css',
+            'enterprise-purple.css', 'enterprise-red.css', 'deep-black.css',
+            'midnight-blue.css', 'mint-cyan.css', 'flame-red.css',
+            'aurora-purple.css', 'geek-green.css', 'cyberpunk.css',
+            'deep-sea.css', 'premium-black.css'
+        ];
+        
         function applyTheme(themeFile) {
-            // 移除旧的主题样式
-            var oldLink = document.getElementById('theme-css');
-            if (oldLink) {
-                oldLink.remove();
-            }
-            
-            // 创建新的主题样式链接
-            if (themeFile && themeFile !== 'none') {
-                var link = document.createElement('link');
-                link.id = 'theme-css';
-                link.rel = 'stylesheet';
-                link.href = '/static/layui/css/themes/' + themeFile;
-                document.head.appendChild(link);
-            }
-            
-            // 保存主题选择
             localStorage.setItem('layui_theme', themeFile);
             currentTheme = themeFile;
             
-            // 根据主题文件名自动更新 data-theme 属性（关键修复！）
-            var isLightTheme = themeFile && (themeFile.indexOf('light') !== -1 || 
-                           themeFile.indexOf('Light') !== -1 || 
-                           themeFile.indexOf('cyan-light') !== -1 || 
-                           themeFile.indexOf('green-light') !== -1 ||
-                           themeFile.indexOf('purple-light') !== -1 ||
-                           themeFile.indexOf('pink-light') !== -1 ||
-                           themeFile.indexOf('yellow-light') !== -1 ||
-                           themeFile.indexOf('indigo-light') !== -1);
+            var cssTheme = themeFileMap[themeFile] || 'theme-default-dark';
+            document.documentElement.setAttribute('data-theme', cssTheme);
             
-            if (isLightTheme) {
-                document.documentElement.setAttribute('data-theme', 'light');
-            } else {
-                document.documentElement.setAttribute('data-theme', 'dark');
+            var isDark = darkThemeFiles.indexOf(themeFile) !== -1;
+            document.documentElement.setAttribute('data-theme-mode', isDark ? 'dark' : 'light');
+            
+            var icon = document.getElementById('themeIcon');
+            if (icon) {
+                if (isDark) {
+                    icon.classList.remove('layui-icon-moon');
+                    icon.classList.add('layui-icon-light');
+                } else {
+                    icon.classList.remove('layui-icon-light');
+                    icon.classList.add('layui-icon-moon');
+                }
             }
             
-            // 更新下拉菜单选中状态
             document.querySelectorAll('.theme-option').forEach(function(option) {
                 if (option.getAttribute('data-theme') === themeFile) {
                     option.style.background = 'var(--bg-hover)';

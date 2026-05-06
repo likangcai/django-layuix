@@ -26,8 +26,8 @@
     <style>
         body { padding: 0; margin: 0; background: var(--bg-primary); }
         .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
-        .layui-form-label { width: 100px; padding: 9px 12px 9px 0; }
-        .layui-input-block { margin-left: 110px; }
+        .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
+        .layui-input-block { margin-left: 130px; }
         .menu-tree-box {
             border: 1px solid var(--card-border);
             border-radius: 6px;
@@ -217,7 +217,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                                 : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
                         }},
                         {field: 'create_time', title: t('user.createTime'), width: 170, align: 'center'},
-                        {title: t('common.operation'), width: 280, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+                        {title: t('common.operation'), width: 420, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
                     ]]
                 });
             }

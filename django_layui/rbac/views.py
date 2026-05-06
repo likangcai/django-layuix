@@ -148,7 +148,6 @@ def _get_user_menus(user):
             'parent_id': m.parent_id,
             'name': menu_name,
             'name_zh_hans': m.name_zh_hans,
-            'name_zh_hant': m.name_zh_hant,
             'name_en': m.name_en,
             'icon': m.icon,
             'path': m.path,
@@ -805,7 +804,6 @@ def menu_tree(request):
             'name': m.name,
             'name_en': m.name_en,
             'name_zh_hans': m.name_zh_hans,
-            'name_zh_hant': m.name_zh_hant,
             'icon': m.icon,
             'path': m.path,
             'component': m.component,
@@ -841,7 +839,6 @@ def menu_detail(request, pk):
             'name': menu.name,
             'name_en': menu.name_en,
             'name_zh_hans': menu.name_zh_hans,
-            'name_zh_hant': menu.name_zh_hant,
             'icon': menu.icon,
             'path': menu.path,
             'component': menu.component,
@@ -864,8 +861,6 @@ def menu_detail(request, pk):
             menu.name_en = body['name_en']
         if 'name_zh_hans' in body:
             menu.name_zh_hans = body['name_zh_hans']
-        if 'name_zh_hant' in body:
-            menu.name_zh_hant = body['name_zh_hant']
         if 'parent_id' in body:
             menu.parent_id = body['parent_id'] if body['parent_id'] else None
         if 'icon' in body:
@@ -916,7 +911,6 @@ def menu_create(request):
         name=name,
         name_en=body.get('name_en', ''),
         name_zh_hans=body.get('name_zh_hans', ''),
-        name_zh_hant=body.get('name_zh_hant', ''),
         parent_id=parent_id if parent_id else None,
         icon=body.get('icon', 'layui-icon-app'),
         path=body.get('path', ''),

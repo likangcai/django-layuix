@@ -8,20 +8,38 @@
     <title>{% system_name %}</title>
     <script>
         (function() {
-            var theme = localStorage.getItem('theme') || 'light';
+            var theme = localStorage.getItem('theme') || '默认深色';
             var themeMap = {
-                '默认深色': 'dark', '默认浅色': 'light', 'Element蓝': 'light',
-                'Ant Design黑': 'dark', 'AdminLTE蓝': 'dark', '企业紫': 'dark-violet',
-                '企业红': 'dark-coral', '清新绿': 'light-forest', '科技橙': 'dark-amber',
-                '深邃黑': 'dark', '优雅灰': 'dark', '天空蓝': 'light-ocean',
-                '樱花粉': 'light-rose', '极光紫': 'dark-violet', '暗夜蓝': 'dark-ocean',
-                '薄荷青': 'dark-forest', '烈焰红': 'dark-coral', '商务蓝': 'dark-ocean',
-                '高端黑': 'dark', '活力橙': 'dark-amber', '森林绿': 'dark-forest',
-                '深海蓝': 'dark-ocean', '玫瑰金': 'light-rose', '极客绿': 'dark-forest',
-                '赛博朋克': 'dark-amber'
+                '默认深色': 'theme-default-dark',
+                '默认浅色': 'theme-default-light',
+                'Element蓝': 'theme-element-blue',
+                'Ant Design黑': 'theme-ant-design-black',
+                'AdminLTE蓝': 'theme-adminlte-blue',
+                '企业紫': 'theme-enterprise-purple',
+                '企业红': 'theme-enterprise-red',
+                '清新绿': 'theme-fresh-green',
+                '科技橙': 'theme-tech-orange',
+                '深邃黑': 'theme-deep-black',
+                '优雅灰': 'theme-elegant-gray',
+                '天空蓝': 'theme-sky-blue',
+                '樱花粉': 'theme-sakura-pink',
+                '极光紫': 'theme-aurora-purple',
+                '暗夜蓝': 'theme-midnight-blue',
+                '薄荷青': 'theme-mint-cyan',
+                '烈焰红': 'theme-flame-red',
+                '商务蓝': 'theme-business-blue',
+                '高端黑': 'theme-premium-black',
+                '活力橙': 'theme-vibrant-orange',
+                '森林绿': 'theme-forest-green',
+                '深海蓝': 'theme-deep-sea',
+                '玫瑰金': 'theme-rose-gold',
+                '极客绿': 'theme-geek-green',
+                '赛博朋克': 'theme-cyberpunk'
             };
-            var cssTheme = themeMap[theme] || theme;
+            var darkThemeNames = ['默认深色', 'Ant Design黑', 'AdminLTE蓝', '企业紫', '企业红', '深邃黑', '暗夜蓝', '薄荷青', '烈焰红', '极光紫', '极客绿', '赛博朋克', '深海蓝', '高端黑'];
+            var cssTheme = themeMap[theme] || 'theme-default-dark';
             document.documentElement.setAttribute('data-theme', cssTheme);
+            document.documentElement.setAttribute('data-theme-mode', darkThemeNames.indexOf(theme) >= 0 ? 'dark' : 'light');
         })();
     </script>
     {% favicon_url as favicon %}
@@ -31,6 +49,7 @@
     <link rel="icon" type="image/x-icon" href="{% static 'layui/favicon.ico' %}?v={{ sv }}">
     {% endif %}
     <link rel="stylesheet" href="{% static 'layui/lib/layui.css' %}?v={{ sv }}">
+    <link rel="stylesheet" href="{% static 'layui/css/themes.css' %}?v={{ sv }}">
     <link rel="stylesheet" href="{% static 'layui/css/admin.css' %}?v={{ sv }}">
     <style>
         .layui-form-checkbox[lay-skin="primary"] span { color: var(--text-primary); }
@@ -355,11 +374,6 @@
         // ==================== Render Menu Tree ====================
         function renderMenu(menus) {
             var html = '';
-            // Dashboard always first
-            html += '<div class="menu-item active" data-url="/static/layui/pages/dashboard.html" data-title="' + t('header.home') + '">' +
-                   '<i class="layui-icon layui-icon-home menu-icon"></i>' +
-                   '<span class="menu-text">' + t('header.home') + '</span>' +
-                   '</div>';
             menus.forEach(function(menu) {
                 if (menu.menu_type === 1) {
                     html += renderDirectory(menu);
@@ -374,8 +388,15 @@
             var children = menu.children || [];
             var hasVisibleChildren = children.some(function(c) { return c.visible !== false; });
             if (!hasVisibleChildren) return '';
+            // 根据语言环境选择菜单名称
+            var name = menu.name;
+            if (window.LANG === 'en' && menu.name_en) {
+                name = menu.name_en;
+            } else if (window.LANG === 'zh-CN' && menu.name_zh_hans) {
+                name = menu.name_zh_hans;
+            }
             var html = '<div class="menu-group has-children" data-menu-id="' + menu.id + '">';
-            html += '<div class="menu-group-title"><i class="menu-arrow"></i><span>' + escapeHtml(menu.name) + '</span></div>';
+            html += '<div class="menu-group-title"><i class="menu-arrow"></i><span>' + escapeHtml(name) + '</span></div>';
             html += '<div class="sub-menu open">';
             children.forEach(function(child) {
                 if (child.visible === false) return;
@@ -407,7 +428,14 @@
             var icon = menu.icon || 'layui-icon-app';
             var rawUrl = menu.path || menu.component || '';
             var url = menuPathMap[rawUrl] || rawUrl;
-            var title = escapeHtml(menu.name);
+            // 根据语言环境选择菜单名称
+            var title = menu.name;
+            if (window.LANG === 'en' && menu.name_en) {
+                title = menu.name_en;
+            } else if (window.LANG === 'zh-CN' && menu.name_zh_hans) {
+                title = menu.name_zh_hans;
+            }
+            title = escapeHtml(title);
             return '<div class="menu-item" data-url="' + escapeAttr(url) + '" data-title="' + escapeAttr(title) + '">' +
                    '<i class="layui-icon ' + escapeAttr(icon) + ' menu-icon"></i>' +
                    '<span class="menu-text">' + title + '</span>' +
@@ -535,69 +563,85 @@
         }
 
         // Dark theme names for quick toggle
-        var darkThemes = ['dark', '默认深色', 'Ant Design黑', 'AdminLTE蓝', '企业紫', '企业红', '深邃黑', '暗夜蓝', '薄荷青', '烈焰红', '极光紫', '极客绿', '赛博朋克'];
+        var darkThemes = ['默认深色', 'Ant Design黑', 'AdminLTE蓝', '企业紫', '企业红', '深邃黑', '暗夜蓝', '薄荷青', '烈焰红', '极光紫', '极客绿', '赛博朋克', '深海蓝', '高端黑'];
         
-        // Theme name mapping: Chinese name -> CSS data-theme value
+        // Theme name mapping: Chinese name -> CSS data-theme value (1:1 mapping)
         var themeNameMap = {
-            '默认深色': 'dark',
-            '默认浅色': 'light',
-            'Element蓝': 'light',
-            'Ant Design黑': 'dark',
-            'AdminLTE蓝': 'dark',
-            '企业紫': 'dark-violet',
-            '企业红': 'dark-coral',
-            '清新绿': 'light-forest',
-            '科技橙': 'dark-amber',
-            '深邃黑': 'dark',
-            '优雅灰': 'dark',
-            '天空蓝': 'light-ocean',
-            '樱花粉': 'light-rose',
-            '极光紫': 'dark-violet',
-            '暗夜蓝': 'dark-ocean',
-            '薄荷青': 'dark-forest',
-            '烈焰红': 'dark-coral',
-            '商务蓝': 'dark-ocean',
-            '高端黑': 'dark',
-            '活力橙': 'dark-amber',
-            '森林绿': 'dark-forest',
-            '深海蓝': 'dark-ocean',
-            '玫瑰金': 'light-rose',
-            '极客绿': 'dark-forest',
-            '赛博朋克': 'dark-amber'
+            '默认深色': 'theme-default-dark',
+            '默认浅色': 'theme-default-light',
+            'Element蓝': 'theme-element-blue',
+            'Ant Design黑': 'theme-ant-design-black',
+            'AdminLTE蓝': 'theme-adminlte-blue',
+            '企业紫': 'theme-enterprise-purple',
+            '企业红': 'theme-enterprise-red',
+            '清新绿': 'theme-fresh-green',
+            '科技橙': 'theme-tech-orange',
+            '深邃黑': 'theme-deep-black',
+            '优雅灰': 'theme-elegant-gray',
+            '天空蓝': 'theme-sky-blue',
+            '樱花粉': 'theme-sakura-pink',
+            '极光紫': 'theme-aurora-purple',
+            '暗夜蓝': 'theme-midnight-blue',
+            '薄荷青': 'theme-mint-cyan',
+            '烈焰红': 'theme-flame-red',
+            '商务蓝': 'theme-business-blue',
+            '高端黑': 'theme-premium-black',
+            '活力橙': 'theme-vibrant-orange',
+            '森林绿': 'theme-forest-green',
+            '深海蓝': 'theme-deep-sea',
+            '玫瑰金': 'theme-rose-gold',
+            '极客绿': 'theme-geek-green',
+            '赛博朋克': 'theme-cyberpunk'
         };
         
         // ==================== Theme ====================
         function applyTheme(theme) {
             currentTheme = theme || '默认深色';
-            // Map Chinese theme name to CSS data-theme value
-            var cssTheme = themeNameMap[currentTheme] || currentTheme;
+            // Map Chinese theme name to CSS data-theme value (1:1 mapping)
+            var cssTheme = themeNameMap[currentTheme] || 'theme-default-dark';
             document.documentElement.setAttribute('data-theme', cssTheme);
-            
+            // Set data-theme-mode for CSS dark/light overrides
+            var isDark = darkThemes.includes(currentTheme);
+            document.documentElement.setAttribute('data-theme-mode', isDark ? 'dark' : 'light');
+            // Persist to localStorage for page reload
+            localStorage.setItem('theme', currentTheme);
+
             // Update theme icon based on dark/light category
-            if (darkThemes.includes(currentTheme)) {
+            if (isDark) {
                 $('#themeIcon').removeClass('layui-icon-moon').addClass('layui-icon-light');
             } else {
                 $('#themeIcon').removeClass('layui-icon-light').addClass('layui-icon-moon');
             }
-            
+
             // Update active theme item
             $('.theme-item').removeClass('active');
             $('.theme-item[data-theme="' + currentTheme + '"]').addClass('active');
-            
-            // Notify iframes
+
+            // Notify iframes via postMessage (cross-origin safe)
+            var themeMode = isDark ? 'dark' : 'light';
             Object.keys(tabs).forEach(function(url) {
                 var tabId = 'tab_' + url.replace(/[^a-zA-Z0-9]/g, '_');
                 var iframe = document.getElementById('iframe_' + tabId);
-                if (iframe && iframe.contentDocument) {
-                    try { iframe.contentDocument.documentElement.setAttribute('data-theme', cssTheme); } catch(e) {}
+                if (iframe) {
+                    try {
+                        // Try direct DOM access first (same origin)
+                        if (iframe.contentDocument) {
+                            iframe.contentDocument.documentElement.setAttribute('data-theme', cssTheme);
+                            iframe.contentDocument.documentElement.setAttribute('data-theme-mode', themeMode);
+                        }
+                    } catch(e) {}
+                    // Also send postMessage for cross-origin or sandboxed iframes
+                    try {
+                        iframe.contentWindow.postMessage({ type: 'themeChange', theme: cssTheme, themeName: currentTheme, themeMode: themeMode }, '*');
+                    } catch(e) {}
                 }
             });
         }
 
         // 设置 header 按钮的 title
         $('#sidebarToggle').attr('title', t('header.toggleSidebar') || '收起/展开');
-        $('#themeToggle').attr('title', t('header.toggleTheme') || '切换深浅色');
-        $('#themeBtn').attr('title', t('header.selectTheme') || '主题选择');
+        $('#themeToggle').attr('title', t('header.toggleTheme') || '浅色/深色');
+        $('#themeBtn').attr('title', t('header.selectTheme') || '切换主题');
         $('#frontendBtn').attr('title', t('header.viewSite') || '访问前台');
         $('#fullscreenBtn').attr('title', t('header.fullscreen') || '全屏');
 

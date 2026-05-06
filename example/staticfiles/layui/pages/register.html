@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户注册 - Django Layui Admin</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <style>
+        body { background: var(--bg-primary); padding: 0; margin: 0; }
+        .register-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        .register-box {
+            width: 100%;
+            max-width: 420px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            padding: 40px;
+        }
+        .register-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .register-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .register-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 13px;
+            color: var(--text-primary);
+            background: var(--input-bg);
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: var(--input-focus-bg);
+        }
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+        .password-tips {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 10px;
+            height: 40px;
+            line-height: 40px;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+        .btn-submit:hover {
+            background-color: var(--primary-light);
+        }
+        .btn-submit:active {
+            opacity: 0.9;
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .login-link {
+            text-align: center;
+            margin-top: 18px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .login-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        .login-link a:hover {
+            color: var(--primary-light);
+        }
+        .error-msg {
+            color: #ff4d4f;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+        .success-msg {
+            color: #52c41a;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-box">
+            <div class="register-header">
+                <div class="register-title">用户注册</div>
+                <div class="register-subtitle">创建新账户以访问系统</div>
+            </div>
+
+            <form id="registerForm" class="layui-form">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        placeholder="请输入用户名（3-20个字符）" 
+                        required
+                    >
+                    <div class="error-msg" id="usernameError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">邮箱地址</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="请输入邮箱地址（可选）"
+                    >
+                    <div class="error-msg" id="emailError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="请输入密码（至少6个字符）" 
+                        required
+                    >
+                    <div class="password-tips">密码需要至少6个字符，建议混合大小写和数字</div>
+                    <div class="error-msg" id="passwordError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">确认密码</label>
+                    <input 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        placeholder="请再次输入密码" 
+                        required
+                    >
+                    <div class="error-msg" id="confirmError"></div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">注册账户</button>
+                <div class="success-msg" id="successMsg">注册成功！正在跳转登录页面...</div>
+
+                <div class="login-link">
+                    已有账户？<a href="/admin/login/" onclick="window.location.href='/admin/'; return false;">返回登录</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/layui/lib/layui.js"></script>
+    <script>
+        const form = document.getElementById('registerForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const username = document.getElementById('username');
+        const email = document.getElementById('email');
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirm_password');
+
+        // 清除错误提示
+        function clearErrors() {
+            document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
+        }
+
+        // 显示错误
+        function showError(fieldId, message) {
+            const errorEl = document.getElementById(fieldId + 'Error');
+            if (errorEl) {
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // 验证表单
+        function validateForm() {
+            clearErrors();
+            let isValid = true;
+
+            const usernameVal = username.value.trim();
+            if (!usernameVal) {
+                showError('username', '用户名不能为空');
+                isValid = false;
+            } else if (usernameVal.length < 3) {
+                showError('username', '用户名至少需要3个字符');
+                isValid = false;
+            } else if (usernameVal.length > 20) {
+                showError('username', '用户名最多20个字符');
+                isValid = false;
+            }
+
+            const emailVal = email.value.trim();
+            if (emailVal && !emailVal.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                showError('email', '请输入有效的邮箱地址');
+                isValid = false;
+            }
+
+            const passwordVal = password.value;
+            if (!passwordVal) {
+                showError('password', '密码不能为空');
+                isValid = false;
+            } else if (passwordVal.length < 6) {
+                showError('password', '密码至少需要6个字符');
+                isValid = false;
+            }
+
+            const confirmVal = confirmPassword.value;
+            if (!confirmVal) {
+                showError('confirm', '请确认密码');
+                isValid = false;
+            } else if (passwordVal !== confirmVal) {
+                showError('confirm', '两次输入的密码不一致');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        // 提交表单
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!validateForm()) {
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '注册中...';
+
+            try {
+                const response = await fetch('/admin/api/rbac/register/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        username: username.value.trim(),
+                        email: email.value.trim(),
+                        password: password.value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.code === 200) {
+                    document.getElementById('successMsg').style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/admin/';
+                    }, 2000);
+                } else {
+                    const errorMsg = data.msg || '注册失败，请重试';
+                    if (errorMsg.includes('用户名')) {
+                        showError('username', errorMsg);
+                    } else if (errorMsg.includes('密码')) {
+                        showError('password', errorMsg);
+                    } else {
+                        alert(errorMsg);
+                    }
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '注册账户';
+                }
+            } catch (error) {
+                console.error('注册失败:', error);
+                alert('网络错误，请检查连接后重试');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '注册账户';
+            }
+        });
+
+        // 获取CSRF Token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 回车提交
+        form.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target !== submitBtn) {
+                e.preventDefault();
+                submitBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>

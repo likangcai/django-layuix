@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - 软件测试管理后台</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <script>
+        function syncParentTheme() {
+            var theme = 'theme-default-dark';
+            try {
+                if (window.parent && window.parent.document) {
+                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'theme-default-dark';
+                }
+            } catch(e) {}
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        syncParentTheme();
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'themeChange' && e.data.theme) {
+                document.documentElement.setAttribute('data-theme', e.data.theme);
+            }
+        });
+    </script>
+    <style>
+        body { background: var(--bg-primary); padding: 20px 24px; margin: 0; }
+        .profile-container { max-width: 900px; margin: 0 auto; display: flex; gap: 20px; }
+        .profile-sidebar { width: 220px; flex-shrink: 0; }
+        .profile-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+            padding: 28px 20px;
+            text-align: center;
+        }
+        .avatar-wrapper {
+            position: relative; width: 110px; height: 110px; margin: 0 auto 14px;
+            cursor: pointer; border-radius: 50%; overflow: hidden;
+            border: 3px solid var(--border-color); transition: border-color 0.3s;
+        }
+        .avatar-wrapper:hover { border-color: var(--primary-color); }
+        .avatar-wrapper:hover .avatar-mask { opacity: 1; }
+        .avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .avatar-mask {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.45); display: flex; align-items: center;
+            justify-content: center; opacity: 0; transition: opacity 0.3s;
+            color: #fff; font-size: 13px;
+        }
+        .avatar-mask i { font-size: 22px; margin-right: 4px; }
+        .profile-username { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+        .profile-role-tag {
+            display: inline-block; padding: 2px 10px;
+            background: var(--primary-light); color: var(--primary-color);
+            border-radius: 12px; font-size: 12px; margin-top: 4px;
+        }
+        .profile-main { flex: 1; min-width: 0; }
+        .profile-main .layui-tab-card {
+            border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid var(--card-border); overflow: hidden;
+        }
+        .profile-main .layui-tab-title {
+            background: var(--card-bg); border-bottom: 1px solid var(--card-border);
+        }
+        .profile-main .layui-tab-title li {
+            font-size: 13px; padding: 0 22px; line-height: 40px; color: var(--text-secondary);
+        }
+        .profile-main .layui-tab-title .layui-this { color: #ffffff; background-color: var(--primary-color); }
+        .profile-main .layui-tab-title .layui-this::after { display: none; }
+        .profile-main .layui-tab-content {
+            background: var(--card-bg); padding: 22px 28px; min-height: 340px;
+        }
+        .form-section { max-width: 480px; }
+        .form-section .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
+        .form-section .layui-input-block { margin-left: 130px; }
+        .form-section .layui-input, .form-section .layui-textarea { border-radius: 4px; }
+        .form-section .layui-form-item { margin-bottom: 18px; }
+        .btn-submit { width: 110px; height: 36px; line-height: 36px; border-radius: 4px; }
+        .role-card-list { display: flex; flex-wrap: wrap; gap: 14px; }
+        .role-card {
+            background: var(--bg-tertiary); border: 1px solid var(--card-border);
+            border-radius: 8px; padding: 18px; width: 220px;
+            transition: box-shadow 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .role-card:hover { box-shadow: 0 8px 16px rgba(0,0,0,0.15), 0 4px 8px rgba(0,0,0,0.1); }
+        .role-card .role-name { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+        .role-card .role-code {
+            display: inline-block; padding: 1px 8px;
+            background: var(--bg-hover); color: var(--text-secondary);
+            border-radius: 4px; font-size: 12px; font-family: monospace; margin-bottom: 8px;
+        }
+        .role-card .role-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+        .no-roles { color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px 0; }
+        .default-avatar {
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--primary-color), #40a9ff);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 38px; font-weight: 600;
+        }
+        .avatar-loading {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.7); display: flex; align-items: center;
+            justify-content: center; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <!-- 左侧：头像和用户名 -->
+        <div class="profile-sidebar">
+            <div class="profile-card">
+                <div class="avatar-wrapper" id="avatarWrapper" title="{{ t('profile.changeAvatar') }}">
+                    <div id="avatarContent">
+                        <div class="default-avatar" id="defaultAvatar">U</div>
+                    </div>
+                    <div class="avatar-mask">
+                        <i class="layui-icon layui-icon-camera"></i> <span data-i18n="profile.changeAvatar">更换头像</span>
+                    </div>
+                </div>
+                <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+                <div class="profile-username" id="sidebarUsername">--</div>
+                <div id="sidebarRoles"></div>
+            </div>
+        </div>
+
+        <!-- 右侧：Tab 切换区域 -->
+        <div class="profile-main">
+            <div class="layui-tab layui-tab-card" lay-filter="profileTab">
+                <ul class="layui-tab-title">
+                    <li class="layui-this" data-i18n="profile.basicInfo">基本信息</li>
+                    <li data-i18n="profile.changePassword">修改密码</li>
+                    <li data-i18n="profile.roleInfo">角色信息</li>
+                </ul>
+                <div class="layui-tab-content">
+                    <!-- Tab 1: 基本信息 -->
+                    <div class="layui-tab-item layui-show">
+                        <form class="layui-form form-section" lay-filter="profileForm">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label" data-i18n="user.username">用户名</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="username" readonly class="layui-input layui-disabled" style="background:var(--bg-tertiary);color:var(--text-muted);">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label" data-i18n="user.nickname">昵称</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="nickname" placeholder="{{ t('common.inputRequired', [t('user.nickname')]) }}" class="layui-input" maxlength="50">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label" data-i18n="user.phone">手机号</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="phone" placeholder="{{ t('common.inputRequired', [t('user.phone')]) }}" class="layui-input" maxlength="20">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label" data-i18n="user.email">邮箱</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="email" placeholder="{{ t('common.inputRequired', [t('user.email')]) }}" class="layui-input" maxlength="100">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button type="button" class="layui-btn btn-submit" id="btnSaveProfile">{{ t('common.save') }}</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tab 2: 修改密码 -->
+                    <div class="layui-tab-item">
+                        <form class="layui-form form-section" lay-filter="passwordForm">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label" data-i18n="profile.oldPassword">原密码</label>
+                                <div class="layui-input-block">
+                                    <input type="password" name="old_password" placeholder="{{ t('common.inputRequired', [t('profile.oldPassword')]) }}" class="layui-input" maxlength="128">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label" data-i18n="profile.newPassword">新密码</label>
+                                <div class="layui-input-block">
+                                    <input type="password" name="new_password" placeholder="{{ t('profile.newPassword') }}" class="layui-input" maxlength="128">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label" data-i18n="profile.confirmPassword">确认密码</label>
+                                <div class="layui-input-block">
+                                    <input type="password" name="confirm_password" placeholder="{{ t('common.inputRequired', [t('profile.confirmPassword')]) }}" class="layui-input" maxlength="128">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button type="button" class="layui-btn btn-submit" id="btnChangePassword">{{ t('profile.changePassword') }}</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tab 3: 角色信息 -->
+                    <div class="layui-tab-item">
+                        <div class="role-card-list" id="roleCardList">
+                            <div class="no-roles" data-i18n="profile.noRoles">暂无角色信息</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/layui/lib/layui.js"></script>
+    <script src="/static/layui/js/common.js"></script>
+    <script src="/static/layui/js/i18n.js"></script>
+    <script>
+    inheritTheme();
+
+    // 初始化语言
+    if (window.parent && window.parent.I18N) {
+        window.I18N = window.parent.I18N;
+        window.t = window.parent.t;
+    } else {
+        I18N.getLang();
+    }
+
+    layui.use(['form', 'layer', 'element'], function(){
+        var form = layui.form;
+        var layer = layui.layer;
+        var element = layui.element;
+        var $ = layui.$;
+
+        // 初始化 data-i18n 和 {{ t() }} 占位符
+        $('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); $(this).text(t(key)); });
+        renderI18n();
+
+        var currentUser = null;
+
+        // 从父页面获取用户信息
+        function getCurrentUser() {
+            try {
+                if (window.parent && window.parent.currentUser) {
+                    currentUser = window.parent.currentUser;
+                    return currentUser;
+                }
+            } catch (e) {
+                console.warn('Cannot get user info from parent');
+            }
+            return null;
+        }
+
+        // 渲染头像
+        function renderAvatar(avatarUrl, nickname) {
+            var avatarContent = $('#avatarContent');
+            if (avatarUrl) {
+                avatarContent.html('<img src="' + avatarUrl + '" alt="' + t('profile.avatar') + '">');
+            } else {
+                var initial = (nickname || 'U').charAt(0).toUpperCase();
+                avatarContent.html('<div class="default-avatar">' + initial + '</div>');
+            }
+        }
+
+        // 初始化页面数据
+        function initPage() {
+            var user = getCurrentUser();
+            if (!user) {
+                layer.msg(t('profile.noUserInfo'), {icon: 2});
+                return;
+            }
+
+            renderAvatar(user.avatar, user.nickname || user.username);
+
+            $('#sidebarUsername').text(user.nickname || user.username);
+
+            var rolesHtml = '';
+            if (user.roles && user.roles.length > 0) {
+                user.roles.forEach(function(role) {
+                    rolesHtml += '<span class="profile-role-tag">' + role.name + '</span> ';
+                });
+            }
+            $('#sidebarRoles').html(rolesHtml);
+
+            form.val('profileForm', {
+                username: user.username || '',
+                nickname: user.nickname || '',
+                phone: user.phone || '',
+                email: user.email || ''
+            });
+
+            renderRoleCards(user.roles);
+        }
+
+        // 渲染角色卡片
+        function renderRoleCards(roles) {
+            var container = $('#roleCardList');
+            if (!roles || roles.length === 0) {
+                container.html('<div class="no-roles">' + t('profile.noRoles') + '</div>');
+                return;
+            }
+            var html = '';
+            roles.forEach(function(role) {
+                html += '<div class="role-card">';
+                html += '  <div class="role-name">' + (role.name || '--') + '</div>';
+                html += '  <div class="role-code">' + (role.code || '--') + '</div>';
+                html += '  <div class="role-desc">' + (role.description || t('common.noDescription')) + '</div>';
+                html += '</div>';
+            });
+            container.html(html);
+        }
+
+        // 头像上传
+        $('#avatarWrapper').on('click', function() {
+            $('#avatarInput').click();
+        });
+
+        $('#avatarInput').on('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+
+            var allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (allowedTypes.indexOf(file.type) === -1) {
+                layer.msg(t('profile.avatar.formatError'), {icon: 2});
+                return;
+            }
+
+            if (file.size > 2 * 1024 * 1024) {
+                layer.msg(t('profile.avatar.sizeError'), {icon: 2});
+                return;
+            }
+
+            var avatarContent = $('#avatarContent');
+            avatarContent.append('<div class="avatar-loading"><i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size:24px;color:var(--primary-color);"></i></div>');
+
+            var formData = new FormData();
+            formData.append('avatar', file);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/admin/api/rbac/profile/avatar/', true);
+
+            xhr.onload = function() {
+                $('.avatar-loading').remove();
+                if (xhr.status === 401) {
+                    layer.msg(t('login.expired'), {icon: 2});
+                    setTimeout(function() { window.top.location.href = (window.parent.ADMIN_LOGIN_URL || '/admin/login/'); }, 1500);
+                    return;
+                }
+                if (xhr.status === 200) {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        if (res.code === 200) {
+                            layer.msg(t('profile.avatar.uploadSuccess'), {icon: 1});
+                            var newAvatar = res.data.avatar;
+                            renderAvatar(newAvatar, currentUser.nickname || currentUser.username);
+                            try {
+                                if (window.parent && window.parent.currentUser) {
+                                    window.parent.currentUser.avatar = newAvatar;
+                                }
+                            } catch (e) {}
+                        } else {
+                            layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        }
+                    } catch (e) {
+                        layer.msg(t('common.requestFail'), {icon: 2});
+                    }
+                } else {
+                    layer.msg(t('common.fail'), {icon: 2});
+                }
+            };
+
+            xhr.onerror = function() {
+                $('.avatar-loading').remove();
+                layer.msg(t('common.networkError'), {icon: 2});
+            };
+
+            xhr.send(formData);
+            $(this).val('');
+        });
+
+        // 保存基本信息（使用回调模式）
+        $('#btnSaveProfile').on('click', function() {
+            var formData = form.val('profileForm');
+            var nickname = (formData.nickname || '').trim();
+            var phone = (formData.phone || '').trim();
+            var email = (formData.email || '').trim();
+
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                layer.msg(t('profile.emailInvalid'), {icon: 2});
+                return;
+            }
+
+            var loadIndex = layer.load(1);
+
+            putApi('/admin/api/rbac/profile/', {
+                nickname: nickname,
+                phone: phone,
+                email: email
+            }, function(res) {
+                layer.close(loadIndex);
+                if (res.code === 200) {
+                    layer.msg(t('profile.save.success'), {icon: 1});
+                    try {
+                        if (window.parent && window.parent.currentUser) {
+                            window.parent.currentUser.nickname = nickname;
+                            window.parent.currentUser.phone = phone;
+                            window.parent.currentUser.email = email;
+                        }
+                    } catch (e) {}
+                    $('#sidebarUsername').text(nickname || currentUser.username);
+                    if (nickname) {
+                        renderAvatar(currentUser.avatar, nickname);
+                    }
+                } else {
+                    layer.msg(res.msg || t('common.fail'), {icon: 2});
+                }
+            });
+        });
+
+        // 修改密码（使用回调模式）
+        $('#btnChangePassword').on('click', function() {
+            var formData = form.val('passwordForm');
+            var oldPassword = (formData.old_password || '').trim();
+            var newPassword = (formData.new_password || '').trim();
+            var confirmPassword = (formData.confirm_password || '').trim();
+
+            if (!oldPassword) { layer.msg(t('common.inputRequired', [t('profile.oldPassword')]), {icon: 2}); return; }
+            if (!newPassword) { layer.msg(t('common.inputRequired', [t('profile.newPassword')]), {icon: 2}); return; }
+            if (newPassword.length < 6) { layer.msg(t('profile.password.minLen'), {icon: 2}); return; }
+            if (!confirmPassword) { layer.msg(t('common.inputRequired', [t('profile.confirmPassword')]), {icon: 2}); return; }
+            if (newPassword !== confirmPassword) { layer.msg(t('profile.password.diff'), {icon: 2}); return; }
+            if (oldPassword === newPassword) { layer.msg(t('profile.password.same'), {icon: 2}); return; }
+
+            var loadIndex = layer.load(1);
+
+            putApi('/admin/api/rbac/profile/password/', {
+                old_password: oldPassword,
+                new_password: newPassword,
+                confirm_password: confirmPassword
+            }, function(res) {
+                layer.close(loadIndex);
+                if (res.code === 200) {
+                    layer.msg(t('profile.password.success'), {icon: 1, time: 2000}, function() {
+                        form.val('passwordForm', {
+                            old_password: '',
+                            new_password: '',
+                            confirm_password: ''
+                        });
+                        try {
+                            if (window.parent) {
+                                window.parent.location.href = (window.parent.ADMIN_LOGIN_URL || '/admin/login/');
+                            }
+                        } catch (e) {
+                            window.location.href = '/login/';
+                        }
+                    });
+                } else {
+                    layer.msg(res.msg || t('common.fail'), {icon: 2});
+                }
+            });
+        });
+
+        initPage();
+    });
+    </script>
+</body>
+</html>

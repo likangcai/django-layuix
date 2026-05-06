@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 初始化默认菜单数据
-用法: python manage.py init_menu
+用法:
+  python manage.py init_menu             # 初始化菜单、角色、系统配置（已存在则跳过）
+  python manage.py init_menu --force     # 强制清空后重新初始化
+  python manage.py init_menu --fix-icons # 修复数据库中可能存在的无效 Layui 图标
+
+注意：fix_ai_config_permissions / fix_icons 两个历史补丁命令已合并入本命令，不再单独存在。
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
@@ -9,7 +14,7 @@ from django_layui.rbac.models import Menu, Role, SystemConfig
 
 
 class Command(BaseCommand):
-    help = '初始化默认菜单和角色数据'
+    help = '初始化默认菜单和角色数据（包含图标修复功能）'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -19,10 +24,23 @@ class Command(BaseCommand):
             default=False,
             help='强制重新初始化菜单数据（会删除现有菜单）',
         )
+        parser.add_argument(
+            '--fix-icons',
+            action='store_true',
+            dest='fix_icons',
+            default=False,
+            help='修复数据库中无效的 Layui 图标（原 fix_icons 命令功能）',
+        )
 
     def handle(self, *args, **options):
         force = options.get('force', False)
-        
+        fix_icons = options.get('fix_icons', False)
+
+        # --fix-icons 模式：仅修复图标，不初始化菜单
+        if fix_icons:
+            self._fix_icons()
+            return
+
         # 如果已有菜单数据且不强制重新初始化，则跳过
         if Menu.objects.exists() and not force:
             self._init_default_configs()
@@ -35,42 +53,38 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('已清空现有菜单数据'))
 
         # 创建菜单
-        # (name, icon, path, menu_type, sort, parent_name_or_None)
+        # (name, name_en, name_zh_hans, icon, path, menu_type, sort, parent_name_or_None)
         # menu_type: 1=目录, 2=菜单
         menus_data = [
             # ---- 仪表盘 ----
-            ('仪表盘', 'layui-icon-chart', '/static/layui/pages/dashboard.html', 2, 0, None),
+            ('仪表盘', 'Dashboard', '仪表盘', 'layui-icon-chart', '/static/layui/pages/dashboard.html', 2, 0, None),
 
             # ---- 权限管理 ----
-            ('权限管理', 'layui-icon-auz', '', 1, 1, None),
-            ('菜单管理', 'layui-icon-menu-fill', '/permission/menu', 2, 1, '权限管理'),
-            ('角色管理', 'layui-icon-group', '/permission/role', 2, 2, '权限管理'),
-            ('用户管理', 'layui-icon-username', '/permission/user', 2, 3, '权限管理'),
+            ('权限管理', 'Permission', '权限管理', 'layui-icon-auz', '', 1, 1, None),
+            ('菜单管理', 'Menu', '菜单管理', 'layui-icon-menu-fill', '/permission/menu', 2, 1, '权限管理'),
+            ('角色管理', 'Role', '角色管理', 'layui-icon-group', '/permission/role', 2, 2, '权限管理'),
+            ('用户管理', 'User', '用户管理', 'layui-icon-username', '/permission/user', 2, 3, '权限管理'),
 
             # ---- 系统管理 ----
-            ('系统管理', 'layui-icon-set', '', 1, 2, None),
-            ('个人中心', 'layui-icon-user', '/static/layui/pages/profile.html', 2, 1, '系统管理'),
-            ('操作日志', 'layui-icon-log', '/system/log', 2, 2, '系统管理'),
-            ('系统配置', 'layui-icon-set-sm', '/system/config', 2, 3, '系统管理'),
+            ('系统管理', 'System', '系统管理', 'layui-icon-set', '', 1, 2, None),
+            ('个人中心', 'Profile', '个人中心', 'layui-icon-user', '/static/layui/pages/profile.html', 2, 1, '系统管理'),
+            ('操作日志', 'Log', '操作日志', 'layui-icon-log', '/system/log', 2, 2, '系统管理'),
+            ('系统配置', 'Config', '系统配置', 'layui-icon-set-sm', '/system/config', 2, 3, '系统管理'),
 
             # ---- 运维管理 ----
-            ('运维管理', 'layui-icon-console', '', 1, 3, None),
-            ('服务器管理', 'layui-icon-console', '/ops/server', 2, 1, '运维管理'),
-            ('AI 配置', 'layui-icon-light', '/ops/ai-config', 2, 2, '运维管理'),
-
-            # ---- 业务示例 ----
-            ('业务示例', 'layui-icon-cart', '', 1, 4, None),
-            ('商品管理', 'layui-icon-file', '/admin/store/product/', 2, 1, '业务示例'),
-            ('订单管理', 'layui-icon-form', '/admin/store/order/', 2, 2, '业务示例'),
-            ('分类管理', 'layui-icon-folder', '/admin/store/category/', 2, 3, '业务示例'),
+            ('运维管理', 'Operations', '运维管理', 'layui-icon-console', '', 1, 3, None),
+            ('服务器管理', 'Server', '服务器管理', 'layui-icon-console', '/ops/server', 2, 1, '运维管理'),
+            ('AI 配置', 'AI Config', 'AI 配置', 'layui-icon-light', '/ops/ai-config', 2, 2, '运维管理'),
         ]
 
         created = {}
-        for name, icon, path, menu_type, sort, parent_name in menus_data:
+        for name, name_en, name_zh_hans, icon, path, menu_type, sort, parent_name in menus_data:
             parent = created.get(parent_name) if parent_name else None
             menu, is_new = Menu.objects.get_or_create(
                 name=name,
                 defaults={
+                    'name_en': name_en,
+                    'name_zh_hans': name_zh_hans,
                     'icon': icon,
                     'path': path,
                     'menu_type': menu_type,
@@ -80,49 +94,64 @@ class Command(BaseCommand):
                     'visible': True,
                 }
             )
+            # 如果菜单已存在，更新英文名称和简体中文字段
+            if not is_new:
+                updated = False
+                if menu.name_en != name_en:
+                    menu.name_en = name_en
+                    updated = True
+                if menu.name_zh_hans != name_zh_hans:
+                    menu.name_zh_hans = name_zh_hans
+                    updated = True
+                if updated:
+                    menu.save()
+                    self.stdout.write(f'  更新菜单: {name} (name_en, name_zh_hans)')
             created[name] = menu
             if is_new:
                 self.stdout.write(self.style.SUCCESS(f'  创建菜单: {name}'))
-            else:
+            elif not updated:
                 self.stdout.write(f'  菜单已存在: {name}')
 
         # 创建按钮级权限（menu_type=3）
+        # (name, name_en, name_zh_hans, parent_menu, permission, sort)
         buttons_data = [
             # 菜单管理下：新增菜单、编辑菜单、删除菜单
-            ('新增菜单', created['菜单管理'], 'menu:add', 1),
-            ('编辑菜单', created['菜单管理'], 'menu:edit', 2),
-            ('删除菜单', created['菜单管理'], 'menu:delete', 3),
+            ('新增菜单', 'Add Menu', '新增菜单', created['菜单管理'], 'menu:add', 1),
+            ('编辑菜单', 'Edit Menu', '编辑菜单', created['菜单管理'], 'menu:edit', 2),
+            ('删除菜单', 'Delete Menu', '删除菜单', created['菜单管理'], 'menu:delete', 3),
             # 角色管理下：新增角色、编辑角色、删除角色、复制角色
-            ('新增角色', created['角色管理'], 'role:add', 1),
-            ('编辑角色', created['角色管理'], 'role:edit', 2),
-            ('删除角色', created['角色管理'], 'role:delete', 3),
-            ('复制角色', created['角色管理'], 'role:copy', 4),
+            ('新增角色', 'Add Role', '新增角色', created['角色管理'], 'role:add', 1),
+            ('编辑角色', 'Edit Role', '编辑角色', created['角色管理'], 'role:edit', 2),
+            ('删除角色', 'Delete Role', '删除角色', created['角色管理'], 'role:delete', 3),
+            ('复制角色', 'Copy Role', '复制角色', created['角色管理'], 'role:copy', 4),
             # 用户管理下：新增用户、编辑用户、删除用户、重置密码、启用/禁用
-            ('新增用户', created['用户管理'], 'user:add', 1),
-            ('编辑用户', created['用户管理'], 'user:edit', 2),
-            ('删除用户', created['用户管理'], 'user:delete', 3),
-            ('重置密码', created['用户管理'], 'user:reset_password', 4),
-            ('启用/禁用', created['用户管理'], 'user:toggle_status', 5),
+            ('新增用户', 'Add User', '新增用户', created['用户管理'], 'user:add', 1),
+            ('编辑用户', 'Edit User', '编辑用户', created['用户管理'], 'user:edit', 2),
+            ('删除用户', 'Delete User', '删除用户', created['用户管理'], 'user:delete', 3),
+            ('重置密码', 'Reset Password', '重置密码', created['用户管理'], 'user:reset_password', 4),
+            ('启用/禁用', 'Toggle Status', '启用/禁用', created['用户管理'], 'user:toggle_status', 5),
             # 操作日志下：（只读，无按钮权限）
             # 个人中心下：（只读，无按钮权限）
             # 系统配置下：新增配置、编辑配置、删除配置
-            ('新增配置', created['系统配置'], 'config:add', 1),
-            ('编辑配置', created['系统配置'], 'config:edit', 2),
-            ('删除配置', created['系统配置'], 'config:delete', 3),
+            ('新增配置', 'Add Config', '新增配置', created['系统配置'], 'config:add', 1),
+            ('编辑配置', 'Edit Config', '编辑配置', created['系统配置'], 'config:edit', 2),
+            ('删除配置', 'Delete Config', '删除配置', created['系统配置'], 'config:delete', 3),
             # 服务器管理下：新增、编辑、删除
-            ('新增服务器', created['服务器管理'], 'server:add', 1),
-            ('编辑服务器', created['服务器管理'], 'server:edit', 2),
-            ('删除服务器', created['服务器管理'], 'server:delete', 3),
+            ('新增服务器', 'Add Server', '新增服务器', created['服务器管理'], 'server:add', 1),
+            ('编辑服务器', 'Edit Server', '编辑服务器', created['服务器管理'], 'server:edit', 2),
+            ('删除服务器', 'Delete Server', '删除服务器', created['服务器管理'], 'server:delete', 3),
              # AI 配置下：新增、编辑、删除、设默认
-            ('新增 AI 配置', created['AI 配置'], 'ai_config:add', 1),
-            ('编辑 AI 配置', created['AI 配置'], 'ai_config:edit', 2),
-            ('删除 AI 配置', created['AI 配置'], 'ai_config:delete', 3),
-            ('设为默认', created['AI 配置'], 'ai_config:set_default', 4),
+            ('新增 AI 配置', 'Add AI Config', '新增 AI 配置', created['AI 配置'], 'ai_config:add', 1),
+            ('编辑 AI 配置', 'Edit AI Config', '编辑 AI 配置', created['AI 配置'], 'ai_config:edit', 2),
+            ('删除 AI 配置', 'Delete AI Config', '删除 AI 配置', created['AI 配置'], 'ai_config:delete', 3),
+            ('设为默认', 'Set Default', '设为默认', created['AI 配置'], 'ai_config:set_default', 4),
         ]
-        for btn_name, parent_menu, permission, sort in buttons_data:
+        for btn_name, btn_name_en, btn_name_zh_hans, parent_menu, permission, sort in buttons_data:
             btn, is_new = Menu.objects.get_or_create(
                 name=btn_name,
                 defaults={
+                    'name_en': btn_name_en,
+                    'name_zh_hans': btn_name_zh_hans,
                     'parent': parent_menu,
                     'icon': '',
                     'path': '',
@@ -134,6 +163,18 @@ class Command(BaseCommand):
                     'visible': True,
                 }
             )
+            # 如果按钮已存在，更新英文名称和简体中文字段
+            if not is_new:
+                updated = False
+                if btn.name_en != btn_name_en:
+                    btn.name_en = btn_name_en
+                    updated = True
+                if btn.name_zh_hans != btn_name_zh_hans:
+                    btn.name_zh_hans = btn_name_zh_hans
+                    updated = True
+                if updated:
+                    btn.save()
+                    self.stdout.write(f'  更新按钮权限: {btn_name} (name_en, name_zh_hans)')
             if is_new:
                 self.stdout.write(self.style.SUCCESS(f'  创建按钮权限: {btn_name} ({permission})'))
             else:
@@ -213,3 +254,36 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f'  创建配置: {key}'))
             else:
                 self.stdout.write(f'  配置已存在: {key}')
+
+    def _fix_icons(self):
+        """修复数据库中无效的 Layui 图标（原 fix_icons 命令功能）"""
+        # 图标映射：错误图标 -> 正确图标
+        # 覆盖场景：
+        #   - init_menu.py 旧版本的 layui-icon-menu (已修正为 menu-fill)
+        #   - init_data.py 错误使用的 layui-icon-template / layui-icon-website
+        icon_mapping = {
+            'layui-icon-menu': 'layui-icon-menu-fill',      # 菜单
+            'layui-icon-template': 'layui-icon-menu-fill', # 菜单(init_data.py错误)
+            'layui-icon-server': 'layui-icon-console',     # 服务器->控制台
+            'layui-icon-website': 'layui-icon-console',    # 服务器(init_data.py错误)
+            'layui-icon-brain': 'layui-icon-light',         # AI/大脑 -> 太阳/智能
+            'layui-icon-checkin': 'layui-icon-form',        # 签到 -> 表单
+        }
+        self.stdout.write(self.style.MIGRATE_HEADING('\n修复 Layui 图标:'))
+        updated_count = 0
+        for old_icon, new_icon in icon_mapping.items():
+            menus = Menu.objects.filter(icon=old_icon)
+            count = menus.count()
+            if count > 0:
+                menus.update(icon=new_icon)
+                self.stdout.write(self.style.SUCCESS(
+                    f'  ✓ 更新 {count} 个菜单: {old_icon} → {new_icon}'
+                ))
+                updated_count += count
+            else:
+                self.stdout.write(f'  跳过 {old_icon} (未找到使用该图标的菜单)')
+
+        if updated_count > 0:
+            self.stdout.write(self.style.SUCCESS(f'\n总计更新 {updated_count} 个菜单图标'))
+        else:
+            self.stdout.write(self.style.WARNING('\n没有需要更新的图标'))

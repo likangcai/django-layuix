@@ -169,12 +169,30 @@ function openParentTab(title, url) {
 // 子页面继承父页面主题
 function inheritTheme() {
     try {
-        if (window.parent && window.parent.currentTheme) {
-            document.documentElement.setAttribute('data-theme', window.parent.currentTheme);
+        // 先尝试从父页面读取当前 data-theme 属性
+        if (window.parent && window.parent.document) {
+            var parentTheme = window.parent.document.documentElement.getAttribute('data-theme');
+            if (parentTheme) {
+                document.documentElement.setAttribute('data-theme', parentTheme);
+            }
+            var parentThemeMode = window.parent.document.documentElement.getAttribute('data-theme-mode');
+            if (parentThemeMode) {
+                document.documentElement.setAttribute('data-theme-mode', parentThemeMode);
+            }
         }
     } catch(e) {
-        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.setAttribute('data-theme', 'theme-default-dark');
+        document.documentElement.setAttribute('data-theme-mode', 'dark');
     }
+    // 监听父页面的主题切换消息
+    window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'themeChange' && e.data.theme) {
+            document.documentElement.setAttribute('data-theme', e.data.theme);
+            if (e.data.themeMode) {
+                document.documentElement.setAttribute('data-theme-mode', e.data.themeMode);
+            }
+        }
+    });
 }
 
 // 防抖

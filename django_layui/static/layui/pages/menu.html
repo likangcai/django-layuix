@@ -46,8 +46,8 @@
         }
         .menu-tree-panel .panel-title i { color: var(--primary-color); }
         .menu-table-panel { flex: 1; overflow: auto; }
-        .layui-form-label { width: 100px; padding: 9px 12px 9px 0; }
-        .layui-input-block { margin-left: 110px; }
+        .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
+        .layui-input-block { margin-left: 130px; }
         .icon-preview { display: inline-block; width: 20px; text-align: center; margin-right: 5px; }
         .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
         .layui-card-header { border-bottom: 1px solid var(--card-border); }
@@ -144,12 +144,6 @@
             <label class="layui-form-label">{{ t('menu.name_zh_hans') }}</label>
             <div class="layui-input-block">
                 <input type="text" name="name_zh_hans" placeholder="菜单名称（简体中文）" autocomplete="off" class="layui-input">
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">{{ t('menu.name_zh_hant') }}</label>
-            <div class="layui-input-block">
-                <input type="text" name="name_zh_hant" placeholder="選單名稱（繁體中文）" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
@@ -261,6 +255,8 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             result.push({
                 id: item.id,
                 name: item.name,
+                name_en: item.name_en || '',
+                name_zh_hans: item.name_zh_hans || '',
                 icon: item.icon,
                 menu_type: item.menu_type,
                 permission: item.permission,
@@ -389,7 +385,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                                 : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
                         }},
                         {field: 'permission', title: t('menu.permission'), width: 160},
-                        {title: t('common.operation'), width: 260, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+                        {title: t('common.operation'), width: 320, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
                     ]]
                 });
             }
@@ -423,7 +419,6 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                             name: menuData.name,
                             name_en: menuData.name_en || '',
                             name_zh_hans: menuData.name_zh_hans || '',
-                            name_zh_hant: menuData.name_zh_hant || '',
                             icon: menuData.icon || '',
                             path: menuData.path || '',
                             component: menuData.component || '',
@@ -475,7 +470,6 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 name: field.name,
                 name_en: field.name_en || '',
                 name_zh_hans: field.name_zh_hans || '',
-                name_zh_hant: field.name_zh_hant || '',
                 icon: field.icon || 'layui-icon-app',
                 path: field.path || '',
                 component: field.component || '',

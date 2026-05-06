@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主题切换完整测试</title>
+    <!-- 加载完整的样式文件 -->
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/themes.css">
+    <style>
+        .test-container {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .theme-btn {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: var(--primary-color, #1e9fff);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-btn:hover {
+            background-color: var(--primary-hover, #1785d4);
+        }
+        
+        .status-box {
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid var(--border-color, #ddd);
+            background-color: var(--bg-card, #fff);
+            color: var(--text-primary, #333);
+            border-radius: 8px;
+        }
+        
+        .color-preview {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            margin-right: 12px;
+            vertical-align: middle;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .preview-row {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .preview-label {
+            min-width: 80px;
+            color: var(--text-secondary, #666);
+        }
+        
+        .preview-value {
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .section-title {
+            color: var(--primary-color, #1e9fff);
+            border-bottom: 2px solid var(--primary-color, #1e9fff);
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+        }
+        
+        .light-theme {
+            background-color: #f8f9fa;
+        }
+        
+        .dark-theme {
+            background-color: #212529;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>主题切换测试</h1>
+        
+        <div id="status" class="status-box">
+            <h3 class="section-title">当前状态</h3>
+            <div class="preview-row">
+                <span class="preview-label">当前主题:</span>
+                <span id="current-theme" class="preview-value">未设置</span>
+            </div>
+            <div class="preview-row">
+                <span class="preview-label">data-theme:</span>
+                <span id="data-theme-value" class="preview-value">-</span>
+            </div>
+            <div class="preview-row">
+                <span class="preview-label">data-theme-mode:</span>
+                <span id="data-theme-mode-value" class="preview-value">-</span>
+            </div>
+        </div>
+        
+        <div id="colors" class="status-box">
+            <h3 class="section-title">CSS变量预览</h3>
+            <div class="preview-row">
+                <span class="color-preview" id="primary-preview"></span>
+                <span class="preview-label">主色调</span>
+                <span id="primary-value" class="preview-value"></span>
+            </div>
+            <div class="preview-row">
+                <span class="color-preview" id="bg-body-preview"></span>
+                <span class="preview-label">背景色</span>
+                <span id="bg-body-value" class="preview-value"></span>
+            </div>
+            <div class="preview-row">
+                <span class="color-preview" id="bg-card-preview"></span>
+                <span class="preview-label">卡片背景</span>
+                <span id="bg-card-value" class="preview-value"></span>
+            </div>
+            <div class="preview-row">
+                <span class="color-preview" id="text-primary-preview"></span>
+                <span class="preview-label">文字颜色</span>
+                <span id="text-primary-value" class="preview-value"></span>
+            </div>
+        </div>
+        
+        <div>
+            <h3 class="section-title">点击切换主题</h3>
+            <div class="theme-grid">
+                <button class="theme-btn" onclick="testTheme('theme-default-dark')">默认深色</button>
+                <button class="theme-btn" onclick="testTheme('theme-default-light')">默认浅色</button>
+                <button class="theme-btn" onclick="testTheme('theme-element-blue')">Element蓝</button>
+                <button class="theme-btn" onclick="testTheme('theme-ant-design-black')">Ant Design黑</button>
+                <button class="theme-btn" onclick="testTheme('theme-adminlte-blue')">AdminLTE蓝</button>
+                <button class="theme-btn" onclick="testTheme('theme-enterprise-purple')">企业紫</button>
+                <button class="theme-btn" onclick="testTheme('theme-enterprise-red')">企业红</button>
+                <button class="theme-btn" onclick="testTheme('theme-fresh-green')">清新绿</button>
+                <button class="theme-btn" onclick="testTheme('theme-tech-orange')">科技橙</button>
+                <button class="theme-btn" onclick="testTheme('theme-deep-black')">深邃黑</button>
+                <button class="theme-btn" onclick="testTheme('theme-elegant-gray')">优雅灰</button>
+                <button class="theme-btn" onclick="testTheme('theme-sky-blue')">天空蓝</button>
+                <button class="theme-btn" onclick="testTheme('theme-sakura-pink')">樱花粉</button>
+                <button class="theme-btn" onclick="testTheme('theme-aurora-purple')">极光紫</button>
+                <button class="theme-btn" onclick="testTheme('theme-midnight-blue')">暗夜蓝</button>
+                <button class="theme-btn" onclick="testTheme('theme-mint-cyan')">薄荷青</button>
+                <button class="theme-btn" onclick="testTheme('theme-flame-red')">烈焰红</button>
+                <button class="theme-btn" onclick="testTheme('theme-business-blue')">商务蓝</button>
+                <button class="theme-btn" onclick="testTheme('theme-premium-black')">高端黑</button>
+                <button class="theme-btn" onclick="testTheme('theme-vibrant-orange')">活力橙</button>
+                <button class="theme-btn" onclick="testTheme('theme-forest-green')">森林绿</button>
+                <button class="theme-btn" onclick="testTheme('theme-deep-sea')">深海蓝</button>
+                <button class="theme-btn" onclick="testTheme('theme-rose-gold')">玫瑰金</button>
+                <button class="theme-btn" onclick="testTheme('theme-geek-green')">极客绿</button>
+                <button class="theme-btn" onclick="testTheme('theme-cyberpunk')">赛博朋克</button>
+            </div>
+            <button class="theme-btn" onclick="resetTheme()" style="margin-top: 15px; background-color: #6c757d;">重置主题</button>
+        </div>
+    </div>
+
+    <script>
+        // 深色主题列表
+        var darkThemes = [
+            'theme-default-dark', 'theme-ant-design-black', 'theme-adminlte-blue',
+            'theme-enterprise-purple', 'theme-enterprise-red', 'theme-deep-black',
+            'theme-midnight-blue', 'theme-mint-cyan', 'theme-flame-red',
+            'theme-aurora-purple', 'theme-geek-green', 'theme-cyberpunk',
+            'theme-deep-sea', 'theme-premium-black'
+        ];
+        
+        function updateStatus() {
+            var theme = document.documentElement.getAttribute('data-theme');
+            var mode = document.documentElement.getAttribute('data-theme-mode');
+            
+            document.getElementById('current-theme').textContent = theme || '未设置';
+            document.getElementById('data-theme-value').textContent = theme || '-';
+            document.getElementById('data-theme-mode-value').textContent = mode || '-';
+            
+            // 获取CSS变量值
+            var root = document.documentElement;
+            var computedStyle = getComputedStyle(root);
+            
+            var colors = {
+                'primary': computedStyle.getPropertyValue('--primary-color').trim(),
+                'bg-body': computedStyle.getPropertyValue('--bg-body').trim(),
+                'bg-card': computedStyle.getPropertyValue('--card-bg').trim() || computedStyle.getPropertyValue('--bg-primary').trim(),
+                'text-primary': computedStyle.getPropertyValue('--text-primary').trim()
+            };
+            
+            document.getElementById('primary-value').textContent = colors['primary'];
+            document.getElementById('primary-preview').style.backgroundColor = colors['primary'];
+            
+            document.getElementById('bg-body-value').textContent = colors['bg-body'];
+            document.getElementById('bg-body-preview').style.backgroundColor = colors['bg-body'];
+            
+            document.getElementById('bg-card-value').textContent = colors['bg-card'];
+            document.getElementById('bg-card-preview').style.backgroundColor = colors['bg-card'];
+            
+            document.getElementById('text-primary-value').textContent = colors['text-primary'];
+            document.getElementById('text-primary-preview').style.backgroundColor = colors['text-primary'];
+        }
+        
+        function testTheme(themeName) {
+            console.log('Applying theme:', themeName);
+            
+            // 设置data-theme属性
+            document.documentElement.setAttribute('data-theme', themeName);
+            
+            // 设置主题模式
+            var isDark = darkThemes.includes(themeName);
+            document.documentElement.setAttribute('data-theme-mode', isDark ? 'dark' : 'light');
+            
+            // 保存到localStorage
+            localStorage.setItem('theme', themeName);
+            
+            // 更新状态显示
+            updateStatus();
+            
+            console.log('Theme applied successfully!');
+            console.log('data-theme:', document.documentElement.getAttribute('data-theme'));
+            console.log('data-theme-mode:', document.documentElement.getAttribute('data-theme-mode'));
+        }
+        
+        function resetTheme() {
+            console.log('Resetting theme');
+            document.documentElement.removeAttribute('data-theme');
+            document.documentElement.removeAttribute('data-theme-mode');
+            localStorage.removeItem('theme');
+            updateStatus();
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            var savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                testTheme(savedTheme);
+            } else {
+                // 默认使用深色主题
+                testTheme('theme-default-dark');
+            }
+        });
+    </script>
+</body>
+</html>

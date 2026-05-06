@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色管理 - 软件测试管理后台</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <script>
+        function syncParentTheme() {
+            var theme = 'light';
+            try {
+                if (window.parent && window.parent.document) {
+                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'light';
+                }
+            } catch(e) {}
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        syncParentTheme();
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'themeChange') {
+                document.documentElement.setAttribute('data-theme', e.data.theme);
+            }
+        });
+    </script>
+    <style>
+        body { padding: 0; margin: 0; background: var(--bg-primary); }
+        .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
+        .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
+        .layui-input-block { margin-left: 130px; }
+        .menu-tree-box {
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            max-height: 300px; overflow-y: auto; padding: 10px;
+            background: var(--bg-primary);
+        }
+        .btn-disabled { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
+        .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
+        .layui-card-header { border-bottom: 1px solid var(--card-border); }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <span style="font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                <i class="layui-icon layui-icon-template-1" style="color: var(--primary-color);"></i> <span data-i18n="role.title">角色管理</span>
+            </span>
+        </div>
+        <div class="layui-card-body">
+            <table id="roleTable" lay-filter="roleTable"></table>
+        </div>
+    </div>
+</div>
+
+<!-- 工具栏模板 -->
+<script type="text/html" id="toolbarTpl">
+    <div class="layui-btn-container">
+        {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
+        {{# if(layui.$.inArray('role:add', perms) > -1){ }}
+        <button class="layui-btn layui-btn-sm layui-btn-normal" lay-event="add">
+            <i class="layui-icon layui-icon-add-1"></i> {{ t('common.add') + t('role.title') }}
+        </button>
+        {{# } }}
+        <button class="layui-btn layui-btn-sm layui-btn-primary" lay-event="refresh">
+            <i class="layui-icon layui-icon-refresh"></i> {{ t('common.refresh') }}
+        </button>
+    </div>
+</script>
+
+<!-- 操作列模板 -->
+<script type="text/html" id="operateTpl">
+    {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
+    {{# if(layui.$.inArray('role:edit', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
+    <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="copy">{{ t('role.copy.title') }}</a>
+    {{# } }}
+    {{# if(d.is_system){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger btn-disabled" title="{{ t('role.systemCannotDelete') }}">{{ t('common.delete') }}</a>
+    {{# } else if(layui.$.inArray('role:delete', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">{{ t('common.delete') }}</a>
+    {{# } }}
+</script>
+
+<!-- 角色表单弹窗模板 -->
+<script type="text/html" id="roleFormTpl">
+    <form class="layui-form" lay-filter="roleForm" style="padding: 20px 30px 0;">
+        <input type="hidden" name="id" value="">
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('role.name') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="name" lay-verify="required" lay-reqtext="{{ t('common.inputRequired', [t('role.name')]) }}" placeholder="{{ t('common.inputRequired', [t('role.name')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('role.code') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="code" lay-verify="required" lay-reqtext="{{ t('common.inputRequired', [t('role.code')]) }}" placeholder="{{ t('common.inputRequired', [t('role.code')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">{{ t('role.description') }}</label>
+            <div class="layui-input-block">
+                <textarea name="description" placeholder="{{ t('common.inputRequired', [t('role.description')]) }}" class="layui-textarea" style="height:80px;"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('role.menuPermission') }}</label>
+            <div class="layui-input-block">
+                <div id="menuPermTree" class="menu-tree-box"></div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('common.status') }}</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="status" lay-skin="switch" lay-text="{{ t('common.enable') }}|{{ t('common.disable') }}" checked>
+            </div>
+        </div>
+        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
+            <button type="button" class="layui-btn" lay-submit lay-filter="roleSubmit">{{ t('common.confirm') }}</button>
+            <button type="reset" class="layui-btn layui-btn-primary">{{ t('common.reset') }}</button>
+        </div>
+    </form>
+</script>
+
+<!-- 复制权限弹窗模板 -->
+<script type="text/html" id="copyFormTpl">
+    <form class="layui-form" lay-filter="copyForm" style="padding: 20px 30px 0;">
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('role.copy.source') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="source_name" readonly class="layui-input layui-disabled" style="background:var(--bg-tertiary);">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('role.copy.newName') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="name" lay-verify="required" lay-reqtext="{{ t('common.inputRequired', [t('role.copy.newName')]) }}" placeholder="{{ t('common.inputRequired', [t('role.copy.newName')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('role.copy.newCode') }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="code" lay-verify="required" lay-reqtext="{{ t('common.inputRequired', [t('role.copy.newCode')]) }}" placeholder="{{ t('common.inputRequired', [t('role.copy.newCode')]) }}" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">{{ t('role.copy.description') }}</label>
+            <div class="layui-input-block">
+                <textarea name="description" placeholder="{{ t('common.inputRequired', [t('role.copy.description')]) }}" class="layui-textarea" style="height:80px;"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
+            <button type="button" class="layui-btn" lay-submit lay-filter="copySubmit">{{ t('common.confirm') }}</button>
+            <button type="reset" class="layui-btn layui-btn-primary">{{ t('common.reset') }}</button>
+        </div>
+    </form>
+</script>
+
+<script src="/static/layui/lib/layui.js"></script>
+    <script src="/static/layui/js/common.js"></script>
+    <script src="/static/layui/js/i18n.js"></script>
+    <script>
+inheritTheme();
+
+// 初始化语言
+if (window.parent && window.parent.I18N) {
+    window.I18N = window.parent.I18N;
+    window.t = window.parent.t;
+} else {
+    I18N.getLang();
+}
+
+layui.use(['table', 'tree', 'form', 'layer'], function(){
+    var table = layui.table;
+    var tree = layui.tree;
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.$;
+
+    // 初始化 data-i18n 和 {{ t() }} 占位符
+    $('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); $(this).text(t(key)); });
+    renderI18n();
+
+    var currentUser = window.parent.currentUser || {};
+    var permissions = currentUser.permissions || [];
+
+    // 加载角色列表
+    function loadTable() {
+        getApi('/admin/api/rbac/roles/', function(res) {
+            if (res.code === 200) {
+                table.render({
+                    elem: '#roleTable',
+                    toolbar: '#toolbarTpl',
+                    defaultToolbar: [],
+                    data: res.data || [],
+                    page: true,
+                    height: 'full-220',
+                    limit: 10,
+                    limits: [10, 30, 50, 100],
+                    skin: 'line',
+                    even: true,
+                    cols: [[
+                        {field: 'id', title: t('common.id'), width: 70, align: 'center'},
+                        {field: 'name', title: t('role.name'), width: 150},
+                        {field: 'code', title: t('role.code'), width: 150},
+                        {field: 'description', title: t('role.description'), minWidth: 200},
+                        {field: 'is_system', title: t('role.isSystem'), width: 100, align: 'center', templet: function(d) {
+                            return d.is_system
+                                ? '<span class="layui-badge">' + t('role.system') + '</span>'
+                                : '<span class="layui-badge layui-bg-gray">' + t('role.normal') + '</span>';
+                        }},
+                        {field: 'status', title: t('common.status'), width: 90, align: 'center', templet: function(d) {
+                            return d.status
+                                ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
+                                : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
+                        }},
+                        {field: 'create_time', title: t('user.createTime'), width: 170, align: 'center'},
+                        {title: t('common.operation'), width: 420, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+                    ]]
+                });
+            }
+        });
+    }
+
+    // 构建权限树数据（layui tree格式）
+    function buildPermTreeData(menuTree) {
+        function convert(items) {
+            var result = [];
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                result.push({
+                    id: item.id,
+                    title: item.name + (item.permission ? ' (' + item.permission + ')' : ''),
+                    children: item.children ? convert(item.children) : []
+                });
+            }
+            return result;
+        }
+        return convert(menuTree || []);
+    }
+
+    // 打开角色表单弹窗
+    function openRoleForm(roleData) {
+        var isEdit = !!roleData;
+        var title = isEdit ? t('common.edit') + t('role.title') : t('common.add') + t('role.title');
+
+        getApi('/admin/api/rbac/menus/tree/', function(res) {
+            if (res.code !== 200) return;
+            var menuTree = res.data || [];
+            var permTreeData = buildPermTreeData(menuTree);
+
+            var layerIndex = layer.open({
+                type: 1,
+                title: title,
+                area: ['600px', 'auto'],
+                content: renderTpl('roleFormTpl'),
+                success: function(layero, index) {
+                    // 渲染权限树
+                    var checkedIds = isEdit ? (roleData.menu_ids || []) : [];
+                    tree.render({
+                        elem: layero.find('#menuPermTree')[0],
+                        data: permTreeData,
+                        showLine: true,
+                        showCheckbox: true,
+                        id: 'menuPermTreeInst'
+                    });
+
+                    // 设置已选中的节点
+                    // 注意：不能用 tree.setChecked()，因为它会触发父子联动
+                    // （选中子节点 → 向上冒泡选中父节点 → 向下传播选中所有子节点）
+                    // 直接操作 checkbox DOM，只勾选指定 ID，不触发联动
+                    if (checkedIds.length > 0) {
+                        var idSet = {};
+                        for (var i = 0; i < checkedIds.length; i++) {
+                            idSet[checkedIds[i]] = true;
+                        }
+                        layero.find('.layui-tree-set').each(function() {
+                            var $set = $(this);
+                            var nodeId = $set.data('id');
+                            if (idSet[nodeId]) {
+                                var $input = $set.children('.layui-tree-entry').find('input[same="layuiTreeCheck"]');
+                                $input.prop('checked', true);
+                                // 同步 Layui checkbox 模拟层样式
+                                $input.next('.layui-form-checkbox').addClass('layui-form-checked');
+                            }
+                        });
+                    }
+
+                    if (isEdit) {
+                        form.val('roleForm', {
+                            id: roleData.id,
+                            name: roleData.name,
+                            code: roleData.code,
+                            description: roleData.description || '',
+                            status: roleData.status
+                        });
+                    }
+
+                    form.render(null, 'roleForm');
+                }
+            });
+        });
+
+        // 角色表单提交（绑定一次，避免重复绑定）
+        form.on('submit(roleSubmit)', function(data) {
+            var field = data.field;
+            var id = field.id;
+
+            var checkedData = tree.getChecked('menuPermTreeInst');
+            var menuIds = [];
+            function collectIds(nodes) {
+                for (var i = 0; i < nodes.length; i++) {
+                    menuIds.push(nodes[i].id);
+                    if (nodes[i].children && nodes[i].children.length > 0) {
+                        collectIds(nodes[i].children);
+                    }
+                }
+            }
+            collectIds(checkedData);
+
+            var submitData = {
+                name: field.name,
+                code: field.code,
+                description: field.description || '',
+                status: field.status === 'on',
+                menu_ids: menuIds
+            };
+
+            if (id) {
+                putApi('/admin/api/rbac/roles/' + id + '/update/', submitData, function(res) {
+                    if (res.code === 200) {
+                        layer.msg(t('common.updateSuccess'), {icon: 1});
+                        layer.closeAll();
+                        loadTable();
+                    } else {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                    }
+                });
+            } else {
+                postApi('/admin/api/rbac/roles/create/', submitData, function(res) {
+                    if (res.code === 200) {
+                        layer.msg(t('common.addSuccess'), {icon: 1});
+                        layer.closeAll();
+                        loadTable();
+                    } else {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                    }
+                });
+            }
+            return false;
+        });
+    }
+
+    // 当前复制操作的源角色数据
+    var currentCopyRoleData = null;
+
+    // 打开复制权限弹窗
+    function openCopyForm(roleData) {
+        currentCopyRoleData = roleData;
+        layer.open({
+            type: 1,
+            title: t('role.copy.title'),
+            area: ['500px', 'auto'],
+            content: renderTpl('copyFormTpl'),
+            success: function(layero, index) {
+                form.val('copyForm', {
+                    source_name: roleData.name,
+                    description: t('role.copy.from') + ' ' + roleData.name
+                });
+                form.render(null, 'copyForm');
+            }
+        });
+    }
+
+    // 复制权限表单提交（绑定一次，避免重复绑定）
+    form.on('submit(copySubmit)', function(data) {
+        var field = data.field;
+        var submitData = {
+            name: field.name,
+            code: field.code,
+            description: field.description || ''
+        };
+        if (!currentCopyRoleData) {
+            layer.msg(t('role.missingSource'), {icon: 2});
+            return false;
+        }
+        postApi('/admin/api/rbac/roles/' + currentCopyRoleData.id + '/copy/', submitData, function(res) {
+            if (res.code === 200) {
+                layer.msg(t('role.copy.success'), {icon: 1});
+                layer.closeAll();
+                loadTable();
+            } else {
+                layer.msg(res.msg || t('common.fail'), {icon: 2});
+            }
+        });
+        return false;
+    });
+
+    // 工具栏事件
+    table.on('toolbar(roleTable)', function(obj) {
+        if (obj.event === 'add') {
+            openRoleForm(null);
+        } else if (obj.event === 'refresh') {
+            loadTable();
+        }
+    });
+
+    // 操作列事件
+    table.on('tool(roleTable)', function(obj) {
+        var data = obj.data;
+        if (obj.event === 'view') {
+            var content = '<div style="padding: 20px 30px;">' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('role.name') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('role.code') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.code || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('role.description') + '</label><div class="layui-input-block"><textarea class="layui-textarea" readonly style="height:80px;">' + escapeHtml(data.description || '') + '</textarea></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('role.isSystem') + '</label><div class="layui-input-block"><input type="text" value="' + (data.is_system ? t('role.system') : t('role.normal')) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('common.status') + '</label><div class="layui-input-block"><input type="text" value="' + (data.status ? t('common.enable') : t('common.disable')) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.createTime') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.create_time || '') + '" class="layui-input" readonly></div></div>' +
+                '</div>';
+            layer.open({
+                type: 1,
+                title: t('common.view') + ' ' + t('role.title') + ' - ' + data.name,
+                area: ['550px', 'auto'],
+                content: content,
+                btn: [t('common.cancel')]
+            });
+        } else if (obj.event === 'edit') {
+            openRoleForm(data);
+        } else if (obj.event === 'copy') {
+            openCopyForm(data);
+        } else if (obj.event === 'del') {
+            if (data.is_system) {
+                layer.msg(t('role.systemCannotDelete'), {icon: 2});
+                return;
+            }
+            layer.confirm(t('common.confirmDelete') + '<br><b>' + data.name + '</b>', {
+                icon: 3,
+                title: t('common.deleteConfirm.title'),
+                btn: [t('common.confirm'), t('common.cancel')]
+            }, function(index) {
+                deleteApi('/admin/api/rbac/roles/' + data.id + '/delete/', function(res) {
+                    if (res.code === 200) {
+                        layer.msg(t('common.deleteSuccess'), {icon: 1});
+                        layer.close(index);
+                        loadTable();
+                    } else {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                    }
+                });
+            });
+        }
+    });
+
+    // 初始化
+    loadTable();
+});
+</script>
+</body>
+</html>

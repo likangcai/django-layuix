@@ -103,7 +103,7 @@ class Command(BaseCommand):
             name='菜单管理',
             defaults={
                 'parent': perm_dir,
-                'icon': 'layui-icon-template',
+                'icon': 'layui-icon-menu-fill',
                 'path': '/permission/menu',
                 'component': 'permission/menu/index',
                 'menu_type': 2,
@@ -364,7 +364,7 @@ class Command(BaseCommand):
             name='服务器管理',
             defaults={
                 'parent': ops_dir,
-                'icon': 'layui-icon-website',
+                'icon': 'layui-icon-console',
                 'path': '/ops/server',
                 'component': 'ops/server/index',
                 'menu_type': 2,

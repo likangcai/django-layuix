@@ -34,8 +34,8 @@
         }
 
         /* 配置表单的 label 宽度 */
-        .ai-form .layui-form-label { width: 100px; padding: 9px 12px 9px 0; }
-        .ai-form .layui-input-block { margin-left: 110px; }
+        .ai-form .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
+        .ai-form .layui-input-block { margin-left: 130px; }
 
         /* 快速选择卡片 */
         .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 18px; }
@@ -61,7 +61,7 @@
                     <i class="layui-icon layui-icon-release" style="color: var(--primary-color);"></i> <span data-i18n="ai.title">AI 模型配置管理</span>
                 </span>
                 <span style="font-size: 12px; color: var(--text-muted);">
-                    <i class="layui-icon layui-icon-tips" style="font-size: 14px;"></i> AI 模型配置主要用于日志智能分析功能
+                    <i class="layui-icon layui-icon-tips" style="font-size: 14px;"></i> <span data-i18n="ai.description">AI 模型配置主要用于日志智能分析功能</span>
                 </span>
             </div>
         </div>
@@ -69,13 +69,13 @@
             <!-- 搜索栏 -->
             <div style="margin-bottom: 16px; display: flex; gap: 10px; align-items: center;">
                 <div style="width: 280px;">
-                    <input type="text" id="searchInput" placeholder="搜索配置名称/厂商/模型" class="layui-input" style="height: 36px;">
+                    <input type="text" id="searchInput" placeholder="{{ t('ai.searchPlaceholder') }}" class="layui-input" style="height: 36px;">
                 </div>
                 <button class="layui-btn layui-btn-sm layui-btn-normal" id="searchBtn">
-                    <i class="layui-icon layui-icon-search"></i> 搜索
+                    <i class="layui-icon layui-icon-search"></i> <span data-i18n="common.search">搜索</span>
                 </button>
                 <button class="layui-btn layui-btn-sm layui-btn-primary" id="resetBtn">
-                    <i class="layui-icon layui-icon-refresh"></i> 重置
+                    <i class="layui-icon layui-icon-refresh"></i> <span data-i18n="common.reset">重置</span>
                 </button>
             </div>
             <table id="aiConfigTable" lay-filter="aiConfigTable"></table>
@@ -240,30 +240,30 @@ layui.use(['form', 'table', 'layer'], function(){
             },
             page: false,
             toolbar: '#toolbarTpl',
-            defaultToolbar: ['filter'],
+            defaultToolbar: [],           // 禁用工具栏，与其他页面保持一致
             cols: [[
-                { field: 'name', title: '配置名称', minWidth: 120, templet: function(d){
+                { field: 'name', title: t('ai.configName'), minWidth: 120, templet: function(d){
                     return d.is_default
-                        ? escapeHtml(d.name) + ' <span class="default-badge">默认</span>'
+                        ? escapeHtml(d.name) + ' <span class="default-badge">' + t('ai.default') + '</span>'
                         : escapeHtml(d.name);
                 }},
-                { field: 'provider', title: '厂商', width: 110, templet: function(d){
+                { field: 'provider', title: t('ai.provider'), width: 110, templet: function(d){
                     var cls = 'provider-' + (d.provider || 'custom');
-                    var label = PROVIDER_LABELS[d.provider] || d.provider || '自定义';
+                    var label = PROVIDER_LABELS[d.provider] || d.provider || t('ai.custom');
                     return '<span class="provider-tag ' + cls + '">' + label + '</span>';
                 }},
-                { field: 'model', title: '模型', minWidth: 140, style: 'font-family:monospace;font-size:13px;' },
-                { field: 'base_url', title: 'API 地址', minWidth: 160, templet: function(d){
+                { field: 'model', title: t('ai.modelName'), minWidth: 140, style: 'font-family:monospace;font-size:13px;' },
+                { field: 'base_url', title: t('ai.baseUrl'), minWidth: 160, templet: function(d){
                     return d.base_url
                         ? '<span style="font-size:12px;color:var(--text-secondary);">' + escapeHtml(d.base_url) + '</span>'
-                        : '<span style="color:var(--text-muted);">默认</span>';
+                        : '<span style="color:var(--text-muted);">' + t('ai.default') + '</span>';
                 }},
-                { field: 'api_key_set', title: 'Key 状态', width: 90, align: 'center', templet: function(d){
+                { field: 'api_key_set', title: t('ai.keyStatus'), width: 120, align: 'center', templet: function(d){
                     return d.api_key_set
-                        ? '<span style="color:#27c93f;">● 已配置</span>'
-                        : '<span style="color:#ff5555;">● 未配置</span>';
+                        ? '<span style="color:#27c93f;">● ' + t('ai.configured') + '</span>'
+                        : '<span style="color:#ff5555;">● ' + t('ai.notConfigured') + '</span>';
                 }},
-                { title: t('common.operation'), width: 320, align: 'center', fixed: 'right', toolbar: '#operateTpl' },
+                { title: t('common.operation'), width: 400, align: 'center', fixed: 'right', toolbar: '#operateTpl' },
             ]],
             done: function(res, curr, count) {
                 // 表格渲染完成后，调整操作按钮对齐

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主题切换测试</title>
+    <style>
+        :root {
+            --primary-color: #1e9fff;
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-primary: #1f2329;
+        }
+        
+        [data-theme="theme-default-dark"] {
+            --primary-color: #1E9FFF;
+            --bg-body: #14161a;
+            --bg-card: #1d1e22;
+            --text-primary: #e5eaf3;
+        }
+        
+        [data-theme="theme-element-blue"] {
+            --primary-color: #409EFF;
+            --bg-body: #eef5ff;
+            --bg-card: #ffffff;
+            --text-primary: #1f2329;
+        }
+        
+        [data-theme="theme-aurora-purple"] {
+            --primary-color: #667eea;
+            --bg-body: #1a1a2e;
+            --bg-card: #16213e;
+            --text-primary: #e5eaf3;
+        }
+        
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .card {
+            background-color: var(--bg-card);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .color-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>主题切换测试</h1>
+        <p>点击下方按钮切换主题：</p>
+        <button onclick="applyTheme('theme-default-dark')">默认深色</button>
+        <button onclick="applyTheme('theme-element-blue')">Element蓝</button>
+        <button onclick="applyTheme('theme-aurora-purple')">极光紫</button>
+        <button onclick="applyTheme('')">重置</button>
+    </div>
+    
+    <div class="card">
+        <h2>主题变量展示</h2>
+        <p>主色调：<span class="color-box" style="background-color: var(--primary-color);"></span></p>
+        <p>背景色：<span class="color-box" style="background-color: var(--bg-body);"></span></p>
+        <p>卡片背景：<span class="color-box" style="background-color: var(--bg-card);"></span></p>
+        <p>文字颜色：<span style="background-color: var(--text-primary);" class="color-box"></span></p>
+    </div>
+    
+    <div class="card">
+        <h2>当前主题</h2>
+        <p id="currentTheme">当前主题：未设置</p>
+    </div>
+
+    <script>
+        function applyTheme(theme) {
+            if (theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+                document.getElementById('currentTheme').textContent = '当前主题：' + theme;
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.removeItem('theme');
+                document.getElementById('currentTheme').textContent = '当前主题：未设置（默认）';
+            }
+        }
+        
+        // 初始化主题
+        var savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            applyTheme(savedTheme);
+        }
+    </script>
+</body>
+</html>

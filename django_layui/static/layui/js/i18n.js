@@ -61,11 +61,12 @@ var I18N = {
             // 顶部导航
             'header.home': '首页',
             'header.toggleSidebar': '收起/展开',
-            'header.toggleTheme': '切换主题',
+            'header.toggleTheme': '浅色/深色',
             'header.viewSite': '访问前台',
             'header.fullscreen': '全屏',
             'header.exitFullscreen': '退出全屏',
             'header.theme': '主题',
+            'header.selectTheme': '切换主题',
             'header.language': '语言',
             'header.personalCenter': '个人中心',
             'header.changePassword': '修改密码',
@@ -141,7 +142,6 @@ var I18N = {
             'menu.type.button': '按钮',
             'menu.name_en': '英文名称',
             'menu.name_zh_hans': '简体中文',
-            'menu.name_zh_hant': '繁体中文',
             'menu.sort': '排序',
             'menu.visible': '可见',
             'menu.status': '状态',
@@ -265,6 +265,7 @@ var I18N = {
 
             // AI配置管理
             'ai.title': 'AI模型配置',
+            'ai.description': 'AI 模型配置主要用于日志智能分析功能',
             'ai.addConfig': '新增模型配置',
             'ai.providerHint': '支持同一厂商配置多个模型，<b style="color:var(--primary-color);">默认</b> 模型用于 AI 日志分析',
             'ai.selectProvider': '快速选择厂商：',
@@ -284,6 +285,13 @@ var I18N = {
             'ai.setDefaultShort': '设默认',
             'ai.setDefaultHint': '设为 AI 分析默认模型',
             'ai.testConnection': '测试连接',
+            'ai.searchPlaceholder': '搜索配置名称/厂商/模型',
+            'ai.provider': '厂商',
+            'ai.custom': '自定义',
+            'ai.keyStatus': 'Key 状态',
+            'ai.configured': '已配置',
+            'ai.notConfigured': '未配置',
+            'ai.default': '默认',
 
             // 通用补充
             'common.noPermission': '无权限执行此操作',
@@ -482,11 +490,12 @@ var I18N = {
             // 顶部导航
             'header.home': 'Home',
             'header.toggleSidebar': 'Toggle Sidebar',
-            'header.toggleTheme': 'Toggle Theme',
+            'header.toggleTheme': 'Light/Dark',
             'header.viewSite': 'View Site',
             'header.fullscreen': 'Fullscreen',
             'header.exitFullscreen': 'Exit Fullscreen',
             'header.theme': 'Theme',
+            'header.selectTheme': 'Switch Theme',
             'header.language': 'Language',
             'header.personalCenter': 'Profile',
             'header.changePassword': 'Change Password',
@@ -549,7 +558,6 @@ var I18N = {
             'menu.type.button': 'Button',
             'menu.name_en': 'English Name',
             'menu.name_zh_hans': 'Simplified Chinese',
-            'menu.name_zh_hant': 'Traditional Chinese',
             'menu.sort': 'Sort',
             'menu.visible': 'Visible',
             'menu.status': 'Status',
@@ -673,6 +681,7 @@ var I18N = {
 
             // AI Config Management
             'ai.title': 'AI Model Config',
+            'ai.description': 'AI model configuration is mainly used for intelligent log analysis',
             'ai.addConfig': 'Add Model Config',
             'ai.providerHint': 'Support multiple models from same provider, <b style="color:var(--primary-color);">default</b> model used for AI log analysis',
             'ai.selectProvider': 'Quick Select Provider:',
@@ -692,6 +701,13 @@ var I18N = {
             'ai.setDefaultShort': 'Default',
             'ai.setDefaultHint': 'Set as default model for AI analysis',
             'ai.testConnection': 'Test Connection',
+            'ai.searchPlaceholder': 'Search config name/provider/model',
+            'ai.provider': 'Provider',
+            'ai.custom': 'Custom',
+            'ai.keyStatus': 'Key Status',
+            'ai.configured': 'Configured',
+            'ai.notConfigured': 'Not Configured',
+            'ai.default': 'Default',
 
             // Common additions
             'common.noPermission': 'No permission',

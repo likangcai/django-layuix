@@ -3,9 +3,16 @@ Django settings for example project using django-layui
 展示 django-layui 完整功能的示例配置
 """
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 开发模式：将 django-layui 源码目录添加到 Python 路径
+# 这样 example 项目会优先使用本地的 django-layui 源码，而不是 pip 安装的包
+django_layui_src = str(BASE_DIR.parent)  # 指向 django_layui 项目根目录
+if django_layui_src not in sys.path:
+    sys.path.insert(0, django_layui_src)
 
 SECRET_KEY = 'django-insecure-example-key-for-development-only'
 
@@ -77,8 +84,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# 开发环境：让 example 使用主项目的静态文件（指向 django_layui/static）
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR.parent / 'django_layui' / 'static',
 ]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -109,7 +117,8 @@ LAYUI_CONFIG = {
     'home_quick_links': [
         {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
         {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
-        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/'},
+        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layui'},
+        {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django_layui'}
         # {'name': '自定义页面', 'icon': 'layui-icon-app', 'url': '/custom-page/'},
     ],
     

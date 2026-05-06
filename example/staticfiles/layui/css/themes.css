@@ -1,0 +1,1061 @@
+/* Theme CSS Variables - Generated for django-layui */
+
+/* Base variables - applied when no theme is set */
+:root {
+    --primary-color: #1e9fff;
+    --primary-hover: #1785d4;
+    --primary-active: #1471b8;
+    --primary-light: rgba(30,159,255,0.1);
+    --primary-lighter: rgba(30,159,255,0.05);
+    --success-color: #5FB878;
+    --warning-color: #FFB800;
+    --danger-color: #FF5722;
+    --info-color: #01AAED;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --border-light: #f0f0f0;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s ease;
+    --transition-slow: 0.35s ease;
+    --bg-body: #f0f2f5;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f6f7f9;
+    --bg-tertiary: #e8e8e8;
+    --text-primary: #1f2329;
+    --text-secondary: #646a73;
+    --text-muted: #8f959e;
+    --border-color: #dee0e3;
+    --header-bg: #ffffff;
+    --header-text: #1f2329;
+    --header-border: #dee0e3;
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #646a73;
+    --sidebar-active-bg: #e8f4fd;
+    --sidebar-active-text: #1e9fff;
+    --sidebar-hover-bg: #f5f5f5;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --card-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    --card-bg: #ffffff;
+    --card-border: #dee0e3;
+    --bg-hover: #f5f5f5;
+    --dropdown-bg: #ffffff;
+    --dropdown-hover: #f5f5f5;
+}
+
+/* Dark mode base overrides - applied when data-theme-mode="dark" */
+/* These serve as fallbacks when no specific theme is selected */
+html[data-theme-mode="dark"] {
+    --bg-body: #14161a;
+    --bg-primary: #1d1e22;
+    --bg-secondary: #26272b;
+    --bg-tertiary: #2e3035;
+    --text-primary: #e5eaf3;
+    --text-secondary: #a6adb6;
+    --text-muted: #6b7280;
+    --border-color: #363840;
+    --header-bg: #1d1e22;
+    --header-text: #e5eaf3;
+    --header-border: #2e3035;
+    --sidebar-bg: #1a1b1f;
+    --sidebar-text: #a6adb6;
+    --sidebar-active-bg: #1e9fff;
+    --sidebar-active-text: #ffffff;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --card-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    --card-bg: #1d1e22;
+    --card-border: #363840;
+    --bg-hover: rgba(255,255,255,0.05);
+    --scrollbar-thumb: #4a4d55;
+    --scrollbar-thumb-hover: #5a5d65;
+    --dropdown-bg: #26272b;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #26272b;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(255,255,255,0.08);
+    --input-border: #363840;
+    --input-text: #e5eaf3;
+    --btn-secondary-bg: #363840;
+    --btn-secondary-text: #e5eaf3;
+}
+
+/* ==================== Theme-Specific Variables ==================== */
+/* These override both base and mode variables when a theme is selected */
+/* Using html[data-theme="xxx"][data-theme-mode] for higher specificity */
+
+/* 1. Default Dark */
+html[data-theme="theme-default-dark"][data-theme-mode="dark"],
+html[data-theme="theme-default-dark"] {
+    --primary-color: #1E9FFF;
+    --primary-hover: #1785d4;
+    --primary-active: #1471b8;
+    --primary-light: rgba(30,159,255,0.1);
+    --primary-lighter: rgba(30,159,255,0.05);
+    --bg-body: #14161a;
+    --bg-primary: #1d1e22;
+    --bg-secondary: #26272b;
+    --bg-tertiary: #2e3035;
+    --text-primary: #e5eaf3;
+    --text-secondary: #a6adb6;
+    --text-muted: #6b7280;
+    --border-color: #363840;
+    --header-bg: #232935;
+    --header-text: #e5eaf3;
+    --header-border: #2e3035;
+    --sidebar-bg: #232935;
+    --sidebar-text: #BFCBD9;
+    --sidebar-active-bg: #1E9FFF;
+    --sidebar-active-text: #ffffff;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --card-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    --card-bg: #1d1e22;
+    --card-border: #363840;
+    --bg-hover: rgba(255,255,255,0.05);
+    --scrollbar-thumb: #4a4d55;
+    --scrollbar-thumb-hover: #5a5d65;
+    --dropdown-bg: #26272b;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #26272b;
+    --table-stripe: rgba(255,255,255,0.03);
+    --table-hover: rgba(255,255,255,0.08);
+    --input-border: #363840;
+    --input-text: #e5eaf3;
+    --btn-secondary-bg: #363840;
+    --btn-secondary-text: #e5eaf3;
+}
+
+/* 2. Default Light */
+html[data-theme="theme-default-light"][data-theme-mode="light"],
+html[data-theme="theme-default-light"] {
+    --primary-color: #1E9FFF;
+    --primary-hover: #1785d4;
+    --primary-active: #1471b8;
+    --primary-light: rgba(30,159,255,0.1);
+    --primary-lighter: rgba(30,159,255,0.05);
+    --bg-body: #f0f2f5;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f6f7f9;
+    --bg-tertiary: #e8e8e8;
+    --text-primary: #1f2329;
+    --text-secondary: #646a73;
+    --text-muted: #8f959e;
+    --border-color: #dee0e3;
+    --header-bg: #ffffff;
+    --header-text: #1f2329;
+    --header-border: #dee0e3;
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #646a73;
+    --sidebar-active-bg: #e8f4fd;
+    --sidebar-active-text: #1E9FFF;
+    --sidebar-hover-bg: #f5f5f5;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --card-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    --card-bg: #ffffff;
+    --card-border: #dee0e3;
+    --bg-hover: #f5f5f5;
+    --scrollbar-thumb: #c4c4c4;
+    --scrollbar-thumb-hover: #a0a0a0;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #FAFAFA;
+    --table-stripe: #f6f7f9;
+    --table-hover: #f5f5f5;
+}
+
+/* 3. Element Blue */
+html[data-theme="theme-element-blue"][data-theme-mode="light"],
+html[data-theme="theme-element-blue"] {
+    --primary-color: #409EFF;
+    --primary-hover: #3088dd;
+    --primary-active: #2677cc;
+    --primary-light: rgba(64,158,255,0.1);
+    --primary-lighter: rgba(64,158,255,0.05);
+    --bg-body: #eef5ff;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0f5ff;
+    --bg-tertiary: #d6e4ff;
+    --text-primary: #1f2329;
+    --text-secondary: #606266;
+    --text-muted: #909399;
+    --border-color: #d9d9d9;
+    --header-bg: #409EFF;
+    --header-text: #ffffff;
+    --header-border: #3088dd;
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #606266;
+    --sidebar-active-bg: rgba(64,158,255,0.12);
+    --sidebar-active-text: #409EFF;
+    --sidebar-hover-bg: #f5f7fa;
+    --shadow: 0 2px 12px rgba(64,158,255,0.12);
+    --card-shadow: 0 1px 4px rgba(64,158,255,0.08);
+    --card-bg: #ffffff;
+    --card-border: #e8e8e8;
+    --bg-hover: #f5f7fa;
+    --scrollbar-thumb: #c8c8c8;
+    --scrollbar-thumb-hover: #a8a8a8;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #ffffff;
+    --table-stripe: #fafcff;
+    --table-hover: #eef5ff;
+}
+
+/* 4. Ant Design Black */
+html[data-theme="theme-ant-design-black"][data-theme-mode="dark"],
+html[data-theme="theme-ant-design-black"] {
+    --primary-color: #1890FF;
+    --primary-hover: #096dd9;
+    --primary-active: #0050b3;
+    --primary-light: rgba(24,144,255,0.1);
+    --primary-lighter: rgba(24,144,255,0.05);
+    --bg-body: #0a0e17;
+    --bg-primary: #001529;
+    --bg-secondary: #0a1628;
+    --bg-tertiary: #112035;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255,255,255,0.65);
+    --text-muted: rgba(255,255,255,0.4);
+    --border-color: rgba(255,255,255,0.1);
+    --header-bg: #001529;
+    --header-text: #ffffff;
+    --header-border: rgba(255,255,255,0.1);
+    --sidebar-bg: #001529;
+    --sidebar-text: rgba(255,255,255,0.65);
+    --sidebar-active-bg: rgba(24,144,255,0.15);
+    --sidebar-active-text: #1890FF;
+    --sidebar-hover-bg: rgba(255,255,255,0.04);
+    --shadow: 0 4px 16px rgba(0,0,0,0.4);
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --card-bg: #0a1628;
+    --card-border: rgba(255,255,255,0.1);
+    --bg-hover: rgba(255,255,255,0.04);
+    --scrollbar-thumb: rgba(255,255,255,0.2);
+    --scrollbar-thumb-hover: rgba(255,255,255,0.3);
+    --dropdown-bg: #0a1628;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #0a1628;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(24,144,255,0.08);
+    --input-border: rgba(255,255,255,0.1);
+    --input-text: #ffffff;
+    --btn-secondary-bg: rgba(255,255,255,0.1);
+    --btn-secondary-text: #ffffff;
+}
+
+/* 5. AdminLTE Blue */
+html[data-theme="theme-adminlte-blue"][data-theme-mode="dark"],
+html[data-theme="theme-adminlte-blue"] {
+    --primary-color: #3C8DBC;
+    --primary-hover: #357ca5;
+    --primary-active: #2d6b94;
+    --primary-light: rgba(60,141,188,0.1);
+    --primary-lighter: rgba(60,141,188,0.05);
+    --bg-body: #1e282c;
+    --bg-primary: #2B3539;
+    --bg-secondary: #364147;
+    --bg-tertiary: #414f57;
+    --text-primary: #B7C0CE;
+    --text-secondary: #9aa4ae;
+    --text-muted: #6b7a85;
+    --border-color: #1a2226;
+    --header-bg: #3C8DBC;
+    --header-text: #ffffff;
+    --header-border: #357ca5;
+    --sidebar-bg: #2B3539;
+    --sidebar-text: #B7C0CE;
+    --sidebar-active-bg: #3C8DBC;
+    --sidebar-active-text: #ffffff;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --card-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    --card-bg: #2B3539;
+    --card-border: #1a2226;
+    --bg-hover: rgba(255,255,255,0.05);
+    --scrollbar-thumb: #4a5562;
+    --scrollbar-thumb-hover: #5a6572;
+    --dropdown-bg: #364147;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #364147;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(60,141,188,0.1);
+    --input-border: #1a2226;
+    --input-text: #B7C0CE;
+    --btn-secondary-bg: #364147;
+    --btn-secondary-text: #B7C0CE;
+}
+
+/* 6. Enterprise Purple */
+html[data-theme="theme-enterprise-purple"][data-theme-mode="dark"],
+html[data-theme="theme-enterprise-purple"] {
+    --primary-color: #8263B1;
+    --primary-hover: #7054a0;
+    --primary-active: #5e458e;
+    --primary-light: rgba(130,99,177,0.1);
+    --primary-lighter: rgba(130,99,177,0.05);
+    --bg-body: #1a161e;
+    --bg-primary: #263238;
+    --bg-secondary: #2e3b42;
+    --bg-tertiary: #384850;
+    --text-primary: #e5eaf3;
+    --text-secondary: #B0BEC5;
+    --text-muted: #7a8a9a;
+    --border-color: #384850;
+    --header-bg: #8263B1;
+    --header-text: #ffffff;
+    --header-border: #7054a0;
+    --sidebar-bg: #263238;
+    --sidebar-text: #B0BEC5;
+    --sidebar-active-bg: rgba(130,99,177,0.2);
+    --sidebar-active-text: #8263B1;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 2px 12px rgba(130,99,177,0.15);
+    --card-shadow: 0 1px 4px rgba(130,99,177,0.1);
+    --card-bg: #263238;
+    --card-border: #384850;
+    --bg-hover: rgba(130,99,177,0.1);
+    --scrollbar-thumb: #4a5562;
+    --scrollbar-thumb-hover: #5a5d65;
+    --dropdown-bg: #2e3b42;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #2e3b42;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(130,99,177,0.1);
+    --input-border: #384850;
+    --input-text: #e5eaf3;
+    --btn-secondary-bg: #384850;
+    --btn-secondary-text: #e5eaf3;
+}
+
+/* 7. Enterprise Red */
+html[data-theme="theme-enterprise-red"][data-theme-mode="dark"],
+html[data-theme="theme-enterprise-red"] {
+    --primary-color: #C9333E;
+    --primary-hover: #b02b35;
+    --primary-active: #96232c;
+    --primary-light: rgba(201,51,62,0.1);
+    --primary-lighter: rgba(201,51,62,0.05);
+    --bg-body: #1a1618;
+    --bg-primary: #263238;
+    --bg-secondary: #2e3b42;
+    --bg-tertiary: #384850;
+    --text-primary: #f0dde0;
+    --text-secondary: #B0BEC5;
+    --text-muted: #7a8a9a;
+    --border-color: #384850;
+    --header-bg: #C9333E;
+    --header-text: #ffffff;
+    --header-border: #b02b35;
+    --sidebar-bg: #1a1a1a;
+    --sidebar-text: #B0BEC5;
+    --sidebar-active-bg: rgba(201,51,62,0.2);
+    --sidebar-active-text: #C9333E;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 2px 12px rgba(201,51,62,0.15);
+    --card-shadow: 0 1px 4px rgba(201,51,62,0.1);
+    --card-bg: #1a1a1a;
+    --card-border: #2a2a2a;
+    --bg-hover: rgba(201,51,62,0.1);
+    --scrollbar-thumb: #3a3a3a;
+    --scrollbar-thumb-hover: #4a4a4a;
+    --dropdown-bg: #222222;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #222222;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(201,51,62,0.1);
+    --input-border: #384850;
+    --input-text: #f0dde0;
+    --btn-secondary-bg: #384850;
+    --btn-secondary-text: #f0dde0;
+}
+
+/* 8. Fresh Green */
+html[data-theme="theme-fresh-green"][data-theme-mode="light"],
+html[data-theme="theme-fresh-green"] {
+    --primary-color: #27AD60;
+    --primary-hover: #219653;
+    --primary-active: #1a7d46;
+    --primary-light: rgba(39,173,96,0.1);
+    --primary-lighter: rgba(39,173,96,0.05);
+    --bg-body: #f0fdf4;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0fdf4;
+    --bg-tertiary: #dcfce7;
+    --text-primary: #1f2329;
+    --text-secondary: #5F5F5F;
+    --text-muted: #7a8a80;
+    --border-color: #a8e0c8;
+    --header-bg: #27AD60;
+    --header-text: #ffffff;
+    --header-border: #219653;
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #5F5F5F;
+    --sidebar-active-bg: rgba(39,173,96,0.12);
+    --sidebar-active-text: #27AD60;
+    --sidebar-hover-bg: #f0fdf4;
+    --shadow: 0 2px 12px rgba(39,173,96,0.12);
+    --card-shadow: 0 1px 4px rgba(39,173,96,0.08);
+    --card-bg: #ffffff;
+    --card-border: #a8e0c8;
+    --bg-hover: #dcfce7;
+    --scrollbar-thumb: #80c8a8;
+    --scrollbar-thumb-hover: #50a888;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #ffffff;
+    --table-stripe: #f0fdf4;
+    --table-hover: #dcfce7;
+}
+
+/* 9. Tech Orange */
+html[data-theme="theme-tech-orange"][data-theme-mode="light"],
+html[data-theme="theme-tech-orange"] {
+    --primary-color: #FF6B35;
+    --primary-hover: #e55a2b;
+    --primary-active: #cc4d24;
+    --primary-light: rgba(255,107,53,0.1);
+    --primary-lighter: rgba(255,107,53,0.05);
+    --bg-body: #fff8f5;
+    --bg-primary: #ffffff;
+    --bg-secondary: #fff8f5;
+    --bg-tertiary: #ffe8e0;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-muted: #9a8880;
+    --border-color: #f0c8b8;
+    --header-bg: linear-gradient(to right, #DA8342, #E45131);
+    --header-text: #ffffff;
+    --header-border: #c86a38;
+    --sidebar-bg: #F7F7F7;
+    --sidebar-text: #333333;
+    --sidebar-active-bg: rgba(255,107,53,0.12);
+    --sidebar-active-text: #FF6B35;
+    --sidebar-hover-bg: #fff0e8;
+    --shadow: 0 2px 12px rgba(255,107,53,0.15);
+    --card-shadow: 0 1px 4px rgba(255,107,53,0.08);
+    --card-bg: #ffffff;
+    --card-border: #f0c8b8;
+    --bg-hover: #ffe8e0;
+    --scrollbar-thumb: #d8a090;
+    --scrollbar-thumb-hover: #c08070;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #F7F7F7;
+    --table-stripe: #fff8f5;
+    --table-hover: #ffe8e0;
+}
+
+/* 10. Deep Black */
+html[data-theme="theme-deep-black"][data-theme-mode="dark"],
+html[data-theme="theme-deep-black"] {
+    --primary-color: #00BCD4;
+    --primary-hover: #00a8c0;
+    --primary-active: #0094aa;
+    --primary-light: rgba(0,188,212,0.1);
+    --primary-lighter: rgba(0,188,212,0.05);
+    --bg-body: #0a0a0a;
+    --bg-primary: #333333;
+    --bg-secondary: #3a3a3a;
+    --bg-tertiary: #444444;
+    --text-primary: #E0F7FA;
+    --text-secondary: #B0BEC5;
+    --text-muted: #6a7a8a;
+    --border-color: #444444;
+    --header-bg: #333333;
+    --header-text: #E0F7FA;
+    --header-border: #444444;
+    --sidebar-bg: #333333;
+    --sidebar-text: #B0BEC5;
+    --sidebar-active-bg: rgba(0,188,212,0.2);
+    --sidebar-active-text: #00BCD4;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 4px 16px rgba(0,0,0,0.4);
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --card-bg: #333333;
+    --card-border: #444444;
+    --bg-hover: rgba(0,188,212,0.1);
+    --scrollbar-thumb: #555555;
+    --scrollbar-thumb-hover: #666666;
+    --dropdown-bg: #3a3a3a;
+    --overlay-bg: rgba(0,0,0,0.7);
+    --input-bg: #3a3a3a;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(0,188,212,0.1);
+    --input-border: #444444;
+    --input-text: #E0F7FA;
+    --btn-secondary-bg: #444444;
+    --btn-secondary-text: #E0F7FA;
+}
+
+/* 11. Elegant Gray */
+html[data-theme="theme-elegant-gray"][data-theme-mode="light"],
+html[data-theme="theme-elegant-gray"] {
+    --primary-color: #213A53;
+    --primary-hover: #1a2d40;
+    --primary-active: #13202d;
+    --primary-light: rgba(33,58,83,0.1);
+    --primary-lighter: rgba(33,58,83,0.05);
+    --bg-body: #f5f5f5;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e8e8e8;
+    --text-primary: #213A53;
+    --text-secondary: #666666;
+    --text-muted: #8a9a9a;
+    --border-color: #d0d0d0;
+    --header-bg: #213A53;
+    --header-text: #ffffff;
+    --header-border: #1a2d40;
+    --sidebar-bg: #E0E0E0;
+    --sidebar-text: #666666;
+    --sidebar-active-bg: rgba(33,58,83,0.15);
+    --sidebar-active-text: #213A53;
+    --sidebar-hover-bg: #d0d0d0;
+    --shadow: 0 2px 12px rgba(33,58,83,0.12);
+    --card-shadow: 0 1px 4px rgba(33,58,83,0.08);
+    --card-bg: #ffffff;
+    --card-border: #d0d0d0;
+    --bg-hover: #e8e8e8;
+    --scrollbar-thumb: #b0b0b0;
+    --scrollbar-thumb-hover: #909090;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #ffffff;
+    --table-stripe: #f5f5f5;
+    --table-hover: #e8e8e8;
+}
+
+/* 12. Sky Blue */
+html[data-theme="theme-sky-blue"][data-theme-mode="light"],
+html[data-theme="theme-sky-blue"] {
+    --primary-color: #02C0CE;
+    --primary-hover: #02a8b8;
+    --primary-active: #02909e;
+    --primary-light: rgba(2,192,206,0.1);
+    --primary-lighter: rgba(2,192,206,0.05);
+    --bg-body: #f0fcfe;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0fcfe;
+    --bg-tertiary: #d0f4f8;
+    --text-primary: #1f2329;
+    --text-secondary: #666666;
+    --text-muted: #7a9a9a;
+    --border-color: #a8e8ec;
+    --header-bg: #02C0CE;
+    --header-text: #ffffff;
+    --header-border: #02a8b8;
+    --sidebar-bg: #E0E0E0;
+    --sidebar-text: #666666;
+    --sidebar-active-bg: rgba(2,192,206,0.12);
+    --sidebar-active-text: #02C0CE;
+    --sidebar-hover-bg: #d0d0d0;
+    --shadow: 0 2px 12px rgba(2,192,206,0.12);
+    --card-shadow: 0 1px 4px rgba(2,192,206,0.08);
+    --card-bg: #ffffff;
+    --card-border: #a8e8ec;
+    --bg-hover: #d0f4f8;
+    --scrollbar-thumb: #80c8cc;
+    --scrollbar-thumb-hover: #50a8ac;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #ffffff;
+    --table-stripe: #f0fcfe;
+    --table-hover: #d0f4f8;
+}
+
+/* 13. Sakura Pink */
+html[data-theme="theme-sakura-pink"][data-theme-mode="light"],
+html[data-theme="theme-sakura-pink"] {
+    --primary-color: #FF6B9D;
+    --primary-hover: #e55a8a;
+    --primary-active: #cc4d77;
+    --primary-light: rgba(255,107,157,0.1);
+    --primary-lighter: rgba(255,107,157,0.05);
+    --bg-body: #fff5f7;
+    --bg-primary: #ffffff;
+    --bg-secondary: #fff5f7;
+    --bg-tertiary: #ffe8f0;
+    --text-primary: #1f2329;
+    --text-secondary: #666666;
+    --text-muted: #9a8890;
+    --border-color: #f0c8d8;
+    --header-bg: #FF6B9D;
+    --header-text: #ffffff;
+    --header-border: #e55a8a;
+    --sidebar-bg: #FFF5F7;
+    --sidebar-text: #666666;
+    --sidebar-active-bg: rgba(255,107,157,0.12);
+    --sidebar-active-text: #FF6B9D;
+    --sidebar-hover-bg: #ffe8f0;
+    --shadow: 0 2px 12px rgba(255,107,157,0.12);
+    --card-shadow: 0 1px 4px rgba(255,107,157,0.08);
+    --card-bg: #ffffff;
+    --card-border: #f0c8d8;
+    --bg-hover: #ffe8f0;
+    --scrollbar-thumb: #d8a0b8;
+    --scrollbar-thumb-hover: #c080a0;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #FFF5F7;
+    --table-stripe: #fff5f7;
+    --table-hover: #ffe8f0;
+}
+
+/* 14. Aurora Purple */
+html[data-theme="theme-aurora-purple"][data-theme-mode="dark"],
+html[data-theme="theme-aurora-purple"] {
+    --primary-color: #667eea;
+    --primary-hover: #5567d3;
+    --primary-active: #4455bc;
+    --primary-light: rgba(102,126,234,0.1);
+    --primary-lighter: rgba(102,126,234,0.05);
+    --bg-body: #1a1a2e;
+    --bg-primary: #16213e;
+    --bg-secondary: #1f2940;
+    --bg-tertiary: #283450;
+    --text-primary: #e5eaf3;
+    --text-secondary: #a0a0b0;
+    --text-muted: #6a6a8a;
+    --border-color: #283450;
+    --header-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --header-text: #ffffff;
+    --header-border: #5567d3;
+    --sidebar-bg: #1a1a2e;
+    --sidebar-text: #a0a0b0;
+    --sidebar-active-bg: rgba(102,126,234,0.2);
+    --sidebar-active-text: #667eea;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 4px 16px rgba(102,126,234,0.2);
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --card-bg: #16213e;
+    --card-border: #283450;
+    --bg-hover: rgba(102,126,234,0.1);
+    --scrollbar-thumb: #384460;
+    --scrollbar-thumb-hover: #485470;
+    --dropdown-bg: #1f2940;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #1f2940;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(102,126,234,0.1);
+    --input-border: #283450;
+    --input-text: #e5eaf3;
+    --btn-secondary-bg: #283450;
+    --btn-secondary-text: #e5eaf3;
+}
+
+/* 15. Midnight Blue */
+html[data-theme="theme-midnight-blue"][data-theme-mode="light"],
+html[data-theme="theme-midnight-blue"] {
+    --primary-color: #3E4295;
+    --primary-hover: #353982;
+    --primary-active: #2c306f;
+    --primary-light: rgba(62,66,149,0.1);
+    --primary-lighter: rgba(62,66,149,0.05);
+    --bg-body: #f0f2f8;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0f2f8;
+    --bg-tertiary: #e0e4f0;
+    --text-primary: #1f2329;
+    --text-secondary: #666666;
+    --text-muted: #7a8a9a;
+    --border-color: #c8cce8;
+    --header-bg: #ffffff;
+    --header-text: #1f2329;
+    --header-border: #c8cce8;
+    --sidebar-bg: #E0E0E0;
+    --sidebar-text: #666666;
+    --sidebar-active-bg: rgba(62,66,149,0.15);
+    --sidebar-active-text: #3E4295;
+    --sidebar-hover-bg: #d0d0d0;
+    --shadow: 0 2px 12px rgba(62,66,149,0.12);
+    --card-shadow: 0 1px 4px rgba(62,66,149,0.08);
+    --card-bg: #ffffff;
+    --card-border: #c8cce8;
+    --bg-hover: #e0e4f0;
+    --scrollbar-thumb: #a8ace8;
+    --scrollbar-thumb-hover: #888cc8;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #ffffff;
+    --table-stripe: #f0f2f8;
+    --table-hover: #e0e4f0;
+}
+
+/* 16. Mint Cyan */
+html[data-theme="theme-mint-cyan"][data-theme-mode="dark"],
+html[data-theme="theme-mint-cyan"] {
+    --primary-color: #2F9688;
+    --primary-hover: #288072;
+    --primary-active: #216a5c;
+    --primary-light: rgba(47,150,136,0.1);
+    --primary-lighter: rgba(47,150,136,0.05);
+    --bg-body: #1a2423;
+    --bg-primary: #263238;
+    --bg-secondary: #2e3b42;
+    --bg-tertiary: #384850;
+    --text-primary: #d8f0ec;
+    --text-secondary: #B0BEC5;
+    --text-muted: #7a9a94;
+    --border-color: #384850;
+    --header-bg: #2F9688;
+    --header-text: #ffffff;
+    --header-border: #288072;
+    --sidebar-bg: #263238;
+    --sidebar-text: #B0BEC5;
+    --sidebar-active-bg: rgba(47,150,136,0.2);
+    --sidebar-active-text: #2F9688;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 2px 12px rgba(47,150,136,0.15);
+    --card-shadow: 0 1px 4px rgba(47,150,136,0.1);
+    --card-bg: #263238;
+    --card-border: #384850;
+    --bg-hover: rgba(47,150,136,0.1);
+    --scrollbar-thumb: #4a5562;
+    --scrollbar-thumb-hover: #5a6572;
+    --dropdown-bg: #2e3b42;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #2e3b42;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(47,150,136,0.1);
+    --input-border: #384850;
+    --input-text: #d8f0ec;
+    --btn-secondary-bg: #384850;
+    --btn-secondary-text: #d8f0ec;
+}
+
+/* 17. Flame Red */
+html[data-theme="theme-flame-red"][data-theme-mode="dark"],
+html[data-theme="theme-flame-red"] {
+    --primary-color: #AA3130;
+    --primary-hover: #942928;
+    --primary-active: #7d2120;
+    --primary-light: rgba(170,49,48,0.1);
+    --primary-lighter: rgba(170,49,48,0.05);
+    --bg-body: #1a1212;
+    --bg-primary: #263238;
+    --bg-secondary: #2e3b42;
+    --bg-tertiary: #384850;
+    --text-primary: #f0d0d0;
+    --text-secondary: #B0BEC5;
+    --text-muted: #7a8a9a;
+    --border-color: #384850;
+    --header-bg: #AA3130;
+    --header-text: #ffffff;
+    --header-border: #942928;
+    --sidebar-bg: #263238;
+    --sidebar-text: #B0BEC5;
+    --sidebar-active-bg: rgba(170,49,48,0.2);
+    --sidebar-active-text: #AA3130;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 2px 12px rgba(170,49,48,0.15);
+    --card-shadow: 0 1px 4px rgba(170,49,48,0.1);
+    --card-bg: #263238;
+    --card-border: #384850;
+    --bg-hover: rgba(170,49,48,0.1);
+    --scrollbar-thumb: #4a5562;
+    --scrollbar-thumb-hover: #5a6572;
+    --dropdown-bg: #2e3b42;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #2e3b42;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(170,49,48,0.1);
+    --input-border: #384850;
+    --input-text: #f0d0d0;
+    --btn-secondary-bg: #384850;
+    --btn-secondary-text: #f0d0d0;
+}
+
+/* 18. Business Blue */
+html[data-theme="theme-business-blue"][data-theme-mode="light"],
+html[data-theme="theme-business-blue"] {
+    --primary-color: #3BA1DF;
+    --primary-hover: #3289c4;
+    --primary-active: #2a72a9;
+    --primary-light: rgba(59,161,223,0.1);
+    --primary-lighter: rgba(59,161,223,0.05);
+    --bg-body: #f0f5fc;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0f5fc;
+    --bg-tertiary: #d8e8fc;
+    --text-primary: #1f2329;
+    --text-secondary: #666666;
+    --text-muted: #7a9ab8;
+    --border-color: #a8c8e8;
+    --header-bg: #3BA1DF;
+    --header-text: #ffffff;
+    --header-border: #3289c4;
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #666666;
+    --sidebar-active-bg: rgba(59,161,223,0.12);
+    --sidebar-active-text: #3BA1DF;
+    --sidebar-hover-bg: #f0f5fc;
+    --shadow: 0 2px 12px rgba(59,161,223,0.12);
+    --card-shadow: 0 1px 4px rgba(59,161,223,0.08);
+    --card-bg: #ffffff;
+    --card-border: #a8c8e8;
+    --bg-hover: #d8e8fc;
+    --scrollbar-thumb: #88a8c8;
+    --scrollbar-thumb-hover: #6888a8;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #ffffff;
+    --table-stripe: #f0f5fc;
+    --table-hover: #d8e8fc;
+}
+
+/* 19. Premium Black */
+html[data-theme="theme-premium-black"][data-theme-mode="dark"],
+html[data-theme="theme-premium-black"] {
+    --primary-color: #1F2C39;
+    --primary-hover: #18232d;
+    --primary-active: #111a22;
+    --primary-light: rgba(31,44,57,0.1);
+    --primary-lighter: rgba(31,44,57,0.05);
+    --bg-body: #f5f5f5;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e8e8e8;
+    --text-primary: #1F2C39;
+    --text-secondary: #666666;
+    --text-muted: #8a9a9a;
+    --border-color: #d0d0d0;
+    --header-bg: #1F2C39;
+    --header-text: #ffffff;
+    --header-border: #18232d;
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #666666;
+    --sidebar-active-bg: rgba(31,44,57,0.15);
+    --sidebar-active-text: #1F2C39;
+    --sidebar-hover-bg: #e8e8e8;
+    --shadow: 0 2px 12px rgba(31,44,57,0.12);
+    --card-shadow: 0 1px 4px rgba(31,44,57,0.08);
+    --card-bg: #ffffff;
+    --card-border: #d0d0d0;
+    --bg-hover: #e8e8e8;
+    --scrollbar-thumb: #b0b0b0;
+    --scrollbar-thumb-hover: #909090;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #ffffff;
+    --table-stripe: #f5f5f5;
+    --table-hover: #e8e8e8;
+}
+
+/* 20. Vibrant Orange */
+html[data-theme="theme-vibrant-orange"][data-theme-mode="light"],
+html[data-theme="theme-vibrant-orange"] {
+    --primary-color: #F57C00;
+    --primary-hover: #dc6f00;
+    --primary-active: #c36200;
+    --primary-light: rgba(245,124,0,0.1);
+    --primary-lighter: rgba(245,124,0,0.05);
+    --bg-body: #fffdf5;
+    --bg-primary: #ffffff;
+    --bg-secondary: #fffdf5;
+    --bg-tertiary: #fff0e0;
+    --text-primary: #424242;
+    --text-secondary: #666666;
+    --text-muted: #9a8870;
+    --border-color: #e8c090;
+    --header-bg: #F57C00;
+    --header-text: #ffffff;
+    --header-border: #dc6f00;
+    --sidebar-bg: #FAFAFA;
+    --sidebar-text: #424242;
+    --sidebar-active-bg: rgba(245,124,0,0.15);
+    --sidebar-active-text: #F57C00;
+    --sidebar-hover-bg: #fff0e0;
+    --shadow: 0 2px 12px rgba(245,124,0,0.15);
+    --card-shadow: 0 1px 4px rgba(245,124,0,0.08);
+    --card-bg: #ffffff;
+    --card-border: #e8c090;
+    --bg-hover: #fff0e0;
+    --scrollbar-thumb: #d8a070;
+    --scrollbar-thumb-hover: #c08050;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #FAFAFA;
+    --table-stripe: #fffdf5;
+    --table-hover: #fff0e0;
+}
+
+/* 21. Forest Green */
+html[data-theme="theme-forest-green"][data-theme-mode="light"],
+html[data-theme="theme-forest-green"] {
+    --primary-color: #19A97B;
+    --primary-hover: #15956b;
+    --primary-active: #12805c;
+    --primary-light: rgba(25,169,123,0.1);
+    --primary-lighter: rgba(25,169,123,0.05);
+    --bg-body: #f0fdf7;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0fdf7;
+    --bg-tertiary: #dff8ed;
+    --text-primary: #1a4535;
+    --text-secondary: #666666;
+    --text-muted: #7a9888;
+    --border-color: #a8e0c8;
+    --header-bg: #19A97B;
+    --header-text: #ffffff;
+    --header-border: #15956b;
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #666666;
+    --sidebar-active-bg: rgba(25,169,123,0.12);
+    --sidebar-active-text: #19A97B;
+    --sidebar-hover-bg: #f0fdf7;
+    --shadow: 0 2px 12px rgba(25,169,123,0.12);
+    --card-shadow: 0 1px 4px rgba(25,169,123,0.08);
+    --card-bg: #ffffff;
+    --card-border: #a8e0c8;
+    --bg-hover: #dff8ed;
+    --scrollbar-thumb: #80c8a8;
+    --scrollbar-thumb-hover: #50a888;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #ffffff;
+    --table-stripe: #f0fdf7;
+    --table-hover: #dff8ed;
+}
+
+/* 22. Deep Sea */
+html[data-theme="theme-deep-sea"][data-theme-mode="dark"],
+html[data-theme="theme-deep-sea"] {
+    --primary-color: #00695C;
+    --primary-hover: #005a4f;
+    --primary-active: #004a42;
+    --primary-light: rgba(0,105,92,0.1);
+    --primary-lighter: rgba(0,105,92,0.05);
+    --bg-body: #0a1c18;
+    --bg-primary: #263238;
+    --bg-secondary: #2e3d3a;
+    --bg-tertiary: #38484a;
+    --text-primary: #c8e8e4;
+    --text-secondary: #B0BEC5;
+    --text-muted: #5a7a78;
+    --border-color: #38484a;
+    --header-bg: #00695C;
+    --header-text: #ffffff;
+    --header-border: #005a4f;
+    --sidebar-bg: #263238;
+    --sidebar-text: #B0BEC5;
+    --sidebar-active-bg: rgba(0,105,92,0.3);
+    --sidebar-active-text: #60c8c0;
+    --sidebar-hover-bg: rgba(255,255,255,0.06);
+    --shadow: 0 4px 16px rgba(0,0,0,0.4);
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --card-bg: #2c3a3a;
+    --card-border: #38484a;
+    --bg-hover: rgba(0,105,92,0.1);
+    --scrollbar-thumb: #38484a;
+    --scrollbar-thumb-hover: #48585a;
+    --dropdown-bg: #263238;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #2e3d3a;
+    --table-stripe: rgba(255,255,255,0.02);
+    --table-hover: rgba(0,105,92,0.12);
+    --input-border: #38484a;
+    --input-text: #c8e8e4;
+    --btn-secondary-bg: #38484a;
+    --btn-secondary-text: #c8e8e4;
+}
+
+/* 23. Rose Gold */
+html[data-theme="theme-rose-gold"][data-theme-mode="light"],
+html[data-theme="theme-rose-gold"] {
+    --primary-color: #B76E79;
+    --primary-hover: #a35e68;
+    --primary-active: #8f4f59;
+    --primary-light: rgba(183,110,121,0.1);
+    --primary-lighter: rgba(183,110,121,0.05);
+    --bg-body: #fff5f0;
+    --bg-primary: #FFF8F0;
+    --bg-secondary: #ffeee8;
+    --bg-tertiary: #ffe0d8;
+    --text-primary: #5a2830;
+    --text-secondary: #666666;
+    --text-muted: #9a8480;
+    --border-color: #e8c0b8;
+    --header-bg: #B76E79;
+    --header-text: #ffffff;
+    --header-border: #a35e68;
+    --sidebar-bg: #FFF8F0;
+    --sidebar-text: #666666;
+    --sidebar-active-bg: rgba(183,110,121,0.15);
+    --sidebar-active-text: #B76E79;
+    --sidebar-hover-bg: #ffeee8;
+    --shadow: 0 2px 12px rgba(183,110,121,0.15);
+    --card-shadow: 0 1px 4px rgba(183,110,121,0.08);
+    --card-bg: #ffffff;
+    --card-border: #e8c0b8;
+    --bg-hover: #ffe0d8;
+    --scrollbar-thumb: #d8a0a8;
+    --scrollbar-thumb-hover: #c08088;
+    --dropdown-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.25);
+    --input-bg: #FFF8F0;
+    --table-stripe: #fff5f0;
+    --table-hover: #ffe0d8;
+}
+
+/* 24. Geek Green */
+html[data-theme="theme-geek-green"][data-theme-mode="dark"],
+html[data-theme="theme-geek-green"] {
+    --primary-color: #00FF00;
+    --primary-hover: #00dd00;
+    --primary-active: #00bb00;
+    --primary-light: rgba(0,255,0,0.1);
+    --primary-lighter: rgba(0,255,0,0.05);
+    --bg-body: #000000;
+    --bg-primary: #0D0D0D;
+    --bg-secondary: #141414;
+    --bg-tertiary: #1a1a1a;
+    --text-primary: #00FF00;
+    --text-secondary: #00cc00;
+    --text-muted: #006600;
+    --border-color: #003300;
+    --header-bg: #000000;
+    --header-text: #00FF00;
+    --header-border: #003300;
+    --sidebar-bg: #0D0D0D;
+    --sidebar-text: #00FF00;
+    --sidebar-active-bg: rgba(0,255,0,0.15);
+    --sidebar-active-text: #00FF00;
+    --sidebar-hover-bg: rgba(0,255,0,0.08);
+    --shadow: 0 4px 16px rgba(0,255,0,0.2);
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    --card-bg: #111111;
+    --card-border: #003300;
+    --bg-hover: rgba(0,255,0,0.08);
+    --scrollbar-thumb: #004400;
+    --scrollbar-thumb-hover: #006600;
+    --dropdown-bg: #0D0D0D;
+    --overlay-bg: rgba(0,0,0,0.7);
+    --input-bg: #141414;
+    --table-stripe: rgba(0,255,0,0.02);
+    --table-hover: rgba(0,255,0,0.08);
+    --input-border: #003300;
+    --input-text: #00FF00;
+    --btn-secondary-bg: #003300;
+    --btn-secondary-text: #00FF00;
+}
+
+/* 25. Cyberpunk */
+html[data-theme="theme-cyberpunk"][data-theme-mode="dark"],
+html[data-theme="theme-cyberpunk"] {
+    --primary-color: #FCEE0A;
+    --primary-hover: #e0d408;
+    --primary-active: #c4bb07;
+    --primary-light: rgba(252,238,10,0.1);
+    --primary-lighter: rgba(252,238,10,0.05);
+    --bg-body: #000000;
+    --bg-primary: #000000;
+    --bg-secondary: #0a0a10;
+    --bg-tertiary: #141420;
+    --text-primary: #00F0FF;
+    --text-secondary: rgba(0,240,255,0.7);
+    --text-muted: rgba(0,240,255,0.4);
+    --border-color
