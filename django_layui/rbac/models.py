@@ -38,7 +38,6 @@ class Menu(models.Model):
         """根据语言代码获取对应的菜单名称"""
         lang_map = {
             'zh-hans': self.name_zh_hans or self.name,
-            'zh-hant': getattr(self, 'name_zh_hant', None) or self.name_zh_hans or self.name,
             'en': self.name_en or self.name,
         }
         return lang_map.get(lang_code, self.name)

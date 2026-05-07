@@ -20,6 +20,7 @@ class RbacConfig(AppConfig):
         self._register_template_dirs()
         self._register_api_urls()
         self._register_operation_log_middleware()
+        self._ensure_default_configs()
 
     def _ensure_base_app_registered(self):
         """Ensure 'django_layui' is in INSTALLED_APPS for templatetags and static files"""
@@ -168,3 +169,27 @@ class RbacConfig(AppConfig):
         if middleware_path not in settings.MIDDLEWARE:
             # Insert after the last middleware (at the end of the list)
             settings.MIDDLEWARE.append(middleware_path)
+
+    def _ensure_default_configs(self):
+        """Ensure default system configs exist in database"""
+        try:
+            from .models import SystemConfig
+            default_configs = [
+                {'key': 'system_name', 'value': 'Django Layui Admin', 'description': '系统名称', 'config_type': 'string', 'sort': 1},
+                {'key': 'system_version', 'value': '1.0.0', 'description': '系统版本号', 'config_type': 'string', 'sort': 2},
+                {'key': 'system_description', 'value': '', 'description': '系统描述（显示在管理后台底部）', 'config_type': 'text', 'sort': 3},
+                {'key': 'logo_icon', 'value': 'layui-icon-code-circle', 'description': 'Logo图标（layui-icon类名）', 'config_type': 'string', 'sort': 4},
+                {'key': 'logo_url', 'value': '', 'description': 'Logo图片URL（优先于图标）', 'config_type': 'image', 'sort': 5},
+                {'key': 'favicon_url', 'value': '', 'description': '网站图标URL', 'config_type': 'image', 'sort': 6},
+                {'key': 'copyright', 'value': 'Copyright © 2024 Django Layui Admin', 'description': '版权信息', 'config_type': 'string', 'sort': 7},
+                {'key': 'frontend_url', 'value': '', 'description': '前端项目地址', 'config_type': 'string', 'sort': 8},
+                {'key': 'login_bg_type', 'value': 'gradient', 'description': '登录页背景类型：gradient(渐变)/color(纯色)/image(图片)', 'config_type': 'string', 'sort': 9},
+                {'key': 'login_bg_value', 'value': 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)', 'description': '登录页背景渐变/颜色值', 'config_type': 'color', 'sort': 10},
+                {'key': 'login_bg_image', 'value': '', 'description': '登录页背景图片URL（当login_bg_type为image时生效）', 'config_type': 'image', 'sort': 11},
+            ]
+            existing_keys = set(SystemConfig.objects.values_list('key', flat=True))
+            for cfg in default_configs:
+                if cfg['key'] not in existing_keys:
+                    SystemConfig.objects.create(**cfg)
+        except Exception:
+            pass

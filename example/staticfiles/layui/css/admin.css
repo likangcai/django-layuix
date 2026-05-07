@@ -94,6 +94,44 @@
     background-color: var(--bg-body);
 }
 
+/* 深色主题下弹窗样式修复 */
+[data-theme-mode="dark"] .layui-layer-page,
+[data-theme-mode="dark"] .layui-layer-dialog {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-title {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-content {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-btn {
+    background: var(--bg-primary) !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-btn a {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-btn a:hover {
+    background: var(--bg-hover) !important;
+    border-color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-btn .layui-layer-btn0 {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    border-color: var(--primary-color) !important;
+}
+
 /* 浅色主题模式 */
 [data-theme-mode="light"] {
     --bg-body: #f0f2f5;
@@ -500,79 +538,6 @@ a:hover {
     transform: rotate(180deg);
 }
 
-/* ---- Theme Dropdown ---- */
-.theme-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 15px;
-    width: 260px;
-    background: var(--dropdown-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow-lg);
-    padding: 8px;
-    display: none;
-    z-index: 200;
-    max-height: 380px;
-    overflow-y: auto;
-}
-
-.theme-dropdown.show {
-    display: block;
-}
-
-.theme-dropdown .theme-group {
-    margin-bottom: 12px;
-}
-
-.theme-dropdown .theme-group:last-child {
-    margin-bottom: 0;
-}
-
-.theme-dropdown .theme-group-title {
-    font-size: 12px;
-    color: var(--text-muted);
-    padding: 6px 8px;
-    border-radius: 4px;
-    margin-bottom: 6px;
-    background: var(--bg-secondary);
-}
-
-.theme-dropdown .theme-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    color: var(--text-primary);
-}
-
-.theme-dropdown .theme-item:hover {
-    background: var(--bg-hover);
-}
-
-.theme-dropdown .theme-item.active {
-    background: var(--primary-light);
-}
-
-.theme-dropdown .theme-item.active .theme-color {
-    box-shadow: 0 0 0 2px var(--primary-color);
-}
-
-.theme-dropdown .theme-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
-    margin-right: 10px;
-    border: 2px solid transparent;
-    transition: box-shadow 0.2s ease;
-}
-
-.theme-dropdown .theme-item span:last-child {
-    font-size: 13px;
-}
-
 /* ---- User Dropdown ---- */
 .user-dropdown {
     position: absolute;
@@ -870,14 +835,8 @@ a:hover {
 
 /* ---- Buttons ---- */
 .layui-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 16px;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
+    display: inline-block;
+    vertical-align: middle;
     cursor: pointer;
     transition: all 0.2s ease;
     outline: none;
@@ -885,37 +844,49 @@ a:hover {
 }
 
 .layui-btn-primary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background: #fff;
+    color: #333;
+    border: 1px solid #e6e6e6;
 }
 
 .layui-btn-primary:hover {
-    background: var(--bg-hover);
     border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 .layui-btn-normal {
     background: var(--primary-color);
     color: #fff;
+    border: 1px solid var(--primary-color);
 }
 
 .layui-btn-normal:hover {
     background: var(--primary-hover);
+    border-color: var(--primary-hover);
 }
 
 .layui-btn-danger {
     background: var(--danger-color);
     color: #fff;
+    border: 1px solid var(--danger-color);
 }
 
 .layui-btn-danger:hover {
     background: #e04516;
+    border-color: #e04516;
 }
 
-.layui-btn-sm {
-    padding: 4px 12px;
-    font-size: 12px;
+/* 深色主题下按钮样式 */
+[data-theme-mode="dark"] .layui-btn-primary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme-mode="dark"] .layui-btn-primary:hover {
+    background: var(--bg-hover);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 /* ---- Cards ---- */
@@ -989,27 +960,42 @@ a:hover {
 
 /* ---- Forms ---- */
 .layui-form-item {
-    margin-bottom: 16px;
+    margin-bottom: 15px;
 }
 
 .layui-form-label {
-    display: inline-block;
+    display: block;
     width: 100px;
-    padding-right: 15px;
+    padding: 9px 15px 9px 0;
     text-align: right;
     font-size: 13px;
     color: var(--text-primary);
     font-weight: 500;
-    vertical-align: middle;
+    float: left;
 }
 
 .layui-input-block {
-    display: inline-block;
-    vertical-align: middle;
+    margin-left: 110px;
+    min-height: 36px;
+}
+
+/* 弹窗中的表单样式 */
+.layui-layer-page .layui-form-item,
+.layui-layer-dialog .layui-form-item {
+    margin-bottom: 15px;
+}
+
+.layui-layer-page .layui-form-label,
+.layui-layer-dialog .layui-form-label {
+    width: 100px;
+}
+
+.layui-layer-page .layui-input-block,
+.layui-layer-dialog .layui-input-block {
+    margin-left: 110px;
 }
 
 .layui-input {
-    width: 280px;
     height: 36px;
     padding: 0 12px;
     border: 1px solid var(--border-color);
@@ -1030,7 +1016,6 @@ a:hover {
 }
 
 .layui-select {
-    width: 280px;
     height: 36px;
     padding: 0 12px;
     border: 1px solid var(--border-color);
@@ -1044,7 +1029,6 @@ a:hover {
 }
 
 .layui-textarea {
-    width: 280px;
     min-height: 80px;
     padding: 10px 12px;
     border: 1px solid var(--border-color);
@@ -1271,4 +1255,28 @@ a:hover {
     .layui-textarea {
         width: calc(100% - 95px);
     }
+}
+
+/* 分页组件样式 */
+.layui-table-page {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 10px 15px;
+}
+
+.layui-table-page .layui-laypage {
+    display: flex;
+    align-items: center;
+    float: none;
+}
+
+.layui-table-page .layui-laypage-count {
+    order: -1;
+    margin-right: auto;
+    margin-left: 0;
+}
+
+.layui-table-page .layui-laypage * {
+    display: inline-block;
 }

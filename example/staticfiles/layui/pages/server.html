@@ -8,18 +8,18 @@
     <link rel="stylesheet" href="/static/layui/css/admin.css">
     <script>
         function syncParentTheme() {
-            var theme = 'light';
+            var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'light';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
                 }
             } catch(e) {}
-            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme-mode', themeMode);
         }
         syncParentTheme();
         window.addEventListener('message', function(e) {
             if (e.data && e.data.type === 'themeChange') {
-                document.documentElement.setAttribute('data-theme', e.data.theme);
+                document.documentElement.setAttribute('data-theme-mode', e.data.themeMode);
             }
         });
     </script>
@@ -354,10 +354,10 @@ layui.use(['table', 'form', 'layer'], function(){
                     cols: [[
                         {field: 'id', title: 'ID', width: 70, align: 'center'},
                         {field: 'name', title: t('server.name'), minWidth: 120},
-                        {field: 'host', title: t('server.host'), minWidth: 130},
-                        {field: 'port', title: t('server.port'), width: 80, align: 'center'},
-                        {field: 'username', title: t('server.username'), width: 100},
-                        {field: 'auth_type', title: t('server.authType'), width: 100, align: 'center', templet: function(d) {
+                        {field: 'host', title: t('server.host'), minWidth: 140},
+                        {field: 'port', title: t('server.port'), width: 100, align: 'center'},
+                        {field: 'username', title: t('server.username'), width: 110},
+                        {field: 'auth_type', title: t('server.authType'), width: 110, align: 'center', templet: function(d) {
                             var type = d.auth_type || 'password';
                             if (type === 'password') {
                                 return '<span class="auth-tag password">' + t('server.auth.password') + '</span>';

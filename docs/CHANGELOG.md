@@ -31,7 +31,73 @@
   - 提供详细的API接口文档
   - 包含颜色规范、最佳实践、测试清单
 
-### 🐛 Bug 修复 (2026-05-07)
+---
+
+### 🐛 Bug 修复 & 功能优化 (2026-05-07)
+
+#### 菜单图标显示修复
+- ✅ **目录菜单图标不显示** - 修复左侧菜单栏目录（一级/二级菜单）无图标问题
+  - 根因：`renderDirectory()` 函数未渲染 `icon` 字段
+  - 修复：添加 `<i class="layui-icon menu-dir-icon">` 图标元素
+  - 新增 CSS 样式 `.menu-dir-icon`（15px，次要文字颜色）
+
+#### 系统配置功能完善
+- ✅ **system_description 未展示** - 修复管理后台底部不显示系统描述
+  - 改用 JS 动态加载配置到 footer（避免 iframe 布局裁剪）
+  - 同时支持 system_description / system_version / copyright 动态显示
+
+- ✅ **登录页 logo_icon 配置无效** - 修复登录页图标无法通过数据库配置修改
+  - 新增公开 API `/admin/api/rbac/system/public-config/`（无需登录）
+  - 登录页 JS 动态获取并应用：system_name / logo_icon / logo_url / favicon / version / copyright / login_bg_*
+
+- ✅ **login_bg_image 上传后登录页未生效**
+  - 根因：模板内联 `background` 简写属性覆盖 JS 设置的 `backgroundImage`
+  - 修复：图片优先逻辑 + 清除 background 简写残留 + 添加 no-repeat
+
+- ✅ **系统配置初始化缺失** - 修复 `python manage.py init_menu` 不创建完整配置项
+  - 补全 3 个登录页背景配置：`login_bg_type` / `login_bg_value` / `login_bg_image`
+  - `AppConfig.ready()` 自动检测并补全缺失配置项（幂等操作）
+
+#### 图片预览功能修复
+- ✅ **编辑模式图片预览无法点击**
+  - 根因：`setCurrentValue()` 使用 `.text()` 设置纯文本，非可点击链接
+  - 修复：改用 `.html()` 添加 `.preview-link` 可点击样式
+
+#### UI 样式优化
+- ✅ **登录页版权信息颜色过淡** - 从 60% → 95% 透明度 + 增强阴影
+- ✅ **菜单收起/展开图标优化** - 尺寸缩小至 20px + 移至右侧
+
+#### 数据模型清理
+- ✅ **删除 name_zh_hant（繁体中文）字段**
+  - Menu 模型移除该字段
+  - `get_name_by_lang()` 移除繁体映射
+  - `init_menu.py` 创建菜单时不再传入该字段
+  - `0001_initial.py` 迁移文件同步更新（从源头删除）
+  - 删除冗余的 `0002_remove_menu_name_zh_hant.py`
+
+#### UserProfile theme 字段精简
+- ✅ choices 从 27 个旧主题精简为 2 个（默认深色/默认浅色）
+- ✅ `0001_initial.py` 同步更新
+
+---
+
+### 📝 本次修改文件清单（源代码 django_layui/）
+
+| 文件路径 | 修改内容 |
+|----------|----------|
+| `rbac/models.py` | 删除 name_zh_hant 字段 + get_name_by_lang() 精简 |
+| `rbac/views.py` | 新增 public_config 公开 API（含 login_bg_*） |
+| `rbac/urls.py` | 注册 /system/public-config/ 路由 |
+| `rbac/apps.py` | 新增 _ensure_default_configs() 自动初始化 12 个配置项 |
+| `rbac/migrations/0001_initial.py` | 移除 name_zh_hant + theme choices 精简为 2 个 |
+| `rbac/migrations/0002_*.py` | 已删除（合并到 0001） |
+| `rbac/management/commands/init_menu.py` | 补全 12 个配置项 + 移除 name_zh_hant |
+| `templates/admin/index.html` | 目录菜单图标渲染 + footer 动态加载 |
+| `templates/admin/login.html` | 版权颜色优化 + 公开 API 配置动态应用 |
+| `static/layui/css/admin.css` | menu-dir-icon 样式 + admin-footer 样式 |
+| `static/layui/pages/config.html` | 编辑模式图片预览可点击 |
+
+---
 
 #### 核心功能修复
 - ✅ **左侧菜单收缩展开功能** - 修复点击按钮无反应问题

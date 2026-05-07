@@ -27,6 +27,21 @@
         .login-page { background: transparent !important; }
         .login-page::before { display: none; }
 
+        /* 版权信息显示在底部 */
+        .login-footer {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 12px;
+            z-index: 10;
+            pointer-events: none;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+            letter-spacing: 1px;
+        }
+
         /* Layui input-wrap 在登录卡片内的样式微调 */
         .login-card .layui-input-wrap .layui-input-prefix {
             color: #999;
@@ -103,7 +118,7 @@
     <!-- 粒子背景画布 -->
     <canvas id="login-particles"></canvas>
 
-    <div class="login-page" id="loginPage" style="background: {% login_bg_value %};">
+    <div class="login-page" id="loginPage" style="background: {% login_bg_value %};{% if login_bg_image %} background-image: url('{% login_bg_image %}'); background-size: cover; background-position: center;{% endif %}">
         <div class="login-card">
             <div class="login-logo">
                 <div class="logo-icon login-logo-icon">
@@ -312,6 +327,64 @@
             resize();
             init();
             animate();
+        })();
+
+        // ---- 从公开API获取系统配置并更新页面 ----
+        (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/admin/api/rbac/system/public-config/', true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        if (res.code === 200 && res.data) {
+                            var c = res.data;
+                            if (c.system_name) {
+                                var titleEl = document.querySelector('.login-title');
+                                if (titleEl) titleEl.textContent = c.system_name;
+                                document.title = (c.system_name || '') + ' | ' + (t('login.title') || '登录');
+                            }
+                            if (c.logo_icon) {
+                                var iconEl = document.querySelector('.login-logo-icon i');
+                                if (iconEl) iconEl.className = 'layui-icon ' + c.logo_icon;
+                            }
+                            if (c.logo_url) {
+                                var logoIconEl = document.querySelector('.login-logo-icon');
+                                if (logoIconEl) logoIconEl.innerHTML = '<img src="' + c.logo_url + '" style="width:60px;height:60px;border-radius:12px;">';
+                            }
+                            if (c.system_version) {
+                                var verEl = document.querySelector('.login-logo p');
+                                if (verEl) verEl.textContent = c.system_version;
+                            }
+                            if (c.copyright) {
+                                var footerEl = document.querySelector('.login-footer');
+                                if (footerEl) footerEl.textContent = c.copyright;
+                            }
+                            if (c.favicon_url) {
+                                var link = document.querySelector('link[rel="icon"]');
+                                if (link) link.href = c.favicon_url;
+                            }
+                            if (c.login_bg_value && !c.login_bg_image) {
+                                var pageEl = document.getElementById('loginPage');
+                                if (pageEl) {
+                                    pageEl.style.background = c.login_bg_value;
+                                    pageEl.style.backgroundImage = '';
+                                }
+                            }
+                            if (c.login_bg_image) {
+                                var pageEl2 = document.getElementById('loginPage');
+                                if (pageEl2) {
+                                    pageEl2.style.backgroundImage = "url('" + c.login_bg_image + "')";
+                                    pageEl2.style.backgroundSize = 'cover';
+                                    pageEl2.style.backgroundPosition = 'center';
+                                    pageEl2.style.backgroundRepeat = 'no-repeat';
+                                }
+                            }
+                        }
+                    } catch(e) {}
+                }
+            };
+            xhr.send();
         })();
     </script>
 </body>

@@ -232,13 +232,16 @@ class Command(BaseCommand):
         configs = [
             ('system_name', 'Django Layui Admin', '系统名称，显示在浏览器标题栏和侧边栏', 'string', 1),
             ('system_version', '1.0.0', '系统版本号', 'string', 2),
-            ('system_description', '', '系统描述信息', 'string', 3),
-            ('logo_icon', 'layui-icon-code-circle', '侧边栏Logo图标（layui图标类名）', 'string', 4),
-            ('logo_url', '', '侧边栏Logo图片URL（设置后替换图标，支持本地上传）', 'url', 5),
-            ('favicon_url', '', '浏览器标签页图标URL（支持ICO/PNG/SVG，支持本地上传）', 'url', 6),
-            ('frontend_url', '', '前端页面地址（顶部"查看站点"按钮跳转地址）', 'url', 7),
-            ('copyright', '', '版权信息', 'string', 8),
+            ('system_description', '', '系统描述信息（显示在管理后台底部）', 'text', 3),
+            ('logo_icon', 'layui-icon-code-circle', 'Logo图标（layui图标类名）', 'string', 4),
+            ('logo_url', '', 'Logo图片URL（设置后替换图标，支持本地上传）', 'image', 5),
+            ('favicon_url', '', '浏览器标签页图标URL（支持ICO/PNG/SVG，支持本地上传）', 'image', 6),
+            ('copyright', '', '版权信息（显示在登录页和管理后台底部）', 'string', 7),
+            ('frontend_url', '', '前端页面地址（顶部"查看站点"按钮跳转地址）', 'url', 8),
             ('webssh_url', '/webssh/', 'WebSSH 服务地址（用于服务器终端功能，默认 /webssh/）', 'url', 9),
+            ('login_bg_type', 'gradient', '登录页背景类型：gradient(渐变)/color(纯色)/image(图片)', 'string', 10),
+            ('login_bg_value', 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)', '登录页背景渐变/颜色值（当type为gradient或color时生效）', 'color', 11),
+            ('login_bg_image', '', '登录页背景图片URL（当type为image时生效，支持本地上传）', 'image', 12),
         ]
         for key, value, desc, config_type, sort in configs:
             _, is_new = SystemConfig.objects.get_or_create(

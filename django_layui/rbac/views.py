@@ -531,6 +531,38 @@ def _get_db_info():
 
 
 @csrf_exempt
+def public_config(request):
+    """Get public system configuration (no auth required) - for login page etc."""
+    from .models import SystemConfig
+
+    db_configs = {}
+    try:
+        for sc in SystemConfig.objects.all():
+            db_configs[sc.key] = sc.value
+    except Exception:
+        pass
+
+    settings_config = getattr(settings, 'LAYUI_CONFIG', {})
+
+    def get_config(key, default=''):
+        if key in db_configs:
+            return db_configs[key]
+        return settings_config.get(key, default)
+
+    return success_response({
+        'system_name': get_config('system_name', 'Django Layui Admin'),
+        'system_version': get_config('system_version', '1.0.0'),
+        'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
+        'logo_url': get_config('logo_url', ''),
+        'favicon_url': get_config('favicon_url', ''),
+        'copyright': get_config('copyright', ''),
+        'login_bg_type': get_config('login_bg_type', 'gradient'),
+        'login_bg_value': get_config('login_bg_value', 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)'),
+        'login_bg_image': get_config('login_bg_image', ''),
+    })
+
+
+@csrf_exempt
 @api_login_required
 def system_config(request):
     """Get system configuration - database first, settings as fallback"""

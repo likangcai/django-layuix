@@ -228,6 +228,7 @@ a:hover {
     width: 100%;
     height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%);
@@ -391,6 +392,41 @@ a:hover {
     font-size: 12px;
 }
 
+.login-footer {
+    position: absolute;
+    bottom: 30px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.admin-footer {
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.admin-footer .footer-desc {
+    margin-right: 15px;
+}
+
+.admin-footer .footer-version {
+    margin-right: 15px;
+    opacity: 0.7;
+}
+
+.admin-footer .footer-copyright {
+}
+
 /* ==================== 主布局样式 ==================== */
 .admin-layout {
     width: 100%;
@@ -420,25 +456,23 @@ a:hover {
 }
 
 .admin-header .sidebar-toggle {
-    width: 40px;
-    height: 40px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-right: 12px;
+    margin-left: 8px;
     color: var(--header-text);
-    font-size: 20px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 10px;
+    background: transparent;
+    border: none;
 }
 
 .admin-header .sidebar-toggle:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.25);
-    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .admin-header .logo-area {
@@ -624,8 +658,7 @@ a:hover {
 }
 
 .admin-sidebar.collapsed .menu-text,
-.admin-sidebar.collapsed .menu-group-title span,
-.admin-sidebar.collapsed .menu-arrow {
+.admin-sidebar.collapsed .menu-group-title span {
     display: none;
 }
 
@@ -660,6 +693,14 @@ a:hover {
     justify-content: center;
 }
 
+.admin-sidebar.collapsed .menu-group-title .menu-arrow {
+    margin-right: 0;
+}
+
+.admin-sidebar.collapsed .menu-group-title .menu-dir-icon {
+    margin-right: 0;
+}
+
 .admin-sidebar.collapsed .menu-item {
     padding: 12px 0;
     justify-content: center;
@@ -684,17 +725,19 @@ a:hover {
 }
 
 .menu-group {
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .menu-group-title {
     display: flex;
     align-items: center;
-    padding: 8px 15px;
+    padding: 10px 15px 8px 15px;
     font-size: 12px;
+    font-weight: 500;
     color: var(--text-muted);
     cursor: pointer;
     transition: background-color 0.2s ease;
+    letter-spacing: 0.5px;
 }
 
 .menu-group-title:hover {
@@ -702,13 +745,31 @@ a:hover {
 }
 
 .menu-group-title .menu-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.menu-group-title .menu-dir-icon {
+    font-size: 15px;
+    margin-right: 6px;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+}
+
+.menu-group-title .menu-arrow::before {
+    content: '';
     width: 0;
     height: 0;
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    border-left: 4px solid var(--text-muted);
-    margin-right: 8px;
-    transition: transform 0.2s ease;
+    border-top: 4.5px solid transparent;
+    border-bottom: 4.5px solid transparent;
+    border-left: 6px solid currentColor;
 }
 
 .menu-group-title.collapsed .menu-arrow {
@@ -717,6 +778,7 @@ a:hover {
 
 .sub-menu {
     display: none;
+    padding: 4px 0;
 }
 
 .sub-menu.open {
@@ -726,10 +788,37 @@ a:hover {
 .menu-item {
     display: flex;
     align-items: center;
-    padding: 10px 15px 10px 30px;
+    padding: 9px 15px 9px 33px;
     cursor: pointer;
     transition: all 0.2s ease;
     color: var(--sidebar-text);
+    position: relative;
+}
+
+.menu-item::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    opacity: 0.5;
+    transition: all 0.2s ease;
+}
+
+.menu-item:hover::before {
+    opacity: 1;
+    background: var(--primary);
+}
+
+.menu-item.active::before {
+    opacity: 1;
+    background: var(--primary);
+    height: 14px;
+    width: 3px;
+    border-radius: 2px;
+    left: 17px;
 }
 
 .menu-item:hover {
@@ -1329,7 +1418,7 @@ a:hover {
 
 [data-theme-mode="dark"] .admin-header .sidebar-toggle i {
     color: #ffffff !important;
-    font-size: 20px !important;
+    font-size: 10px !important;
 }
 
 [data-theme-mode="dark"] .admin-header .logo-icon {
@@ -1478,7 +1567,7 @@ a:hover {
 
 [data-theme-mode="light"] .admin-header .sidebar-toggle i {
     color: #1f2329 !important;
-    font-size: 20px !important;
+    font-size: 10px !important;
 }
 
 [data-theme-mode="light"] .admin-header .logo-icon {

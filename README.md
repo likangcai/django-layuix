@@ -26,7 +26,7 @@
 ### 1. 安装
 
 ```bash
-# 基础安装（RBAC + 系统配置 + 操作日志 + Dashboard）
+# 基础安装（包含 RBAC + 系统配置 + 操作日志 + Dashboard）
 pip install django-layui
 
 # 安装所有功能（含运维管理 + AI 日志分析）
@@ -37,14 +37,26 @@ pip install django-layui[ops]   # 运维管理（服务器管理、SSH 终端）
 pip install django-layui[ai]    # AI 日志分析
 ```
 
-### 2. 最简配置（仅换肤）
+### 2. 标准配置（必需步骤）
 
-在 `INSTALLED_APPS` 中将 `django_layui` 添加到 `django.contrib.admin` **之前**：
+> ⚠️ **重要说明**：django-layui 由两个**必需组件**组成：
+>
+> | 组件 | 包名 | 功能 |
+> |------|------|------|
+> | **基础框架** | `django_layui` | 模板替换、AdminSite、静态文件、国际化 |
+> | **RBAC 引擎** | `django_layui.rbac` | API 路由、用户模型、权限系统、菜单管理 |
+>
+> `django_layui.rbac` **不是可选扩展**！前端页面必须通过 RBAC API 获取用户信息、菜单数据、系统配置等。缺少此组件会导致 404 错误和功能异常。
+
+#### Step 1: 配置 settings.py
+
+在 `INSTALLED_APPS` 中将 `django_layui` 和 `django_layui.rbac` 添加到 `django.contrib.admin` **之前**：
 
 ```python
 # settings.py
 INSTALLED_APPS = [
     'django_layui',                    # 必须放在 django.contrib.admin 之前
+    'django_layui.rbac',               # ⭐ 必需！提供 API 路由和数据模型
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -53,48 +65,93 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # ... 你的应用
 ]
-```
 
-仅此而已！访问 `/admin/` 即可看到 Layui 风格的后台管理界面。
-
-> **注意**：如果需要 iframe 嵌入功能，请从 `MIDDLEWARE` 中移除 `django.middleware.clickjacking.XFrameOptionsMiddleware`。
-
-### 3. 启用 RBAC 扩展（推荐）
-
-如果需要用户管理、菜单管理、角色管理、操作日志、Dashboard 等完整功能：
-
-> **重要**：`AUTH_USER_MODEL` 必须在项目创建之初就设置好，中途切换会导致数据库迁移问题。
-
-```python
-# settings.py
-INSTALLED_APPS = [
-    'django_layui',
-    'django_layui.rbac',               # RBAC 扩展
-    'django.contrib.admin',
-    # ...
-]
-
-# 使用自定义用户模型
+# 使用自定义用户模型（推荐）
 AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'
 ```
 
-然后运行迁移并初始化数据：
+> **注意**：如果需要 iframe 嵌入功能，请从 `MIDDLEWARE` 中移除 `django.middleware.clickjacking.XFrameOptionsMiddleware`。
+>
+> ⚠️ **关键提醒**：`AUTH_USER_MODEL` 必须在项目创建之初就设置好，中途切换会导致数据库迁移问题。
+
+#### Step 2: 配置 urls.py
+
+django-layui 使用自定义的 `LayuiAdminSite`（即 `layui_admin_site`）替代 Django 默认的 `admin.site`。当 `'django_layui'` 在 `INSTALLED_APPS` 中时，Django 启动时会自动将 `admin.site` 替换为 `layui_admin_site`。
+
+```python
+# urls.py
+
+# ✅ 方式一：使用 admin.site（推荐，最简单）
+from django.contrib import admin
+from django.urls import path
+
+urlpatterns = [
+    path('admin/', admin.site.urls),  # 实际指向 layui_admin_site.urls
+]
+
+# ✅ 方式二：显式使用 layui_admin_site（更明确）
+# from django_layui.admin import layui_admin_site
+# urlpatterns = [
+#     path('admin/', layui_admin_site.urls),
+# ]
+```
+
+> **⚠️ 重要提示**：如果遇到 `/admin/api/rbac/userinfo/` 404 错误，请检查：
+> - [ ] `INSTALLED_APPS` 中包含 `'django_layui'` 和 `'django_layui.rbac'`
+> - [ ] 已运行 `python manage.py migrate`
+> - [ ] 已运行 `python manage.py init_menu`
+> - [ ] 重启服务器并清除浏览器缓存 (Ctrl+F5)
+
+#### Step 3: 初始化数据库
+
+运行迁移命令创建数据表，然后初始化默认数据：
 
 ```bash
+# 创建数据库表（用户、菜单、角色、权限、系统配置等）
+python manage.py makemigrations
 python manage.py migrate
+
+# 初始化默认菜单、角色、权限、系统配置（仅首次运行）
 python manage.py init_menu
 ```
 
-初始化命令会自动创建：
-- **默认菜单**：权限管理（菜单/角色/用户）、系统管理（个人中心/操作日志/系统配置）
-- **按钮级权限**：每个菜单下的增删改查按钮权限（15 个按钮权限项）
-- **管理员角色**：绑定所有菜单权限
-- **注册用户角色**：前端注册用户默认角色（仅个人中心权限）
-- **系统配置**：system_name、logo_icon、logo_url、favicon_url、frontend_url 等 8 个默认配置项
+`init_menu` 命令会自动创建：
 
-默认管理员账号：`admin / admin123`
+| 数据类型 | 创建内容 | 说明 |
+|---------|---------|------|
+| **默认菜单** | 权限管理、系统管理 | 包含子菜单：菜单/角色/用户、个人中心/操作日志/系统配置 |
+| **按钮权限** | 15 个权限项 | 每个菜单下的增删改查按钮级权限 |
+| **管理员角色** | `管理员` | 绑定所有菜单和按钮权限 |
+| **注册角色** | `注册用户` | 仅个人中心权限（前端注册用户默认绑定） |
+| **系统配置** | 8 个配置项 | system_name, logo_icon, logo_url, favicon_url 等 |
 
-### 4. 高级配置
+#### Step 4: 创建管理员账号
+
+```bash
+python manage.py createsuperuser
+# 输入用户名: admin
+# 输入邮箱: admin@example.com
+# 输入密码: admin123 (或其他强密码)
+# 再次输入密码确认
+```
+
+#### Step 5: 启动并验证
+
+```bash
+# 启动开发服务器
+python manage.py runserver
+```
+
+访问 http://127.0.0.1:8000/admin/ ，使用刚创建的管理员账号登录即可看到完整的 Layui 后台管理系统。
+
+**验证清单**：
+- [ ] 登录页面显示 Layui 风格界面
+- [ ] 登录后左侧菜单正常显示（权限管理、系统管理等）
+- [ ] 控制台无 `/admin/api/rbac/userinfo/` 404 错误
+- [ ] Dashboard 仪表盘正常加载
+- [ ] 用户信息（头像、昵称）正确显示
+
+### 3. 高级配置
 
 #### 4.1 settings.py 配置（默认值）
 
@@ -181,7 +238,7 @@ OPERATION_LOG = {
 
 支持的配置类型：字符串、整数、布尔、JSON、URL、图片、颜色、文本。
 
-#### 4.4 首页自定义快速链接（类似 django-simpleui）
+#### 4.4 首页自定义快速链接
 
 django-layui 支持在首页仪表盘显示自定义快速链接，方便用户快速访问常用页面或外部网站。
 
@@ -780,11 +837,32 @@ urlpatterns = [
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 ```
 
+> **🔑 核心原理**：
+> - `admin.site` 在 Django 启动时会被自动替换为 `layui_admin_site`（由 `django_layui.apps.DjangoLayuiConfig.ready()` 完成）
+> - 因此使用 `admin.site.urls` 即可自动获得所有 API 路由（`/admin/api/rbac/`, `/admin/api/ops/`）
+> - **无需手动导入或配置 `layui_admin_site`**（除非您需要自定义 AdminSite 行为）
+>
+> **⚠️ 常见错误**：
+> - ❌ 忘记在 `INSTALLED_APPS` 中添加 `'django_layui'` 或 `'django_layui.rbac'`
+> - ❌ 未运行 `python manage.py migrate`（数据库表未创建）
+> - ❌ 未运行 `python manage.py init_menu`（菜单和权限数据未初始化）
+> - ❌ 使用了错误的 admin site 实例（如自定义的 AdminSite 未继承模型注册）
+>
+> **✅ 正确配置检查清单**：
+> - [ ] `INSTALLED_APPS` 包含 `'django_layui'`（必须在 `django.contrib.admin` 之前）
+> - [ ] `INSTALLED_APPS` 包含 `'django_layui.rbac'`（**必需组件**，不是可选的！）
+> - [ ] 已设置 `AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'`
+> - [ ] 已运行 `python manage.py makemigrations && python manage.py migrate`
+> - [ ] 已运行 `python manage.py init_menu`（初始化默认数据，仅首次）
+> - [ ] 已创建超级用户 `python manage.py createsuperuser`
+> - [ ] 重启开发服务器 `python manage.py runserver`
+
 > **注意**：无需手动注册 `django_layui.ops.urls`，ops 模块的 API 路由（`/admin/api/ops/`）由 `AppConfig.ready()` 自动注册。手动重复注册反而会导致路由冲突。
 
 ### 执行数据库迁移
 
 ```bash
+# 如果已完成"快速开始"中的 Step 3，则无需重复执行此步骤
 python manage.py migrate
 python manage.py createsuperuser
 ```
@@ -807,13 +885,18 @@ python manage.py runserver
 
 ## 三、功能开启对照表
 
-| 功能 | 需要的包 | 需要的配置 |
-|------|---------|-----------|
-| Layui 主题（必装） | django-layui | INSTALLED_APPS 加 django_layui |
-| RBAC 用户管理 | django-layui | 加 django_layui.rbac + AUTH_USER_MODEL |
-| 服务器管理 + 日志查看 | paramiko | 加 django_layui.ops（API 路由自动注册） |
-| Web SSH 终端 | webssh | 运行 wssh 命令 + 配置 webssh_url |
-| AI 日志分析 | openai | 配置 AI Key（后台界面或 settings.py） |
+| 功能 | 需要的包 | 需要的配置 | 必需性 |
+|------|---------|-----------|--------|
+| **Layui 基础框架** | django-layui | INSTALLED_APPS 加 `django_layui` | ✅ **必需** |
+| **RBAC 引擎（API/用户/菜单）** | django-layui（内置） | 加 `django_layui.rbac` + `AUTH_USER_MODEL` | ✅ **必需** |
+| 服务器管理 + 日志查看 | paramiko | 加 `django_layui.ops`（API 路由自动注册） | 🔵 可选 |
+| Web SSH 终端 | webssh | 运行 wssh 命令 + 配置 webssh_url | 🔵 可选 |
+| AI 日志分析 | openai | 配置 AI Key（后台界面或 settings.py） | 🔵 可选 |
+
+> **说明**：
+> - ✅ **必需组件**：`django_layui` 和 `django_layui.rbac` 是使用 django-layui 的**最低要求**
+> - 🔵 **可选功能**：运维管理和 AI 分析需要额外安装依赖包
+> - 完整安装命令：`pip install django-layui[all]`（包含所有可选功能）
 
 ---
 
@@ -833,6 +916,392 @@ python manage.py runserver
 
 ### 版本信息
 - [**更新日志 (CHANGELOG)**](docs/CHANGELOG.md) - 版本历史和更新记录
+
+---
+
+## 🆘 常见问题与故障排查
+
+本章节汇总了用户在使用 django-layui 时遇到的**高频问题**及解决方案。如果您遇到的问题未在此列出，请 [提交 Issue](https://github.com/likangcai/django-layui/issues)。
+
+---
+
+### 🔴 问题 1：API 返回 404 错误
+
+#### 症状
+控制台显示以下错误：
+```
+Not Found: /admin/api/rbac/userinfo/
+GET /admin/api/rbac/userinfo/ HTTP/1.1" 404 4356
+```
+
+页面在 `/admin/login/` 和 `/admin/` 之间循环重定向。
+
+#### 原因
+API 路由未正确注册。django-layui 的 API 路由通过 `AppConfig.ready()` 自动注册，如果配置不正确会导致路由缺失。
+
+#### 解决方案（按优先级排序）
+
+**Step 1: 检查 INSTALLED_APPS**
+```python
+# settings.py
+INSTALLED_APPS = [
+    'django_layui',           # ✅ 必须第一个（基础框架）
+    'django_layui.rbac',      # ✅ 必需！RBAC 引擎（提供 API 路由）
+    'django.contrib.admin',
+    'django.contrib.auth',
+    # ... 其他应用
+]
+```
+
+> **⚠️ 关键点**：
+> - `'django_layui'` 必须在 `django.contrib.admin` **之前**
+> - `'django_layui.rbac'` 是 **必需组件**（不是可选的），缺少它会导致所有 API 返回 404
+> - 如果缺少 `'django_layui.rbac'`，前端页面将无法获取用户信息、菜单数据、系统配置
+
+**Step 2: 执行数据库迁移**
+```bash
+# 创建数据库表（包含菜单、角色、用户、系统配置等）
+python manage.py makemigrations
+python manage.py migrate
+
+# 初始化默认数据（仅首次运行）
+python manage.py init_menu
+```
+
+**Step 3: 验证路由已注册**
+```bash
+python manage.py shell
+
+>>> from django.urls import reverse
+>>> reverse('rbac_user_info')
+'/admin/api/rbac/userinfo/'  # ✅ 成功：路由已注册
+
+# 如果报错 NoReverseMatch，说明路由未注册，返回 Step 1 检查配置
+```
+
+**Step 4: 重启服务器并清除缓存**
+```bash
+# 重启 Django 开发服务器
+# 按 Ctrl+C 停止当前服务器
+python manage.py runserver
+
+# 浏览器中强制刷新（清除缓存）
+# Windows/Linux: Ctrl + F5
+# Mac: Cmd + Shift + R
+```
+
+**Step 5: 检查 urls.py 配置**
+```python
+# urls.py - 确保使用正确的 AdminSite
+from django.contrib import admin
+from django.urls import path
+
+urlpatterns = [
+    path('admin/', admin.site.urls),  # ✅ 正确（会被自动替换为 layui_admin_site）
+]
+
+# 或者显式使用（更明确）
+# from django_layui.admin import layui_admin_site
+# urlpatterns = [
+#     path('admin/', layui_admin_site.urls),
+# ]
+```
+
+#### 快速诊断命令
+```bash
+# 一键检查所有配置项
+python manage.py shell << 'EOF'
+from django.conf import settings
+from django.urls import reverse
+
+print("=" * 60)
+print("django-layui 配置诊断报告")
+print("=" * 60)
+
+# 1. 检查 INSTALLED_APPS
+print("\n[1] INSTALLED_APPS 检查:")
+apps_to_check = ['django_layui', 'django_layui.rbac']
+for app in apps_to_check:
+    status = "✅" if app in settings.INSTALLED_APPS else "❌"
+    print(f"  {status} {app}")
+
+# 2. 检查 API 路由
+print("\n[2] API 路由检查:")
+try:
+    url = reverse('rbac_user_info')
+    print(f"  ✅ /admin/api/rbac/userinfo/ -> {url}")
+except Exception as e:
+    print(f"  ❌ 路由未注册: {e}")
+
+try:
+    url = reverse('rbac_menu_tree')
+    print(f"  ✅ /admin/api/rbac/menus/tree/ -> {url}")
+except Exception as e:
+    print(f"  ❌ 路由未注册: {e}")
+
+# 3. 检查 AUTH_USER_MODEL
+print("\n[3] 用户模型检查:")
+user_model = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
+print(f"  当前模型: {user_model}")
+if user_model == 'django_layui_rbc.UserProfile':
+    print("  ✅ 使用自定义 UserProfile")
+else:
+    print("  ⚠️ 使用默认 User 模型（RBAC功能可能受限）")
+
+print("\n" + "=" * 60)
+print("诊断完成！如果所有项目都显示 ✅，请尝试重启服务器")
+print("=" * 60)
+EOF
+```
+
+---
+
+### 🟡 问题 2：循环重定向 (/admin/login/ → /admin/)
+
+#### 症状
+浏览器不断在登录页和首页之间跳转，无法进入后台。
+
+#### 原因
+1. **Session/Cookie 配置问题** - Session 无效或 Cookie 被阻止
+2. **CSRF Token 失效** - CSRF 配置与 iframe 不兼容
+3. **未完成登录流程** - 直接访问需要认证的页面
+
+#### 解决方案
+
+**方案 A: 清除 Cookie 并重新登录**
+1. 打开浏览器开发者工具 (F12)
+2. 切换到 **Application** 标签 → **Cookies**
+3. 删除当前域名下的所有 Cookie
+4. 访问 `/admin/login/` 重新登录
+
+**方案 B: 检查 CSRF 配置**
+```python
+# settings.py
+# iframe 嵌入场景必须禁用 SameSite
+CSRF_COOKIE_SAMESITE = None
+SESSION_COOKIE_SAMESITE = None
+
+# 如果使用了 XFrameOptionsMiddleware，请移除它
+MIDDLEWARE = [
+    # ...
+    # ❌ 移除这行: 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+```
+
+**方案 C: 使用隐私/无痕模式测试**
+- 打开浏览器无痕窗口
+- 访问 `http://127.0.0.1:8000/admin/login/`
+- 登录后观察是否正常
+
+---
+
+### 🟠 问题 3：静态文件或样式未加载
+
+#### 症状
+- 页面显示但样式混乱（CSS 未加载）
+- 图标显示为方块或乱码
+- JavaScript 报错 404
+
+#### 原因
+静态文件路径配置错误或未收集。
+
+#### 解决方案
+
+**开发环境 (DEBUG=True)**
+```bash
+# Django 开发服务器会自动查找静态文件
+# 确保设置正确：
+# settings.py
+STATIC_URL = '/static/'
+STATICFILES_DIRS = []  # 可选：额外的静态文件目录
+
+# 重启服务器即可
+python manage.py runserver
+```
+
+**生产环境 (DEBUG=False)**
+```bash
+# 必须手动收集静态文件
+python manage.py collectstatic --noinput
+
+# 配置 Nginx/Apache 提供静态文件服务
+# Nginx 示例:
+# location /static/ {
+#     alias /path/to/staticfiles/;
+# }
+```
+
+**验证静态文件路径**
+```bash
+python manage.py shell
+
+>>> from django.contrib.staticfiles.storage import staticfiles_storage
+>>> staticfiles_storage.url('layui/css/admin.css')
+'/static/layui/css/admin.css'  # ✅ 正确
+
+# 检查文件是否存在
+>>> import os
+>>> from django.conf import settings
+>>> os.path.exists(os.path.join(settings.STATIC_ROOT, 'layui/css/admin.css'))
+True  # ✅ 文件存在
+```
+
+---
+
+### 🟢 问题 4：菜单或权限数据缺失
+
+#### 症状
+- 登录后左侧菜单为空
+- 显示"暂无菜单数据"
+- 权限按钮不可见
+
+#### 原因
+未执行 `init_menu` 命令初始化默认数据。
+
+#### 解决方案
+```bash
+# 初始化菜单、角色、权限、系统配置
+python manage.py init_menu
+
+# 输出示例:
+# ✅ 创建目录: 权限管理
+# ✅ 创建菜单: 菜单管理
+# ✅ 创建菜单: 角色管理
+# ✅ 创建菜单: 用户管理
+# ✅ 创建角色: 管理员 (绑定所有权限)
+# ✅ 创建角色: 注册用户 (仅个人中心权限)
+# ✅ 创建系统配置: system_name, logo_icon, ...
+
+# 默认管理员账号
+# 用户名: admin
+# 密码: admin123
+```
+
+**如果 init_menu 命令不存在**:
+```bash
+# 检查是否正确安装了 django_layui.rbac
+python manage.py shell
+
+>>> import django_layui.rbac
+>>> print(django_layui.rbac.__version__)  # 如果报错，说明安装有问题
+
+# 重新安装
+pip install --force-reinstall django-layui
+```
+
+---
+
+### 🔵 问题 5：依赖包缺失错误
+
+#### 常见错误信息
+
+| 错误信息 | 缺失的依赖 | 安装命令 |
+|---------|-----------|---------|
+| `ModuleNotFoundError: No module named 'paramiko'` | paramiko (运维模块) | `pip install paramiko` |
+| `ModuleNotFoundError: No module named 'openai'` | openai (AI模块) | `pip install openai` |
+| `ModuleNotFoundError: No module named 'psutil'` | psutil (系统监控) | `pip install psutil` |
+| `ImportError: cannot import name 'webssh'` | webssh (SSH终端) | `pip install webssh` |
+
+#### 一键安装所有依赖
+```bash
+# 方式一：安装全部可选依赖
+pip install django-layui[all]
+
+# 方式二：仅安装需要的
+pip install django-layui[ops]   # 运维管理
+pip install django-layui[ai]    # AI日志分析
+```
+
+> **注意**: 核心依赖 (`Django`, `psutil`) 会随 `pip install django-layui` 自动安装，无需单独安装。
+
+---
+
+### 🟣 问题 6：Chrome DevTools 请求 404（可忽略）
+
+#### 症状
+控制台显示：
+```
+Not Found: /.well-known/appspecific/com.chrome.devtools.json
+GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 2341
+```
+
+#### 说明
+这是 **Chrome 浏览器的自动请求**，用于检测 DevTools 功能，与您的应用无关。
+
+#### 处理方式
+✅ **可以安全忽略** - 不会影响应用功能
+
+如果希望消除此错误，可以：
+```python
+# urls.py - 添加一个空响应（可选）
+from django.http import JsonResponse
+
+def chrome_devtools(request):
+    return JsonResponse({}, status=404)
+
+urlpatterns = [
+    # ...
+    path('.well-known/appspecific/com.chrome.devtools.json', chrome_devtools),
+]
+```
+
+---
+
+### 📋 完整安装检查清单
+
+首次安装 django-layui 后，请按顺序执行：
+
+```bash
+# ===== Step 1: 安装包 =====
+pip install django-layui
+# 或完整版: pip install django-layui[all]
+
+# ===== Step 2: 配置 settings.py =====
+# 编辑 your_project/settings.py:
+#   INSTALLED_APPS = ['django_layui', 'django_layui.rbac', 'django.contrib.admin', ...]
+#   ⚠️ 注意: 'django_layui.rbac' 是必需的，不是可选的！
+#   AUTH_USER_MODEL = 'django_layui_rbac.UserProfile' (推荐，启用自定义用户模型)
+
+# ===== Step 3: 配置 urls.py =====
+# 编辑 your_project/urls.py:
+#   from django.contrib import admin
+#   urlpatterns = [path('admin/', admin.site.urls)]
+
+# ===== Step 4: 数据库迁移 =====
+python manage.py makemigrations
+python manage.py migrate
+
+# ===== Step 5: 初始化数据（首次） =====
+python manage.py init_menu
+
+# ===== Step 6: 创建管理员 =====
+python manage.py createsuperuser
+# 输入用户名: admin
+# 输入密码: admin123 (或其他强密码)
+
+# ===== Step 7: 启动服务 =====
+python manage.py runserver
+
+# ===== Step 8: 验证安装 =====
+# 浏览器打开: http://127.0.0.1:8000/admin/
+# 使用 admin/admin123 登录
+# 检查: 左侧菜单正常显示、无控制台404错误
+```
+
+---
+
+### 🆘 获取帮助
+
+如果以上方法都无法解决您的问题：
+
+1. **查看详细文档**: `docs/` 目录下的各专题指南
+2. **搜索已知 Issues**: [GitHub Issues](https://github.com/likangcai/django-layui/issues)
+3. **提交新 Issue**: 请包含以下信息：
+   - Django 版本 (`python -c "import django; print(django.VERSION)"`)
+   - django-layui 版本 (`pip show django-layui`)
+   - 完整的错误堆栈信息
+   - `settings.py` 中相关的配置（隐藏敏感信息）
+   - 操作系统和 Python 版本
 
 ---
 

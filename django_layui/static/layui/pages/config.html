@@ -274,7 +274,7 @@ layui.use(['table', 'form', 'layer'], function(){
                             var type = d.config_type || 'string';
                             var val = d.value || '';
                             if (type === 'image' && val) {
-                                return '<div class="config-value-image"><span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">' + escapeHtml(val) + '</span><img src="' + escapeHtml(val) + '" onerror="this.style.display=\'none\'"></div>';
+                                return '<div class="config-value-image"><span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">' + escapeHtml(val) + '</span><img src="' + escapeHtml(val) + '" class="table-image-preview" onerror="this.style.display=\'none\'" style="cursor:pointer;"></div>';
                             } else if (type === 'color' && val) {
                                 return '<div class="config-value-color"><span class="color-preview" style="background:' + escapeHtml(val) + ';"></span>' + escapeHtml(val) + '</div>';
                             } else if (type === 'boolean') {
@@ -350,8 +350,8 @@ layui.use(['table', 'form', 'layer'], function(){
         if (type === 'image') {
             $('[name="value_image"]').val(value || '');
             if (value) {
-                $('#imagePreview').attr('src', value).show();
-                $('#imagePreviewHint').text(t('config.preview'));
+                $('#imagePreview').attr('src', value).show().css('cursor', 'pointer');
+                $('#imagePreviewHint').html('<span style="color:var(--primary-color);cursor:pointer;" class="preview-link">' + t('config.preview') + '</span>');
             } else {
                 $('#imagePreview').hide();
                 $('#imagePreviewHint').text(t('config.previewHint'));
@@ -430,11 +430,24 @@ layui.use(['table', 'form', 'layer'], function(){
                 layero.find('[name="value_image"]').on('input', function() {
                     var val = $(this).val();
                     if (val) {
-                        layero.find('#imagePreview').attr('src', val).show();
-                        layero.find('#imagePreviewHint').text(t('config.preview'));
+                        layero.find('#imagePreview').attr('src', val).show().css('cursor', 'pointer');
+                        layero.find('#imagePreviewHint').html('<span style="color:var(--primary-color);cursor:pointer;" class="preview-link">' + t('config.preview') + '</span>');
                     } else {
                         layero.find('#imagePreview').hide();
                         layero.find('#imagePreviewHint').text(t('config.previewHint'));
+                    }
+                });
+
+                // 图片点击放大预览（编辑弹窗）
+                layero.on('click', '#imagePreview, .preview-link', function() {
+                    var src = layero.find('#imagePreview').attr('src');
+                    if (src) {
+                        layer.photos({
+                            photos: { data: [{ alt: t('config.preview'), src: src }] },
+                            anim: 5,
+                            shade: 0.5,
+                            closeBtn: 1
+                        });
                     }
                 });
 
@@ -614,6 +627,19 @@ layui.use(['table', 'form', 'layer'], function(){
 
     // 初始化
     loadTable();
+
+    // 表格图片点击放大预览（事件委托）
+    $(document).on('click', '.table-image-preview', function() {
+        var src = $(this).attr('src');
+        if (src) {
+            layer.photos({
+                photos: { data: [{ alt: t('config.preview'), src: src }] },
+                anim: 5,
+                shade: 0.5,
+                closeBtn: 1
+            });
+        }
+    });
 });
 </script>
 </body>

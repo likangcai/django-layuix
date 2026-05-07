@@ -33,14 +33,14 @@
         <!-- Header -->
         <header class="admin-header">
             <div class="header-left">
-                <div class="sidebar-toggle" id="sidebarToggle" title="" style="cursor:pointer;z-index:1000;position:relative;" onclick="window.__toggleSidebar && window.__toggleSidebar(event);">
-                    <i class="layui-icon layui-icon-shrink-right"></i>
-                </div>
                 <div class="logo-area">
                     <div class="logo-icon">
                         <i class="layui-icon {% logo_icon %}"></i>
                     </div>
                     <span class="logo-text">{% system_name %}</span>
+                </div>
+                <div class="sidebar-toggle" id="sidebarToggle" title="">
+                    <i class="layui-icon layui-icon-shrink-right"></i>
                 </div>
             </div>
             <div class="header-right">
@@ -97,6 +97,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="admin-footer" id="adminFooter">
+        <span class="footer-copyright">{% copyright_text %}</span>
+    </footer>
 
     <!-- Change Password Popup Template -->
     <script type="text/html" id="changePasswordTpl">
@@ -286,6 +291,19 @@
                         if (config.favicon_url) {
                             $('link[rel="icon"]').attr('href', config.favicon_url);
                         }
+                        var footerHtml = '';
+                        if (config.system_description) {
+                            footerHtml += '<span class="footer-desc">' + escapeHtml(config.system_description) + '</span>';
+                        }
+                        if (config.system_version) {
+                            footerHtml += '<span class="footer-version">' + escapeHtml(config.system_version) + '</span>';
+                        }
+                        if (config.copyright) {
+                            footerHtml += '<span class="footer-copyright">' + escapeHtml(config.copyright) + '</span>';
+                        }
+                        if (footerHtml) {
+                            $('#adminFooter').html(footerHtml);
+                        }
                     }
                 });
             } else {
@@ -313,13 +331,14 @@
             var hasVisibleChildren = children.some(function(c) { return c.visible !== false; });
             if (!hasVisibleChildren) return '';
             var name = menu.name;
+            var icon = menu.icon || 'layui-icon-app';
             if (window.LANG === 'en' && menu.name_en) {
                 name = menu.name_en;
             } else if (window.LANG === 'zh-CN' && menu.name_zh_hans) {
                 name = menu.name_zh_hans;
             }
             var html = '<div class="menu-group has-children" data-menu-id="' + menu.id + '">';
-            html += '<div class="menu-group-title"><i class="menu-arrow"></i><span>' + escapeHtml(name) + '</span></div>';
+            html += '<div class="menu-group-title"><i class="layui-icon ' + escapeAttr(icon) + ' menu-dir-icon"></i><i class="menu-arrow"></i><span>' + escapeHtml(name) + '</span></div>';
             html += '<div class="sub-menu open">';
             children.forEach(function(child) {
                 if (child.visible === false) return;
@@ -535,60 +554,35 @@
             var $toggle = $('#sidebarToggle');
             var $sidebar = $('#adminSidebar');
 
-            console.log('[Sidebar Toggle] Initializing...', {
-                toggleExists: $toggle.length > 0,
-                sidebarExists: $sidebar.length > 0
-            });
-
             if (!$toggle.length || !$sidebar.length) {
-                console.warn('[Sidebar Toggle] Missing elements:', {
-                    toggle: $toggle.length,
-                    sidebar: $sidebar.length
-                });
+                console.warn('[Sidebar Toggle] Missing elements');
                 return;
             }
 
             var $icon = $toggle.find('i');
-            console.log('[Sidebar Toggle] Icon element:', $icon.length > 0 ? 'found' : 'missing');
 
             function toggleFn(e) {
-                console.log('[Sidebar Toggle] Clicked! Current state:', sidebarCollapsed);
-                
                 if (e) { 
                     e.preventDefault(); 
                     e.stopPropagation(); 
                 }
                 
                 sidebarCollapsed = !sidebarCollapsed;
-                console.log('[Sidebar Toggle] New state:', sidebarCollapsed);
                 
                 if (sidebarCollapsed) {
                     $sidebar.addClass('collapsed');
                     $icon.removeClass('layui-icon-shrink-right').addClass('layui-icon-spread-left');
-                    console.log('[Sidebar Toggle] Sidebar collapsed, icon changed to spread-left');
                 } else {
                     $sidebar.removeClass('collapsed');
                     $icon.removeClass('layui-icon-spread-left').addClass('layui-icon-shrink-right');
-                    console.log('[Sidebar Toggle] Sidebar expanded, icon changed to shrink-right');
                 }
             }
 
-            window.__toggleSidebar = toggleFn;
-
-            $toggle.off('click.toggleSidebar').on('click.toggleSidebar', function(e) {
-                console.log('[Sidebar Toggle] Event triggered!');
+            // 使用事件委托，确保事件绑定可靠
+            $(document).off('click.sidebarToggle').on('click.sidebarToggle', '#sidebarToggle', function(e) {
+                console.log('[Sidebar Toggle] Clicked!');
                 toggleFn(e);
             });
-
-            $toggle.css({
-                'cursor': 'pointer', 
-                'position': 'relative', 
-                'z-index': '9999',
-                'outline': 'none',
-                '-webkit-tap-highlight-color': 'transparent'
-            });
-            
-            console.log('[Sidebar Toggle] Initialization complete ✓');
         })();
 
         // ==================== Fullscreen ====================
