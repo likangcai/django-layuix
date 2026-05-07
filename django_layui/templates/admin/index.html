@@ -8,38 +8,8 @@
     <title>{% system_name %}</title>
     <script>
         (function() {
-            var theme = localStorage.getItem('theme') || '默认深色';
-            var themeMap = {
-                '默认深色': 'theme-default-dark',
-                '默认浅色': 'theme-default-light',
-                'Element蓝': 'theme-element-blue',
-                'Ant Design黑': 'theme-ant-design-black',
-                'AdminLTE蓝': 'theme-adminlte-blue',
-                '企业紫': 'theme-enterprise-purple',
-                '企业红': 'theme-enterprise-red',
-                '清新绿': 'theme-fresh-green',
-                '科技橙': 'theme-tech-orange',
-                '深邃黑': 'theme-deep-black',
-                '优雅灰': 'theme-elegant-gray',
-                '天空蓝': 'theme-sky-blue',
-                '樱花粉': 'theme-sakura-pink',
-                '极光紫': 'theme-aurora-purple',
-                '暗夜蓝': 'theme-midnight-blue',
-                '薄荷青': 'theme-mint-cyan',
-                '烈焰红': 'theme-flame-red',
-                '商务蓝': 'theme-business-blue',
-                '高端黑': 'theme-premium-black',
-                '活力橙': 'theme-vibrant-orange',
-                '森林绿': 'theme-forest-green',
-                '深海蓝': 'theme-deep-sea',
-                '玫瑰金': 'theme-rose-gold',
-                '极客绿': 'theme-geek-green',
-                '赛博朋克': 'theme-cyberpunk'
-            };
-            var darkThemeNames = ['默认深色', 'Ant Design黑', 'AdminLTE蓝', '企业紫', '企业红', '深邃黑', '暗夜蓝', '薄荷青', '烈焰红', '极光紫', '极客绿', '赛博朋克', '深海蓝', '高端黑'];
-            var cssTheme = themeMap[theme] || 'theme-default-dark';
-            document.documentElement.setAttribute('data-theme', cssTheme);
-            document.documentElement.setAttribute('data-theme-mode', darkThemeNames.indexOf(theme) >= 0 ? 'dark' : 'light');
+            var theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme-mode', theme === 'dark' ? 'dark' : 'light');
         })();
     </script>
     {% favicon_url as favicon %}
@@ -63,7 +33,7 @@
         <!-- Header -->
         <header class="admin-header">
             <div class="header-left">
-                <div class="sidebar-toggle" id="sidebarToggle" title="">
+                <div class="sidebar-toggle" id="sidebarToggle" title="" style="cursor:pointer;z-index:1000;position:relative;" onclick="window.__toggleSidebar && window.__toggleSidebar(event);">
                     <i class="layui-icon layui-icon-shrink-right"></i>
                 </div>
                 <div class="logo-area">
@@ -76,53 +46,6 @@
             <div class="header-right">
                 <div class="header-action-btn" id="langBtn" title="中文">
                     <i class="layui-icon layui-icon-flag"></i>
-                </div>
-                <div class="header-action-btn theme-btn" id="themeBtn" title="主题选择">
-                    <i class="layui-icon layui-icon-theme" id="themeBtnIcon"></i>
-                    <i class="layui-icon layui-icon-down theme-arrow"></i>
-                    <div class="theme-dropdown" id="themeDropdown">
-                        <div class="theme-group">
-                            <div class="theme-group-title" data-translate="theme.uiFrameworks">UI框架风格</div>
-                            <div class="theme-item" data-theme="Element蓝"><span class="theme-color" style="background:#409EFF;"></span><span data-translate="theme.elementBlue">Element蓝</span></div>
-                            <div class="theme-item" data-theme="Ant Design黑"><span class="theme-color" style="background:#1890FF;"></span><span data-translate="theme.antDesignDark">Ant Design黑</span></div>
-                            <div class="theme-item" data-theme="AdminLTE蓝"><span class="theme-color" style="background:#3C8DBC;"></span><span data-translate="theme.adminlteBlue">AdminLTE蓝</span></div>
-                        </div>
-                        <div class="theme-group">
-                            <div class="theme-group-title" data-translate="theme.enterprise">企业色系</div>
-                            <div class="theme-item" data-theme="企业紫"><span class="theme-color" style="background:#8263B1;"></span><span data-translate="theme.enterprisePurple">企业紫</span></div>
-                            <div class="theme-item" data-theme="企业红"><span class="theme-color" style="background:#C9333E;"></span><span data-translate="theme.enterpriseRed">企业红</span></div>
-                            <div class="theme-item" data-theme="商务蓝"><span class="theme-color" style="background:#3BA1DF;"></span><span data-translate="theme.businessBlue">商务蓝</span></div>
-                            <div class="theme-item" data-theme="高端黑"><span class="theme-color" style="background:#1F2C39;"></span><span data-translate="theme.premiumBlack">高端黑</span></div>
-                        </div>
-                        <div class="theme-group">
-                            <div class="theme-group-title" data-translate="theme.natural">自然色系</div>
-                            <div class="theme-item" data-theme="清新绿"><span class="theme-color" style="background:#27AD60;"></span><span data-translate="theme.freshGreen">清新绿</span></div>
-                            <div class="theme-item" data-theme="森林绿"><span class="theme-color" style="background:#19A97B;"></span><span data-translate="theme.forestGreen">森林绿</span></div>
-                            <div class="theme-item" data-theme="天空蓝"><span class="theme-color" style="background:#02C0CE;"></span><span data-translate="theme.skyBlue">天空蓝</span></div>
-                            <div class="theme-item" data-theme="深海蓝"><span class="theme-color" style="background:#00695C;"></span><span data-translate="theme.deepSeaBlue">深海蓝</span></div>
-                        </div>
-                        <div class="theme-group">
-                            <div class="theme-group-title" data-translate="theme.vibrant">活力色系</div>
-                            <div class="theme-item" data-theme="科技橙"><span class="theme-color" style="background:#FF6B35;"></span><span data-translate="theme.techOrange">科技橙</span></div>
-                            <div class="theme-item" data-theme="活力橙"><span class="theme-color" style="background:#F57C00;"></span><span data-translate="theme.vibrantOrange">活力橙</span></div>
-                            <div class="theme-item" data-theme="樱花粉"><span class="theme-color" style="background:#FF6B9D;"></span><span data-translate="theme.cherryBlossom">樱花粉</span></div>
-                            <div class="theme-item" data-theme="玫瑰金"><span class="theme-color" style="background:#B76E79;"></span><span data-translate="theme.roseGold">玫瑰金</span></div>
-                        </div>
-                        <div class="theme-group">
-                            <div class="theme-group-title" data-translate="theme.darkThemes">暗色主题</div>
-                            <div class="theme-item" data-theme="深邃黑"><span class="theme-color" style="background:#00BCD4;"></span><span data-translate="theme.deepBlack">深邃黑</span></div>
-                            <div class="theme-item" data-theme="暗夜蓝"><span class="theme-color" style="background:#3E4295;"></span><span data-translate="theme.nightBlue">暗夜蓝</span></div>
-                            <div class="theme-item" data-theme="薄荷青"><span class="theme-color" style="background:#2F9688;"></span><span data-translate="theme.mintGreen">薄荷青</span></div>
-                            <div class="theme-item" data-theme="烈焰红"><span class="theme-color" style="background:#AA3130;"></span><span data-translate="theme.blazingRed">烈焰红</span></div>
-                            <div class="theme-item" data-theme="极光紫"><span class="theme-color" style="background:#667eea;"></span><span data-translate="theme.auroraPurple">极光紫</span></div>
-                        </div>
-                        <div class="theme-group">
-                            <div class="theme-group-title" data-translate="theme.unique">个性主题</div>
-                            <div class="theme-item" data-theme="优雅灰"><span class="theme-color" style="background:#213A53;"></span><span data-translate="theme.elegantGray">优雅灰</span></div>
-                            <div class="theme-item" data-theme="极客绿"><span class="theme-color" style="background:#00FF00;"></span><span data-translate="theme.techGeekGreen">极客绿</span></div>
-                            <div class="theme-item" data-theme="赛博朋克"><span class="theme-color" style="background:#FCEE0A;"></span><span data-translate="theme.cyberpunk">赛博朋克</span></div>
-                        </div>
-                    </div>
                 </div>
                 <div class="header-action-btn" id="themeToggle" title="深色/浅色切换">
                     <i class="layui-icon layui-icon-light" id="themeIcon"></i>
@@ -142,16 +65,16 @@
                     <div class="user-dropdown" id="userDropdown">
                         <div class="dropdown-item" id="profileBtn">
                             <i class="layui-icon layui-icon-user"></i>
-                            <span>个人中心</span>
+                            <span data-i18n="header.personalCenter">个人中心</span>
                         </div>
                         <div class="dropdown-item" id="changePasswordBtn">
                             <i class="layui-icon layui-icon-password"></i>
-                            <span>修改密码</span>
+                            <span data-i18n="header.changePassword">修改密码</span>
                         </div>
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-item danger" id="logoutBtn">
                             <i class="layui-icon layui-icon-logout"></i>
-                            <span>退出登录</span>
+                            <span data-i18n="header.logout">退出登录</span>
                         </div>
                     </div>
                 </div>
@@ -164,7 +87,7 @@
                 <div class="sidebar-menu" id="sidebarMenu">
                     <div class="empty-state" style="padding: 40px 20px;">
                         <i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i>
-                        <p>加载中...</p>
+                        <p data-i18n="common.loading">加载中...</p>
                     </div>
                 </div>
             </aside>
@@ -261,12 +184,9 @@
     window.LAYUI_CONFIG = {
         webssh_url: '{{ webssh_url_val|escapejs }}',
         admin_login_url: '{% url "admin:login" %}',
-        // 首页自定义快速链接（从 settings.LAYUI_CONFIG 读取，未配置则使用默认值）
         home_quick_links: {{ layui_config.home_quick_links|default:"[]"|safe }},
-        // 首页统计卡片（从 settings.LAYUI_CONFIG 读取，未配置则使用默认值）
         home_stats_cards: {{ layui_config.home_stats_cards|default:"[]"|safe }},
     };
-    window.ADMIN_LOGIN_URL = '{% url "admin:login" %}';
 
     // ==================== Global Variables ====================
     var currentUser = null;
@@ -285,16 +205,16 @@
         window.openTab = openTab;
         window.switchTab = switchTab;
         window.closeTab = closeTab;
-        window.applyTheme = applyTheme;
+        window.applyThemeMode = applyThemeMode;
         window.getCurrentTheme = function() { return currentTheme; };
 
         // Initialize language
         var currentLang = I18N.getLang();
+        window.LANG = currentLang;
         updateLangUI(currentLang);
         window.I18N = I18N;
         window.t = t;
 
-        // 保存原始文本（在首次调用前记录，防止翻译失败时丢失）
         var _originalTexts = {};
         function updateLangUI(lang) {
             var label = lang === 'en' ? 'English' : '中文';
@@ -302,16 +222,18 @@
             $('[data-i18n]').each(function() {
                 var $el = $(this);
                 var key = $el.attr('data-i18n');
-                // 首次记录原始文本
-                if (!_originalTexts[key]) {
-                    _originalTexts[key] = $el.text();
-                }
-                var translated = t(key);
-                // 翻译成功则使用翻译，否则使用原始文本
-                if (translated && translated !== key) {
-                    $el.text(translated);
-                } else if (_originalTexts[key]) {
-                    $el.text(_originalTexts[key]);
+                if (!key) return;
+                try {
+                    var translated = (typeof t === 'function') ? t(key) : null;
+                    if (translated && translated !== key && typeof translated === 'string') {
+                        $el.text(translated);
+                    } else if (!_originalTexts[key]) {
+                        _originalTexts[key] = $el.text();
+                    }
+                } catch(e) {
+                    if (!_originalTexts[key]) {
+                        _originalTexts[key] = $el.text();
+                    }
                 }
             });
         }
@@ -335,9 +257,11 @@
             if (res.code === 200) {
                 currentUser = res.data;
                 window.currentUser = currentUser;
-                currentTheme = res.data.theme || 'dark';
+                var rawTheme = res.data.theme || 'dark';
+                var themeAliasMap = {'默认深色': 'dark', '默认浅色': 'light'};
+                currentTheme = themeAliasMap[rawTheme] || rawTheme;
                 renderMenu(res.data.menus);
-                applyTheme(currentTheme);
+                applyThemeMode(currentTheme === 'dark');
                 updateUserInfo(res.data);
                 // Default open dashboard
                 openTab(t('header.home'), '/static/layui/pages/dashboard.html');
@@ -365,10 +289,10 @@
                     }
                 });
             } else {
-                location.href = window.ADMIN_LOGIN_URL;
+                location.href = window.LAYUI_CONFIG.admin_login_url;
             }
         }).fail(function() {
-            location.href = window.ADMIN_LOGIN_URL;
+            location.href = window.LAYUI_CONFIG.admin_login_url || '/admin/login/';
         });
 
         // ==================== Render Menu Tree ====================
@@ -388,7 +312,6 @@
             var children = menu.children || [];
             var hasVisibleChildren = children.some(function(c) { return c.visible !== false; });
             if (!hasVisibleChildren) return '';
-            // 根据语言环境选择菜单名称
             var name = menu.name;
             if (window.LANG === 'en' && menu.name_en) {
                 name = menu.name_en;
@@ -456,11 +379,19 @@
         });
 
         // Menu group collapse/expand
-        $(document).on('click', '.menu-group-title', function() {
+        $(document).off('click.menuGroup').on('click.menuGroup', '.menu-group-title', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             var $title = $(this);
             var $subMenu = $title.siblings('.sub-menu');
-            $title.toggleClass('collapsed');
-            $subMenu.toggleClass('open');
+            var isCollapsed = $title.hasClass('collapsed');
+            if (isCollapsed) {
+                $title.removeClass('collapsed');
+                $subMenu.addClass('open');
+            } else {
+                $title.addClass('collapsed');
+                $subMenu.removeClass('open');
+            }
         });
 
         // ==================== Tab Management ====================
@@ -562,137 +493,103 @@
             }
         }
 
-        // Dark theme names for quick toggle
-        var darkThemes = ['默认深色', 'Ant Design黑', 'AdminLTE蓝', '企业紫', '企业红', '深邃黑', '暗夜蓝', '薄荷青', '烈焰红', '极光紫', '极客绿', '赛博朋克', '深海蓝', '高端黑'];
-        
-        // Theme name mapping: Chinese name -> CSS data-theme value (1:1 mapping)
-        var themeNameMap = {
-            '默认深色': 'theme-default-dark',
-            '默认浅色': 'theme-default-light',
-            'Element蓝': 'theme-element-blue',
-            'Ant Design黑': 'theme-ant-design-black',
-            'AdminLTE蓝': 'theme-adminlte-blue',
-            '企业紫': 'theme-enterprise-purple',
-            '企业红': 'theme-enterprise-red',
-            '清新绿': 'theme-fresh-green',
-            '科技橙': 'theme-tech-orange',
-            '深邃黑': 'theme-deep-black',
-            '优雅灰': 'theme-elegant-gray',
-            '天空蓝': 'theme-sky-blue',
-            '樱花粉': 'theme-sakura-pink',
-            '极光紫': 'theme-aurora-purple',
-            '暗夜蓝': 'theme-midnight-blue',
-            '薄荷青': 'theme-mint-cyan',
-            '烈焰红': 'theme-flame-red',
-            '商务蓝': 'theme-business-blue',
-            '高端黑': 'theme-premium-black',
-            '活力橙': 'theme-vibrant-orange',
-            '森林绿': 'theme-forest-green',
-            '深海蓝': 'theme-deep-sea',
-            '玫瑰金': 'theme-rose-gold',
-            '极客绿': 'theme-geek-green',
-            '赛博朋克': 'theme-cyberpunk'
-        };
-        
-        // ==================== Theme ====================
-        function applyTheme(theme) {
-            currentTheme = theme || '默认深色';
-            // Map Chinese theme name to CSS data-theme value (1:1 mapping)
-            var cssTheme = themeNameMap[currentTheme] || 'theme-default-dark';
-            document.documentElement.setAttribute('data-theme', cssTheme);
-            // Set data-theme-mode for CSS dark/light overrides
-            var isDark = darkThemes.includes(currentTheme);
+        // ==================== Theme (Dark/Light only) ====================
+        function applyThemeMode(isDark) {
+            currentTheme = isDark ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme-mode', isDark ? 'dark' : 'light');
-            // Persist to localStorage for page reload
             localStorage.setItem('theme', currentTheme);
 
-            // Update theme icon based on dark/light category
+            // Update theme icon
             if (isDark) {
                 $('#themeIcon').removeClass('layui-icon-moon').addClass('layui-icon-light');
             } else {
                 $('#themeIcon').removeClass('layui-icon-light').addClass('layui-icon-moon');
             }
 
-            // Update active theme item
-            $('.theme-item').removeClass('active');
-            $('.theme-item[data-theme="' + currentTheme + '"]').addClass('active');
-
-            // Notify iframes via postMessage (cross-origin safe)
+            // Notify all iframes
             var themeMode = isDark ? 'dark' : 'light';
-            Object.keys(tabs).forEach(function(url) {
-                var tabId = 'tab_' + url.replace(/[^a-zA-Z0-9]/g, '_');
-                var iframe = document.getElementById('iframe_' + tabId);
-                if (iframe) {
-                    try {
-                        // Try direct DOM access first (same origin)
-                        if (iframe.contentDocument) {
-                            iframe.contentDocument.documentElement.setAttribute('data-theme', cssTheme);
-                            iframe.contentDocument.documentElement.setAttribute('data-theme-mode', themeMode);
-                        }
-                    } catch(e) {}
-                    // Also send postMessage for cross-origin or sandboxed iframes
-                    try {
-                        iframe.contentWindow.postMessage({ type: 'themeChange', theme: cssTheme, themeName: currentTheme, themeMode: themeMode }, '*');
-                    } catch(e) {}
-                }
+            $('iframe[id^="iframe_"]').each(function() {
+                var iframe = this;
+                try {
+                    iframe.contentWindow.postMessage({ type: 'themeChange', themeMode: themeMode }, '*');
+                } catch(e) {}
             });
         }
 
-        // 设置 header 按钮的 title
         $('#sidebarToggle').attr('title', t('header.toggleSidebar') || '收起/展开');
         $('#themeToggle').attr('title', t('header.toggleTheme') || '浅色/深色');
-        $('#themeBtn').attr('title', t('header.selectTheme') || '切换主题');
         $('#frontendBtn').attr('title', t('header.viewSite') || '访问前台');
         $('#fullscreenBtn').attr('title', t('header.fullscreen') || '全屏');
 
         // Quick dark/light toggle
         $('#themeToggle').on('click', function() {
-            var newTheme = darkThemes.includes(currentTheme) ? '默认浅色' : '默认深色';
-            applyTheme(newTheme);
-            putApi('/admin/api/rbac/profile/theme/', {theme: newTheme}, function(res) {
+            var isDark = currentTheme === 'dark';
+            applyThemeMode(!isDark);
+            putApi('/admin/api/rbac/profile/theme/', {theme: !isDark ? 'dark' : 'light'}, function(res) {
                 if (res.code === 200) layer.msg(t('common.success'), {icon: 1, time: 800});
             });
         });
-        
-        // Theme dropdown toggle
-        $('#themeBtn').on('click', function(e) {
-            e.stopPropagation();
-            $('#themeDropdown').toggleClass('show');
-            $('#themeBtn').toggleClass('open');
-        });
-        
-        // Theme item click
-        $(document).on('click', '.theme-item', function() {
-            var newTheme = $(this).data('theme');
-            if (newTheme && newTheme !== currentTheme) {
-                applyTheme(newTheme);
-                putApi('/admin/api/rbac/profile/theme/', {theme: newTheme}, function(res) {
-                    if (res.code === 200) layer.msg(t('common.success'), {icon: 1, time: 800});
-                });
-            }
-            $('#themeDropdown').removeClass('show');
-            $('#themeBtn').removeClass('open');
-        });
-        
-        // Close theme dropdown when clicking elsewhere
-        $(document).on('click', function() {
-            $('#themeDropdown').removeClass('show');
-            $('#themeBtn').removeClass('open');
-        });
 
         // ==================== Sidebar Toggle ====================
-        $('#sidebarToggle').on('click', function() {
-            sidebarCollapsed = !sidebarCollapsed;
-            var sidebar = $('#adminSidebar');
-            var icon = $(this).find('i');
-            if (sidebarCollapsed) {
-                sidebar.addClass('collapsed');
-                icon.removeClass('layui-icon-shrink-right').addClass('layui-icon-spread-left');
-            } else {
-                sidebar.removeClass('collapsed');
-                icon.removeClass('layui-icon-spread-left').addClass('layui-icon-shrink-right');
+        (function initSidebarToggle() {
+            var $toggle = $('#sidebarToggle');
+            var $sidebar = $('#adminSidebar');
+
+            console.log('[Sidebar Toggle] Initializing...', {
+                toggleExists: $toggle.length > 0,
+                sidebarExists: $sidebar.length > 0
+            });
+
+            if (!$toggle.length || !$sidebar.length) {
+                console.warn('[Sidebar Toggle] Missing elements:', {
+                    toggle: $toggle.length,
+                    sidebar: $sidebar.length
+                });
+                return;
             }
-        });
+
+            var $icon = $toggle.find('i');
+            console.log('[Sidebar Toggle] Icon element:', $icon.length > 0 ? 'found' : 'missing');
+
+            function toggleFn(e) {
+                console.log('[Sidebar Toggle] Clicked! Current state:', sidebarCollapsed);
+                
+                if (e) { 
+                    e.preventDefault(); 
+                    e.stopPropagation(); 
+                }
+                
+                sidebarCollapsed = !sidebarCollapsed;
+                console.log('[Sidebar Toggle] New state:', sidebarCollapsed);
+                
+                if (sidebarCollapsed) {
+                    $sidebar.addClass('collapsed');
+                    $icon.removeClass('layui-icon-shrink-right').addClass('layui-icon-spread-left');
+                    console.log('[Sidebar Toggle] Sidebar collapsed, icon changed to spread-left');
+                } else {
+                    $sidebar.removeClass('collapsed');
+                    $icon.removeClass('layui-icon-spread-left').addClass('layui-icon-shrink-right');
+                    console.log('[Sidebar Toggle] Sidebar expanded, icon changed to shrink-right');
+                }
+            }
+
+            window.__toggleSidebar = toggleFn;
+
+            $toggle.off('click.toggleSidebar').on('click.toggleSidebar', function(e) {
+                console.log('[Sidebar Toggle] Event triggered!');
+                toggleFn(e);
+            });
+
+            $toggle.css({
+                'cursor': 'pointer', 
+                'position': 'relative', 
+                'z-index': '9999',
+                'outline': 'none',
+                '-webkit-tap-highlight-color': 'transparent'
+            });
+            
+            console.log('[Sidebar Toggle] Initialization complete ✓');
+        })();
 
         // ==================== Fullscreen ====================
         $('#fullscreenBtn').on('click', function() {
@@ -718,9 +615,7 @@
                 type: 1, title: t('header.personalCenter'), area: ['480px', 'auto'],
                 content: renderTpl('profileTpl'),
                 success: function(layero) {
-                    // 初始化弹窗中的 data-i18n 元素
                     layero.find('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); var v = t(key); if(v && v !== key) $(this).text(v); });
-                    // 设置 placeholder
                     layero.find('#profileNickname').attr('placeholder', t('user.nickname') || '昵称');
                     layero.find('#profilePhone').attr('placeholder', t('user.phone') || '手机号');
                     $('#profileUsername').val(currentUser.username);
@@ -756,9 +651,7 @@
                 type: 1, title: t('header.changePassword'), area: ['480px', 'auto'],
                 content: renderTpl('changePasswordTpl'),
                 success: function(layero) {
-                    // 初始化弹窗中的 data-i18n 元素
                     layero.find('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); var v = t(key); if(v && v !== key) $(this).text(v); });
-                    // 设置 placeholder
                     layero.find('input[name="old_password"]').attr('placeholder', t('profile.oldPassword') || '原密码');
                     layero.find('input[name="new_password"]').attr('placeholder', t('profile.newPassword') || '新密码');
                     layero.find('input[name="confirm_password"]').attr('placeholder', t('profile.confirmPassword') || '确认密码');
@@ -775,7 +668,7 @@
                         }, function(res) {
                             if (res.code === 200) {
                                 layer.msg(t('profile.password.success'), {icon: 1, time: 1500}, function() {
-                                    location.href = window.ADMIN_LOGIN_URL;
+                                    location.href = window.LAYUI_CONFIG.admin_login_url || '/admin/login/';
                                 });
                             } else {
                                 layer.msg(res.msg || t('common.fail'), {icon: 2});
@@ -797,8 +690,6 @@
         });
 
         // ==================== Logout Button ====================
-        // 注意：#logoutBtn 在 #userArea 内部，#userArea 的 click 使用了 stopPropagation
-        // 所以不能在 document 上用事件委托，需要直接绑定
         $('#logoutBtn').on('click', function(e) {
             e.stopPropagation();
             $('#userDropdown').removeClass('show');
@@ -831,7 +722,6 @@
         }
 
         // ==================== Session Check (browser back button) ====================
-        // 页面可见时检查 session 是否有效，防止退出后通过浏览器返回按钮进入
         function checkSession() {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/admin/api/rbac/userinfo/', true);
@@ -843,11 +733,9 @@
             };
             xhr.send();
         }
-        // 监听页面可见性变化（浏览器返回按钮可能触发）
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) checkSession();
         });
-        // 监听 pageshow 事件（bfcache 恢复时触发）
         window.addEventListener('pageshow', function(e) {
             if (e.persisted) checkSession();
         });

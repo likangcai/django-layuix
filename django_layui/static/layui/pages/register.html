@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="/static/layui/css/admin.css">
     <script>
         (function() {
-            var theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
+            var theme = localStorage.getItem('theme') || '默认深色';
+            var themeMode = theme === '默认深色' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme-mode', themeMode);
         })();
     </script>
     <style>

@@ -8,18 +8,18 @@
     <link rel="stylesheet" href="/static/layui/css/admin.css">
     <script>
         function syncParentTheme() {
-            var theme = 'dark';
+            var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'dark';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
                 }
             } catch(e) {}
-            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme-mode', themeMode);
         }
         syncParentTheme();
         window.addEventListener('message', function(e) {
             if (e.data && e.data.type === 'themeChange') {
-                document.documentElement.setAttribute('data-theme', e.data.theme);
+                document.documentElement.setAttribute('data-theme-mode', e.data.themeMode);
             }
         });
     </script>
@@ -326,11 +326,10 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
         getApi(url, function(res) {
             if (res.code === 200) {
                 var rawData = res.data;
-                // 兼容数组格式和分页格式
                 var list = Array.isArray(rawData) ? rawData : (rawData.list || []);
                 total = Array.isArray(rawData) ? list.length : (rawData.total || 0);
 
-                table.render({
+                var tableIns = table.render({
                     elem: '#userTable',
                     toolbar: '#toolbarTpl',
                     defaultToolbar: [],
@@ -350,7 +349,6 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
                             }
                         }
                     },
-                    skin: 'line',
                     even: true,
                     cols: [[
                         {field: 'id', title: t('common.id'), width: 70, align: 'center'},
@@ -378,8 +376,13 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
                         }},
                         {field: 'date_joined', title: t('user.createTime'), width: 170, align: 'center'},
                         {title: t('common.operation'), width: 400, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
-                    ]]
+                    ]],
+                    done: function(res, curr, count) {
+                        window._userTableIns = this;
+                    }
                 });
+            } else {
+                layer.msg(res.msg || t('common.loadFailed') || '加载失败', {icon: 2});
             }
         });
     }
@@ -566,14 +569,16 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
         return false;
     });
 
-    // 搜索
-    $('#searchBtn').on('click', function() {
+    // 搜索 - 使用事件委托确保绑定成功
+    $(document).off('click.userSearch').on('click.userSearch', '#searchBtn', function(e) {
+        e.preventDefault();
         currentPage = 1;
         loadTable();
     });
 
     // 重置搜索
-    $('#resetBtn').on('click', function() {
+    $(document).off('click.userReset').on('click.userReset', '#resetBtn', function(e) {
+        e.preventDefault();
         currentPage = 1;
         $('#searchKeyword').val('');
         $('#searchStatus').val('');
@@ -582,7 +587,7 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
     });
 
     // 回车搜索
-    $('#searchKeyword').on('keydown', function(e) {
+    $(document).off('keydown.userSearch').on('keydown.userSearch', '#searchKeyword', function(e) {
         if (e.keyCode === 13) {
             e.preventDefault();
             currentPage = 1;

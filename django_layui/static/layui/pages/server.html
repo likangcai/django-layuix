@@ -8,18 +8,18 @@
     <link rel="stylesheet" href="/static/layui/css/admin.css">
     <script>
         function syncParentTheme() {
-            var theme = 'light';
+            var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'light';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
                 }
             } catch(e) {}
-            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme-mode', themeMode);
         }
         syncParentTheme();
         window.addEventListener('message', function(e) {
             if (e.data && e.data.type === 'themeChange') {
-                document.documentElement.setAttribute('data-theme', e.data.theme);
+                document.documentElement.setAttribute('data-theme-mode', e.data.themeMode);
             }
         });
     </script>
@@ -262,7 +262,7 @@
                                 <i class="layui-icon layui-icon-search"></i> {{ t('server.log.query') }}
                             </button>
                             <button type="button" class="layui-btn layui-btn-sm layui-btn-warm" id="aiAnalyzeBtn">
-                                <i class="layui-icon layui-icon-engine"></i> {{ t('server.aiAnalyzing') }}
+                                <i class="layui-icon layui-icon-engine"></i> {{ t('server.aiAnalyzeBtn') }}
                             </button>
                             <input type="checkbox" name="auto_refresh" lay-skin="switch" lay-text="ON|OFF" lay-filter="autoRefresh" style="width:50px;">
                         </div>
@@ -349,15 +349,14 @@ layui.use(['table', 'form', 'layer'], function(){
                             }
                         }
                     },
-                    skin: 'line',
                     even: true,
                     cols: [[
                         {field: 'id', title: 'ID', width: 70, align: 'center'},
                         {field: 'name', title: t('server.name'), minWidth: 120},
-                        {field: 'host', title: t('server.host'), minWidth: 130},
-                        {field: 'port', title: t('server.port'), width: 80, align: 'center'},
-                        {field: 'username', title: t('server.username'), width: 100},
-                        {field: 'auth_type', title: t('server.authType'), width: 100, align: 'center', templet: function(d) {
+                        {field: 'host', title: t('server.host'), minWidth: 140},
+                        {field: 'port', title: t('server.port'), width: 100, align: 'center'},
+                        {field: 'username', title: t('server.username'), minWidth: 130},
+                        {field: 'auth_type', title: t('server.authType'), width: 110, align: 'center', templet: function(d) {
                             var type = d.auth_type || 'password';
                             if (type === 'password') {
                                 return '<span class="auth-tag password">' + t('server.auth.password') + '</span>';
@@ -549,7 +548,18 @@ layui.use(['table', 'form', 'layer'], function(){
             if (res.code === 200) {
                 layer.msg(t('server.connectSuccess'), {icon: 1, time: 2000});
             } else {
-                layer.msg(res.msg || t('server.connectFail'), {icon: 2, time: 3000});
+                var errorMsg = res.msg || t('server.connectFail');
+                if (errorMsg.length > 100 || errorMsg.indexOf('\n') !== -1) {
+                    layer.alert(t('server.connectFail') + '\n\n' + errorMsg, {
+                        icon: 2,
+                        title: t('server.testConnect'),
+                        area: ['550px', 'auto'],
+                        shadeClose: true,
+                        maxHeight: 500
+                    });
+                } else {
+                    layer.msg(errorMsg, {icon: 2, time: 3000});
+                }
             }
         });
     }

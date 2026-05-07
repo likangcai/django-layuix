@@ -31,7 +31,7 @@ class LayuiAdminSite(AdminSite):
         # 将配置添加到上下文（不做任何默认值处理）
         context['layui_config'] = layui_config
         
-        # 添加可用主题列表
+        # 添加可用主题列表（深色/浅色双模式）
         context['available_themes'] = get_all_themes()
         
         return context

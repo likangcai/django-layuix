@@ -619,18 +619,15 @@ def profile_password(request):
 @csrf_exempt
 @api_login_required
 def profile_theme(request):
-    """Update user theme preference - supports all 25 themes from themes.py"""
+    """Update user theme preference - supports both new format ('dark'/'light') and legacy Chinese theme names"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
 
     body = get_request_body(request)
-    theme = body.get('theme', '默认深色')
+    raw_theme = body.get('theme', 'dark')
 
-    # Validate theme against available themes from themes.py
-    from .themes import get_all_themes
-    valid_themes = [t['name'] for t in get_all_themes()]
-    if theme not in valid_themes:
-        return error_response(f'无效的主题值。允许的主题：{", ".join(valid_themes)}', 400)
+    from .themes import normalize_theme, get_all_themes
+    theme = normalize_theme(raw_theme)
 
     user = request.user
     if hasattr(user, 'theme'):
@@ -643,13 +640,12 @@ def profile_theme(request):
 @csrf_exempt
 @api_login_required
 def available_themes(request):
-    """GET /api/rbac/available-themes/ - Get all available themes for frontend selection"""
+    """GET /api/rbac/available-themes/ - Get available themes (dark/light only)"""
     from .themes import get_all_themes
-    
+
     themes = get_all_themes()
-    # Return theme names for frontend dropdown/list
     data = [{'name': t['name'], 'file': t['file']} for t in themes]
-    
+
     return success_response(data)
 
 
@@ -1006,7 +1002,7 @@ def role_create(request):
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
 
-    from .models import Role
+    from .models import Role, Menu
 
     body = get_request_body(request)
     name = body.get('name', '').strip()
@@ -1025,8 +1021,26 @@ def role_create(request):
         status=bool(body.get('status', True)),
     )
     role.save()
-    if 'menu_ids' in body:
+
+    if 'menu_ids' in body and body['menu_ids']:
         role.menus.set(body['menu_ids'])
+    else:
+        from .models import Menu
+        default_menus = Menu.objects.filter(
+            permission__in=['profile:view', 'profile:edit']
+        ) | Menu.objects.filter(
+            path__icontains='/profile'
+        )
+        if default_menus.exists():
+            role.menus.set(default_menus)
+        else:
+            profile_menu = Menu.objects.filter(
+                menu_type=2,
+                path__icontains='profile'
+            ).first()
+            if profile_menu:
+                role.menus.set([profile_menu.id])
+
     return success_response({'id': role.id}, msg='创建成功')
 
 

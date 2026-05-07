@@ -9,12 +9,42 @@ django-layui 支持完整的中英文双语切换，包括：
 
 ---
 
+## 🚀 快速开始
+
+### 在 HTML 中使用翻译
+
+```html
+<!-- 方法一：data-i18n 属性（最简单） -->
+<span data-i18n="common.save">保存</span>
+
+<!-- 方法二：模板语法（Layui 模板中） -->
+<script type="text/html" id="toolbarTpl">
+    <button>{{ t('common.add') }}</button>
+</script>
+
+<!-- 方法三：JavaScript 调用 -->
+<script>
+layer.msg(t('common.success'));
+</script>
+```
+
+---
+
 ## 🌐 语言支持
 
 | 语言 | 代码 | 说明 |
 |------|------|------|
 | 简体中文 | `zh-hans` | 默认语言 |
 | English | `en` | 英文 |
+
+### 用户语言切换步骤
+
+1. 点击右上角头像 → **个人中心**
+2. **基本信息** 标签页 → **语言设置**
+3. 选择语言：**简体中文** 或 **English**
+4. 点击 **保存** → 刷新页面
+
+> **默认语言**: 新用户默认 `zh-hans`（简体中文）
 
 ---
 
@@ -62,139 +92,180 @@ var text = t('common.inputRequired', ['用户名']);
 // 输出："请输入用户名"
 ```
 
-### 3. 常用翻译键
+### 3. 常用翻译键速查表
 
 #### 通用按钮和操作
 
-```javascript
-t('common.save')          // 保存 / Save
-t('common.cancel')        // 取消 / Cancel
-t('common.confirm')       // 确认 / Confirm
-t('common.add')           // 新增 / Add
-t('common.edit')          // 编辑 / Edit
-t('common.delete')        // 删除 / Delete
-t('common.view')          // 查看 / View
-t('common.search')        // 搜索 / Search
-t('common.reset')         // 重置 / Reset
-t('common.refresh')       // 刷新 / Refresh
-t('common.submit')        // 提交 / Submit
-```
+| 翻译键 | 中文 | 英文 |
+|--------|------|------|
+| `common.save` | 保存 | Save |
+| `common.cancel` | 取消 | Cancel |
+| `common.confirm` | 确认 | Confirm |
+| `common.add` | 新增 | Add |
+| `common.edit` | 编辑 | Edit |
+| `common.delete` | 删除 | Delete |
+| `common.view` | 查看 | View |
+| `common.search` | 搜索 | Search |
+| `common.reset` | 重置 | Reset |
+| `common.refresh` | 刷新 | Refresh |
+| `common.submit` | 提交 | Submit |
+| `common.enable` | 启用 | Enable |
+| `common.disable` | 禁用 | Disable |
 
 #### 状态和提示
 
-```javascript
-t('common.enable')        // 启用 / Enable
-t('common.disable')       // 禁用 / Disable
-t('common.success')       // 成功 / Success
-t('common.fail')          // 失败 / Failed
-t('common.addSuccess')    // 新增成功 / Added successfully
-t('common.updateSuccess') // 修改成功 / Updated successfully
-t('common.deleteSuccess') // 删除成功 / Deleted successfully
-```
+| 翻译键 | 中文 | 英文 |
+|--------|------|------|
+| `common.success` | 成功 | Success |
+| `common.fail` | 失败 | Failed |
+| `common.addSuccess` | 新增成功 | Added successfully |
+| `common.updateSuccess` | 修改成功 | Updated successfully |
+| `common.deleteSuccess` | 删除成功 | Deleted successfully |
+| `common.required` | 必填项 | Required |
 
 #### 表单验证
 
-```javascript
-t('common.required')      // 必填项 / Required
-t('common.inputRequired', ['用户名'])  // 请输入用户名 / Please enter username
-```
+| 翻译键 | 说明 | 示例 |
+|--------|------|------|
+| `common.inputRequired` | 请输入{0} | `t('common.inputRequired', ['用户名'])` → "请输入用户名" |
 
 ### 4. 各模块翻译键
 
 #### Dashboard 仪表盘
 
 ```javascript
-t('dashboard.welcome')      // 欢迎使用 {0}，祝您心情愉快！
-t('dashboard.systemUsers')  // 用户数量 / User Count
-t('dashboard.systemRoles')  // 系统角色 / System Roles
-t('dashboard.menuCount')    // 菜单数量 / Menu Count
-t('dashboard.operationLogs') // 操作日志 / Operation Logs
+'dashboard.welcome'          // 欢迎使用 {0}，祝您心情愉快！
+'dashboard.systemUsers'      // 用户数量 / User Count
+'dashboard.systemRoles'      // 系统角色 / System Roles
+'dashboard.menuCount'        // 菜单数量 / Menu Count
+'dashboard.operationLogs'    // 操作日志 / Operation Logs
 ```
 
 #### 菜单管理
 
 ```javascript
-t('menu.title')             // 菜单管理 / Menu Management
-t('menu.name')              // 菜单名称 / Name
-t('menu.icon')              // 图标 / Icon
-t('menu.type')              // 类型 / Type
-t('menu.sort')              // 排序 / Sort
-t('menu.visible')           // 可见 / Visible
+'menu.title'                 // 菜单管理 / Menu Management
+'menu.name'                  // 菜单名称 / Name
+'menu.icon'                  // 图标 / Icon
+'menu.type'                  // 类型 / Type
+'menu.sort'                  // 排序 / Sort
+'menu.visible'               // 可见 / Visible
+'menu.status'                // 状态 / Status
+'menu.permission'            // 权限标识 / Permission
+'menu.parent'                // 上级菜单 / Parent Menu
+'menu.path'                  // 路由地址 / Path
+'menu.component'             // 组件路径 / Component
 ```
 
 #### 角色管理
 
 ```javascript
-t('role.title')             // 角色管理 / Role Management
-t('role.name')              // 角色名称 / Name
-t('role.code')              // 角色编码 / Code
-t('role.description')       // 描述 / Description
-t('role.menuPermission')    // 菜单权限 / Menu Permission
+'role.title'                 // 角色管理 / Role Management
+'role.name'                  // 角色名称 / Name
+'role.code'                  // 角色编码 / Code
+'role.description'           // 描述 / Description
+'role.isSystem'              // 系统内置 / Built-in
+'role.menuPermission'        // 菜单权限 / Menu Permission
+'role.copy.title'            // 复制角色权限 / Copy Role Permission
 ```
 
 #### 用户管理
 
 ```javascript
-t('user.title')             // 用户管理 / User Management
-t('user.username')          // 用户名 / Username
-t('user.nickname')          // 昵称 / Nickname
-t('user.phone')             // 手机号 / Phone
-t('user.email')             // 邮箱 / Email
-t('user.role')              // 角色 / Role
-t('user.status')            // 状态 / Status
+'user.title'                 // 用户管理 / User Management
+'user.username'              // 用户名 / Username
+'user.nickname'              // 昵称 / Nickname
+'user.phone'                 // 手机号 / Phone
+'user.email'                 // 邮箱 / Email
+'user.role'                  // 角色 / Role
+'user.tester'                // 测试人员 / Tester
+'user.status'                // 状态 / Status
+'user.createTime'            // 创建时间 / Created
+'user.addForm.title'         // 新增用户 / Add User
+'user.editForm.title'        // 编辑用户 / Edit User
+'user.resetPassword'         // 重置密码 / Reset Password
 ```
 
 #### 个人中心
 
 ```javascript
-t('profile.title')          // 个人中心 / Profile
-t('profile.basicInfo')      // 基本信息 / Basic Info
-t('profile.changePassword') // 修改密码 / Change Password
-t('profile.avatar')         // 头像 / Avatar
+'profile.title'              // 个人中心 / Profile
+'profile.basicInfo'          // 基本信息 / Basic Info
+'profile.changePassword'     // 修改密码 / Change Password
+'profile.roleInfo'           // 角色信息 / Role Info
+'profile.avatar'             // 头像 / Avatar
+'profile.oldPassword'        // 原密码 / Current Password
+'profile.newPassword'        // 新密码 / New Password
+'profile.confirmPassword'    // 确认密码 / Confirm Password
+'profile.changeAvatar'       // 更换头像 / Change Avatar
 ```
 
 #### 操作日志
 
 ```javascript
-t('log.title')              // 操作日志 / Operation Logs
-t('log.user')               // 操作用户 / User
-t('log.module')             // 操作模块 / Module
-t('log.action')             // 操作内容 / Action
-t('log.ip')                 // IP地址 / IP
-t('log.status')             // 状态 / Status
+'log.title'                  // 操作日志 / Operation Logs
+'log.user'                   // 操作用户 / User
+'log.module'                 // 操作模块 / Module
+'log.action'                 // 操作内容 / Action
+'log.ip'                     // IP地址 / IP
+'log.method'                 // 请求方法 / Method
+'log.url'                    // 请求URL / URL
+'log.status'                 // 状态 / Status
+'log.time'                   // 操作时间 / Time
+'log.search.user'            // 操作用户 / User
+'log.search.module'          // 操作模块 / Module
+'log.search.status'          // 操作状态 / Status
+'log.search.timeRange'       // 时间范围 / Time Range
 ```
 
 #### 系统配置
 
 ```javascript
-t('config.title')           // 系统配置 / System Config
-t('config.key')             // 配置键 / Key
-t('config.value')           // 配置值 / Value
-t('config.type')            // 配置类型 / Type
+'config.title'               // 系统配置 / System Config
+'config.key'                 // 配置键 / Key
+'config.value'               // 配置值 / Value
+'config.description'         // 描述 / Description
+'config.type'                // 配置类型 / Type
+'config.sort'                // 排序 / Sort
+'config.addForm.title'       // 新增配置 / Add Config
+'config.editForm.title'      // 编辑配置 / Edit Config
 ```
 
 #### 服务器管理
 
 ```javascript
-t('server.title')           // 服务器管理 / Server Management
-t('server.name')            // 服务器名称 / Name
-t('server.host')            // 主机地址 / Host
-t('server.port')            // SSH端口 / SSH Port
-t('server.testConnect')     // 测试连接 / Test Connection
-t('server.terminal')        // 终端 / Terminal
+'server.title'               // 服务器管理 / Server Management
+'server.name'                // 服务器名称 / Name
+'server.host'                // 主机地址 / Host
+'server.port'                // SSH端口 / SSH Port
+'server.username'            // SSH用户名 / SSH Username
+'server.authType'            // 认证方式 / Auth Type
+'server.password'            // SSH密码 / SSH Password
+'server.privateKey'          // 私钥内容 / Private Key
+'server.description'         // 描述 / Description
+'server.testConnect'         // 测试连接 / Test Connection
+'server.viewLog'             // 查看日志 / View Logs
+'server.terminal'            // 终端 / Terminal
+'server.addForm.title'       // 新增服务器 / Add Server
+'server.editForm.title'      // 编辑服务器 / Edit Server
 ```
 
 #### AI 模型配置
 
 ```javascript
-t('ai.title')               // AI模型配置 / AI Model Config
-t('ai.addConfig')           // 新增模型配置 / Add Model Config
-t('ai.configName')          // 配置名称 / Config Name
-t('ai.apiKey')              // API Key / API Key
-t('ai.baseUrl')             // API 地址 / API Base URL
-t('ai.modelName')           // 模型名称 / Model Name
-t('ai.setDefault')          // 设为默认 / Set as Default
-t('ai.testConnection')      // 测试连接 / Test Connection
+'ai.title'                   // AI模型配置 / AI Model Config
+'ai.addConfig'               // 新增模型配置 / Add Model Config
+'ai.configName'              // 配置名称 / Config Name
+'ai.apiKey'                  // API Key / API Key
+'ai.baseUrl'                 // API 地址 / API Base URL
+'ai.modelName'               // 模型名称 / Model Name
+'ai.setDefault'              // 设为默认 / Set as Default
+'ai.testConnection'          // 测试连接 / Test Connection
+'ai.providerHint'            // 支持同一厂商配置多个模型...
+'ai.selectProvider'          // 快速选择厂商：/ Quick Select Provider:
+'ai.provider.zhipu'          // 智谱 GLM / Zhipu GLM
+'ai.provider.qwen'           // 通义千问 / Qwen
+'ai.provider.custom'         // 自定义 / Custom
 ```
 
 ---
@@ -254,29 +325,42 @@ def _get_user_menus(user):
 
 > **注意**：如果某个语言的翻译缺失，系统会自动回退到中文名称。
 
----
+### 4. API 返回示例
 
-## 👤 用户语言设置
-
-### 1. 修改用户语言
-
-用户可以通过以下方式切换语言：
-
-1. 点击右上角头像进入 **个人中心**
-2. 在 **基本信息** 标签页找到 **语言设置**
-3. 选择 **简体中文** 或 **English**
-4. 点击 **保存**，刷新页面后生效
-
-### 2. 默认语言
-
-- 新用户默认语言：`zh-hans`（简体中文）
-- 可在创建用户时指定语言
+```python
+# 根据用户 language 字段自动返回对应语言
+user_lang = user.language  # 'zh-hans' or 'en'
+menu_name = menu.get_name_by_lang(user_lang)
+```
 
 ---
 
 ## 🛠️ 开发指南
 
-### 1. 添加新的翻译键
+### 1. 开发检查清单
+
+#### ✅ 添加新功能时
+
+- [ ] 所有 HTML 中的中文文本使用 `data-i18n` 或 `{{ t() }}`
+- [ ] Layui 模板中的文本使用 `{{ t() }}`
+- [ ] JavaScript 中的提示使用 `t()`
+- [ ] 在 `i18n.js` 中添加中英文翻译
+- [ ] 测试中文显示
+- [ ] 切换到英文测试显示
+
+#### ❌ 常见错误
+
+```html
+<!-- 错误：硬编码中文 -->
+<button>保存</button>
+<span>ID</span>
+
+<!-- 正确：使用翻译 -->
+<button data-i18n="common.save">保存</button>
+<span>{{ t('common.id') }}</span>
+```
+
+### 2. 添加新的翻译键
 
 在 `i18n.js` 中添加翻译：
 
@@ -296,7 +380,7 @@ var translations = {
 };
 ```
 
-### 2. 检查遗漏的国际化
+### 3. 检查遗漏的国际化
 
 检查 HTML 文件中是否有硬编码的中文文本：
 
@@ -310,7 +394,7 @@ grep -r "[\u4e00-\u9fa5]" static/layui/pages/*.html
 - `{{ t('key') }}` 模板语法
 - JavaScript 中的 `t('key')` 调用
 
-### 3. 翻译键命名规范
+### 4. 翻译键命名规范
 
 建议使用层级结构：
 
@@ -428,8 +512,9 @@ t('user.greeting', [username]);
 
 - [首页快速链接配置指南](HOME_QUICK_LINKS_GUIDE.md)
 - [菜单扩展指南](MENU_EXTENSION_GUIDE.md)
-- [主题系统指南](THEME_SYSTEM_GUIDE.md)
+- [主题系统指南](THEME_SYSTEM_GUIDE.md) - 深色/浅色双模式系统
 - [AJAX 管理指南](AJAX_ADMIN_GUIDE.md)
+- [权限系统指南](PERMISSION_SYSTEM_GUIDE.md)
 
 ---
 
@@ -439,5 +524,6 @@ t('user.greeting', [username]);
 
 ---
 
-**最后更新**: 2024年
+**最后更新**: 2026-05-07  
+**版本**: v1.0.4+  
 **维护者**: django-layui 团队

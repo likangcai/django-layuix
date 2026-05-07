@@ -175,14 +175,89 @@ def server_test(request, pk):
     try:
         server = Server.objects.get(pk=pk)
     except Server.DoesNotExist:
-        return error_response('服务器不存在', 404)
+        return error_response('服务器不存在，请刷新页面后重试', 404)
 
     try:
         client = server.get_ssh_client()
         client.close()
         return success_response(msg='连接成功')
     except Exception as e:
-        return error_response(f'连接失败: {str(e)}', 500)
+        error_msg = str(e)
+        host_info = f'主机: {server.host}:{server.port}'
+
+        if 'getaddrinfo failed' in error_msg or '[Errno 11001]' in error_msg:
+            return error_response(
+                f'DNS 解析失败：无法解析主机名 "{server.host}"\n\n'
+                f'=== 服务器信息 ===\n'
+                f'名称: {server.name}\n'
+                f'{host_info}\n'
+                f'用户: {server.username}\n\n'
+                f'=== 可能的原因 ===\n'
+                f'1. 主机名拼写错误（当前值: {server.host}）\n'
+                f'2. 主机名无法被 DNS 解析（请检查是否为有效的域名或IP地址）\n'
+                f'3. 网络连接问题（请检查本机网络）\n'
+                f'4. DNS 服务器配置问题\n\n'
+                f'=== 建议操作 ===\n'
+                f'• 如果是域名: 请确认域名正确且可访问（可在浏览器中测试）\n'
+                f'• 如果是IP: 请使用正确的IP格式（如 192.168.1.100）\n'
+                f'• 请检查 /etc/hosts 或本地 DNS 配置',
+                400
+            )
+        elif 'Connection refused' in error_msg or '[Errno 111]' in error_msg or '[Errno 10061]' in error_msg:
+            return error_response(
+                f'连接被拒绝: {server.host}:{server.port}\n\n'
+                f'=== 可能的原因 ===\n'
+                f'1. SSH 服务未启动（目标服务器的 sshd 未运行）\n'
+                f'2. 端口号错误（当前端口: {server.port}，默认应为 22）\n'
+                f'3. 防火墙阻止了连接（检查目标服务器防火墙规则）\n'
+                f'4. 主机地址不正确\n\n'
+                f'=== 建议操作 ===\n'
+                f'• 在目标服务器上运行: systemctl status sshd (Linux) 或 检查SSH服务状态\n'
+                f'• 确认端口号是否正确（通常为22）\n'
+                f'• 检查防火墙是否允许该端口',
+                403
+            )
+        elif 'Authentication failed' in error_msg or 'Permission denied' in error_msg:
+            return error_response(
+                f'认证失败: 用户 {server.username}@{server.host}\n\n'
+                f'=== 可能的原因 ===\n'
+                f'1. 用户名错误（当前用户: {server.username}）\n'
+                f'2. 密码错误或已过期\n'
+                f'3. 私钥文件格式不正确或权限不对\n'
+                f'4. 账户被锁定或禁止SSH登录\n\n'
+                f'=== 建议操作 ===\n'
+                f'• 确认用户名和密码/私钥是否正确\n'
+                f'• 使用命令行手动测试: ssh -p {server.port} {server.username}@{server.host}',
+                401
+            )
+        elif 'timeout' in error_msg.lower() or 'timed out' in error_msg.lower():
+            return error_response(
+                f'连接超时: 无法在规定时间内连接到 {server.host}:{server.port}\n\n'
+                f'=== 可能的原因 ===\n'
+                f'1. 目标服务器不可达（网络不通）\n'
+                f'2. 防火墙丢弃了连接请求\n'
+                f'3. 服务器负载过高响应慢\n'
+                f'4. IP地址或端口配置错误\n\n'
+                f'=== 建议操作 ===\n'
+                f'• ping 测试连通性: ping {server.host}\n'
+                f'• telnet 测试端口: telnet {server.host} {server.port}\n'
+                f'• 检查本机到目标服务器的网络路径',
+                408
+            )
+        elif 'No such file or directory' in error_msg and 'key' in error_msg.lower():
+            return error_response(
+                f'私钥文件错误: 私钥内容无效或格式不支持\n\n'
+                f'=== 当前配置 ===\n'
+                f'认证方式: 密钥认证\n'
+                f'私钥长度: {len(server.private_key)} 字符\n\n'
+                f'=== 建议操作 ===\n'
+                f'• 确认私钥格式正确（支持 RSA/ECDSA/Ed25519）\n'
+                f'• 私钥应包含完整的 PEM 格式（包括 -----BEGIN ...----- 和 -----END ...-----）\n'
+                f'• 尝试使用密码认证方式代替',
+                400
+            )
+        else:
+            return error_response(f'连接失败 ({host_info}): {error_msg}', 500)
 
 
 @csrf_exempt
@@ -583,8 +658,22 @@ def ai_config_test(request):
     """Test AI config by sending a simple request.
     POST body: {id?} - test specific config by id, or default if no id.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
+
+    def clean_config_value(value, is_url=False):
+        """清理配置值：去除首尾空格、反引号、引号等"""
+        if not value:
+            return ''
+        cleaned = str(value).strip()
+        for char in ['`', "'", '"']:
+            cleaned = cleaned.strip(char)
+        if is_url and cleaned:
+            cleaned = cleaned.rstrip('/')
+        return cleaned
 
     body = get_request_body(request)
     config_id = body.get('id', '').strip()
@@ -594,15 +683,32 @@ def ai_config_test(request):
         config = None
         for c in configs:
             if c.get('id') == config_id:
-                config = {'api_key': c.get('api_key', ''), 'base_url': c.get('base_url', ''), 'model': c.get('model', '')}
+                config = {
+                    'api_key': clean_config_value(c.get('api_key', '')),
+                    'base_url': clean_config_value(c.get('base_url', ''), is_url=True),
+                    'model': clean_config_value(c.get('model', '')),
+                }
                 break
         if not config:
-            return error_response('配置不存在', 404)
+            return error_response('配置不存在，请刷新页面后重试', 404)
     else:
-        config = _get_default_ai_config()
+        raw_config = _get_default_ai_config()
+        config = {
+            'api_key': clean_config_value(raw_config.get('api_key', '')),
+            'base_url': clean_config_value(raw_config.get('base_url', ''), is_url=True),
+            'model': clean_config_value(raw_config.get('model', '')),
+        }
+
+    logger.info(f'[AI Config Test] Config ID: {config_id or "default"}')
+    logger.info(f'[AI Config Test] Base URL: "{config.get("base_url", "")}" (length: {len(config.get("base_url", ""))})')
+    logger.info(f'[AI Config Test] Model: "{config.get("model", "")}" (length: {len(config.get("model", ""))})')
+    logger.info(f'[AI Config Test] API Key: "{config.get("api_key", "")[:20]}..." (length: {len(config.get("api_key", ""))})')
 
     if not config.get('api_key'):
-        return error_response('未配置 API Key', 400)
+        return error_response('未配置 API Key，请在配置中填写有效的 API 密钥', 400)
+
+    if not config.get('model'):
+        return error_response('未配置模型名称，请填写正确的模型名称（如：gpt-4o-mini, qwen-turbo, deepseek-chat 等）', 400)
 
     try:
         from openai import OpenAI
@@ -622,7 +728,41 @@ def ai_config_test(request):
     except ImportError:
         return error_response('未安装 openai 库，请运行: pip install openai', 400)
     except Exception as e:
-        return error_response(f'连接测试失败: {str(e)}', 500)
+        error_msg = str(e)
+        logger.error(f'[AI Config Test] Error: {error_msg}')
+
+        if 'model is not found' in error_msg.lower() or 'model_not_found' in error_msg.lower():
+            debug_info = (
+                f'模型 "{config["model"]}" 不存在或不可用。\n\n'
+                f'=== 调试信息 ===\n'
+                f'Base URL: "{config.get("base_url") or "(使用默认)"}"\n'
+                f'Model: "{config["model"]}"\n'
+                f'Model 长度: {len(config["model"])} 字符\n'
+                f'API Key 前20位: {config.get("api_key", "")[:20]}...\n\n'
+                f'=== 可能的原因 ===\n'
+                f'1. 模型名称拼写错误（当前值：{config["model"]}）\n'
+                f'2. 模型名称包含不可见字符（如空格、换行符等）\n'
+                f'3. 该模型在您的 API 账户中未开通或无权访问\n'
+                f'4. Base URL 与模型提供商不匹配\n'
+                f'5. 使用了错误的 API 端点\n\n'
+                f'=== 建议操作 ===\n'
+                f'请检查 Admin 后台 AI 模型配置中的以下字段：\n'
+                f'- 确认 Model 名称与您使用的 API 服务商文档一致\n'
+                f'- 确认 Base URL 与该模型的正确端点匹配\n'
+                f'- 确保字段值前后没有多余的空格或特殊字符\n'
+                f'- 查阅您使用的 AI 服务商官方文档获取正确的模型名称'
+            )
+            return error_response(debug_info, 400)
+        elif 'invalid_api_key' in error_msg.lower() or 'unauthorized' in error_msg.lower() or '401' in error_msg:
+            return error_response('API Key 无效或已过期，请检查并更新您的 API 密钥', 401)
+        elif 'rate_limit' in error_msg.lower() or '429' in error_msg:
+            return error_response('请求频率超限，请稍后重试或升级您的 API 套餐', 429)
+        elif 'timeout' in error_msg.lower() or 'timed out' in error_msg.lower():
+            return error_response('连接超时，请检查网络或 Base URL 是否正确', 408)
+        elif 'connection' in error_msg.lower():
+            return error_response(f'无法连接到 API 服务端。请检查：\n1. Base URL 是否正确（当前：{config.get("base_url") or "默认"}）\n2. 网络连接是否正常\n3. 防火墙是否阻止了请求', 503)
+        else:
+            return error_response(f'连接测试失败: {error_msg}', 500)
 
 
 # ==================== AI Analysis ====================

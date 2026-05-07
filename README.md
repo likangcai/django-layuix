@@ -4,8 +4,7 @@
 
 ## 功能特性
 
-- 🎨 现代化 Layui 后台管理界面（暗色/亮色主题）
-- 🌗 深色/浅色主题切换
+- 🌗 现代化 Layui 后台管理界面（深色/浅色主题切换）
 - 🌐 **完整国际化支持**（中文/英文），前端 JS + 后端 Django i18n 双层翻译，菜单多语言字段
 - 🔐 RBAC 权限管理（菜单管理、角色管理、用户管理、按钮级权限控制）
 - 📊 Dashboard 仪表盘（CPU/内存折线图、磁盘饼图、网络监控）
@@ -130,8 +129,10 @@ LAYUI_CONFIG = {
         {'name': '系统配置', 'icon': 'layui-icon-set', 'url': '/static/layui/pages/config.html'},
         # 外部链接示例
         # {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
-        # {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://layui.dev/'},
-        # {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/'},
+        # {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
+        # {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layui'},
+        # {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django_layui'}
+        # {'name': '自定义页面', 'icon': 'layui-icon-app', 'url': '/custom-page/'},
     ],
 }
 
@@ -200,12 +201,14 @@ LAYUI_CONFIG = {
         
         # 外部链接
         {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
-        {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://layui.dev/'},
-        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/'},
+        {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
+        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layui'},
+        {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django_layui'},
         
         # 自定义应用页面
         {'name': '商品管理', 'icon': 'layui-icon-cart-simple', 'url': '/store/product'},
         {'name': '订单管理', 'icon': 'layui-icon-form', 'url': '/store/order'},
+        # {'name': '自定义页面', 'icon': 'layui-icon-app', 'url': '/custom-page/'},
     ],
 }
 ```
@@ -575,10 +578,10 @@ LAYUI_AI_BASE_URL = ''                # API 地址（OpenAI 可留空）
 | 服务 | API 地址 | 模型 |
 |------|---------|------|
 | OpenAI | （留空） | gpt-4o-mini |
-| 智谱AI | `https://open.bigmodel.cn/api/paas/v4/` | glm-4-flash |
-| DeepSeek | `https://api.deepseek.com/v1/` | deepseek-chat |
-| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1/` | qwen-turbo |
-| Moonshot | `https://api.moonshot.cn/v1/` | moonshot-v1-8k |
+| 智谱AI | `https://open.bigmodel.cn/api/paas/v4` | glm-4-flash |
+| DeepSeek | `https://api.deepseek.com/v1` | deepseek-chat |
+| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | qwen-turbo |
+| Moonshot | `https://api.moonshot.cn/v1` | moonshot-v1-8k |
 
 在日志查看器中点击「AI 分析」按钮即可自动分析日志内容，输出包括：
 - 日志概览（类型、时间范围、总体状态）
@@ -713,6 +716,34 @@ django-layui 支持中英文双语，分两层实现：
 
 ---
 
+## 主题系统
+
+### 深色/浅色模式切换
+
+> **版本**: 1.0.3+ | **更新**: 2026-05-07
+
+Django-Layui 内置深色/浅色双模式切换功能：
+
+- **一键切换**：Header 右侧月亮/太阳图标按钮
+- **全局同步**：Header、Sidebar、Tab栏、内容区域全部统一切换
+- **自动保存**：用户偏好保存到数据库，下次登录自动应用
+- **iframe 同步**：通过 postMessage 通知所有子页面同步主题
+- **完整覆盖**：使用 `!important` 确保覆盖 Layui 默认样式
+
+#### 颜色规范
+
+| 组件 | 深色模式 | 浅色模式 |
+|------|----------|----------|
+| Header 背景 | `#1d1e22` | `#ffffff` |
+| Sidebar 背景 | `#1a1b1f` | `#ffffff` |
+| Tab 栏背景 | `#1d1e22` | `#f6f7f9` |
+| Body 背景 | `#14161a` | `#f0f2f5` |
+| 主文字颜色 | `#e5eaf3` | `#1f2329` |
+
+详细文档见 [THEME_SYSTEM_GUIDE.md](docs/THEME_SYSTEM_GUIDE.md)
+
+---
+
 ## 环境要求
 
 - Python >= 3.8
@@ -792,19 +823,16 @@ python manage.py runserver
 
 ### 核心功能
 - [首页自定义快速链接配置](docs/HOME_QUICK_LINKS_GUIDE.md) - 仪表盘的快速入口配置
-- [首页快速链接速查表](docs/HOME_QUICK_LINKS_QUICKREF.md) - 快速参考和常用示例
 - [菜单扩展指南](docs/MENU_EXTENSION_GUIDE.md) - 如何添加自定义应用菜单
 - [**权限系统使用指南**](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例 ⭐ **新增**
 - [AJAX Admin 使用指南](docs/AJAX_ADMIN_GUIDE.md) - AJAX 增强功能
 - [**国际化 (i18n) 使用指南**](docs/I18N_GUIDE.md) - 中英文双语切换与多语言开发
-- [**国际化 (i18n) 快速参考**](docs/I18N_QUICKREF.md) - i18n 翻译键速查表
 
 ### 高级特性
 - [多主题系统使用指南](docs/THEME_SYSTEM_GUIDE.md) - 25种主题的切换与定制
-- [主题集成总结](docs/THEME_INTEGRATION_SUMMARY.md) - 主题系统的实现原理
 
 ### 版本信息
-- [**更新日志 (CHANGELOG)**](CHANGELOG.md) - 版本历史和更新记录
+- [**更新日志 (CHANGELOG)**](docs/CHANGELOG.md) - 版本历史和更新记录
 
 ---
 

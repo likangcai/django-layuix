@@ -40,16 +40,6 @@
                 <div class="header-action-btn" id="themeToggle" title="{% trans 'Toggle Theme' %}">
                     <i class="layui-icon layui-icon-light" id="themeIcon"></i>
                 </div>
-                <div class="header-action-btn" id="themeSelector" title="{% trans 'Select Theme' %}" style="position:relative;">
-                    <i class="layui-icon layui-icon-set"></i>
-                    <div class="theme-dropdown" id="themeDropdown" style="display:none; position:absolute; top:40px; right:0; background:var(--dropdown-bg); border:1px solid var(--border-color); border-radius:4px; box-shadow:var(--shadow-md); min-width:180px; z-index:9999;">
-                        {% for theme in available_themes %}
-                        <div class="theme-option" data-theme="{{ theme.file }}" style="padding:8px 16px; cursor:pointer; color:var(--text-primary); white-space:nowrap;">
-                            {{ theme.name }}
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
                 {% frontend_url as fe_url %}
                 {% if fe_url %}
                 <div class="header-action-btn" id="frontendBtn" title="{% trans 'Frontend' %}" data-url="{{ fe_url }}">
@@ -118,65 +108,19 @@
     };
     </script>
     <script>
-    // Theme selector
+    // Theme toggle (Dark/Light dual mode only)
     (function(){
-        var themes = [
-            {% for theme in available_themes %}
-            {name: '{{ theme.name }}', file: '{{ theme.file }}'},
-            {% endfor %}
-        ];
-        
-        var currentTheme = localStorage.getItem('layui_theme') || 'default-dark.css';
-        
-        var themeFileMap = {
-            'default-dark.css': 'theme-default-dark',
-            'default-light.css': 'theme-default-light',
-            'element-blue.css': 'theme-element-blue',
-            'ant-design-black.css': 'theme-ant-design-black',
-            'adminlte-blue.css': 'theme-adminlte-blue',
-            'enterprise-purple.css': 'theme-enterprise-purple',
-            'enterprise-red.css': 'theme-enterprise-red',
-            'fresh-green.css': 'theme-fresh-green',
-            'tech-orange.css': 'theme-tech-orange',
-            'deep-black.css': 'theme-deep-black',
-            'elegant-gray.css': 'theme-elegant-gray',
-            'sky-blue.css': 'theme-sky-blue',
-            'sakura-pink.css': 'theme-sakura-pink',
-            'aurora-purple.css': 'theme-aurora-purple',
-            'midnight-blue.css': 'theme-midnight-blue',
-            'mint-cyan.css': 'theme-mint-cyan',
-            'flame-red.css': 'theme-flame-red',
-            'business-blue.css': 'theme-business-blue',
-            'premium-black.css': 'theme-premium-black',
-            'vibrant-orange.css': 'theme-vibrant-orange',
-            'forest-green.css': 'theme-forest-green',
-            'deep-sea.css': 'theme-deep-sea',
-            'rose-gold.css': 'theme-rose-gold',
-            'geek-green.css': 'theme-geek-green',
-            'cyberpunk.css': 'theme-cyberpunk'
-        };
-        
-        var darkThemeFiles = [
-            'default-dark.css', 'ant-design-black.css', 'adminlte-blue.css',
-            'enterprise-purple.css', 'enterprise-red.css', 'deep-black.css',
-            'midnight-blue.css', 'mint-cyan.css', 'flame-red.css',
-            'aurora-purple.css', 'geek-green.css', 'cyberpunk.css',
-            'deep-sea.css', 'premium-black.css'
-        ];
-        
-        function applyTheme(themeFile) {
-            localStorage.setItem('layui_theme', themeFile);
-            currentTheme = themeFile;
-            
-            var cssTheme = themeFileMap[themeFile] || 'theme-default-dark';
-            document.documentElement.setAttribute('data-theme', cssTheme);
-            
-            var isDark = darkThemeFiles.indexOf(themeFile) !== -1;
-            document.documentElement.setAttribute('data-theme-mode', isDark ? 'dark' : 'light');
-            
+        var theme = localStorage.getItem('theme') || 'dark';
+        var isDark = theme === 'dark';
+
+        function applyThemeMode(isDarkMode) {
+            var newTheme = isDarkMode ? 'dark' : 'light';
+            localStorage.setItem('theme', newTheme);
+            document.documentElement.setAttribute('data-theme-mode', isDarkMode ? 'dark' : 'light');
+
             var icon = document.getElementById('themeIcon');
             if (icon) {
-                if (isDark) {
+                if (isDarkMode) {
                     icon.classList.remove('layui-icon-moon');
                     icon.classList.add('layui-icon-light');
                 } else {
@@ -184,62 +128,18 @@
                     icon.classList.add('layui-icon-moon');
                 }
             }
-            
-            document.querySelectorAll('.theme-option').forEach(function(option) {
-                if (option.getAttribute('data-theme') === themeFile) {
-                    option.style.background = 'var(--bg-hover)';
-                    option.style.fontWeight = '600';
-                } else {
-                    option.style.background = '';
-                    option.style.fontWeight = '';
-                }
-            });
         }
-        
-        // 初始化主题
-        applyTheme(currentTheme);
-        
-        // 主题选择器按钮
-        var selectorBtn = document.getElementById('themeSelector');
-        var dropdown = document.getElementById('themeDropdown');
-        
-        if (selectorBtn && dropdown) {
-            // 点击显示/隐藏下拉菜单
-            selectorBtn.addEventListener('click', function(e){
-                e.stopPropagation();
-                if (dropdown.style.display === 'none') {
-                    dropdown.style.display = 'block';
-                } else {
-                    dropdown.style.display = 'none';
-                }
-            });
-            
-            // 点击主题选项
-            dropdown.querySelectorAll('.theme-option').forEach(function(option) {
-                option.addEventListener('click', function(e){
-                    e.stopPropagation();
-                    var themeFile = this.getAttribute('data-theme');
-                    applyTheme(themeFile);
-                    dropdown.style.display = 'none';
-                });
-            });
-            
-            // 点击外部关闭下拉菜单
-            document.addEventListener('click', function(){
-                dropdown.style.display = 'none';
-            });
-        }
-        
-        // 原有的主题切换按钮（保留作为快速切换深色/浅色）
-        var icon = document.getElementById('themeIcon');
+
+        applyThemeMode(isDark);
+
         var toggleBtn = document.getElementById('themeToggle');
         if (toggleBtn) {
             toggleBtn.addEventListener('click', function(){
-                var newTheme = currentTheme === 'default-dark.css' ? 'default-light.css' : 'default-dark.css';
-                applyTheme(newTheme);
+                isDark = !isDark;
+                applyThemeMode(isDark);
             });
         }
-        
+
         // Sidebar toggle
         var sidebarBtn = document.getElementById('sidebarToggle');
         var sidebar = document.getElementById('adminSidebar');

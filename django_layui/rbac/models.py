@@ -14,7 +14,6 @@ class Menu(models.Model):
     name = models.CharField(max_length=50, verbose_name='菜单名称（中文）')
     name_en = models.CharField(max_length=50, blank=True, default='', verbose_name='菜单名称（英文）')
     name_zh_hans = models.CharField(max_length=50, blank=True, default='', verbose_name='菜单名称（简体中文）')
-    name_zh_hant = models.CharField(max_length=50, blank=True, default='', verbose_name='菜单名称（繁体中文）')
     icon = models.CharField(max_length=50, default='layui-icon-app', verbose_name='图标')
     path = models.CharField(max_length=200, blank=True, default='', verbose_name='路由地址')
     component = models.CharField(max_length=200, blank=True, default='', verbose_name='组件路径')
@@ -39,7 +38,7 @@ class Menu(models.Model):
         """根据语言代码获取对应的菜单名称"""
         lang_map = {
             'zh-hans': self.name_zh_hans or self.name,
-            'zh-hant': self.name_zh_hant or self.name,
+            'zh-hant': getattr(self, 'name_zh_hant', None) or self.name_zh_hans or self.name,
             'en': self.name_en or self.name,
         }
         return lang_map.get(lang_code, self.name)
@@ -73,33 +72,10 @@ class UserProfile(AbstractUser):
     nickname = models.CharField(max_length=50, blank=True, default='', verbose_name='昵称')
     roles = models.ManyToManyField(Role, blank=True, related_name='users', verbose_name='角色')
     
-    # 主题配置 - 支持28种主题
+    # 主题配置 - 深色/浅色双模式
     THEME_CHOICES = [
         ('默认深色', '默认深色'),
         ('默认浅色', '默认浅色'),
-        ('Element蓝', 'Element蓝'),
-        ('Ant Design黑', 'Ant Design黑'),
-        ('AdminLTE蓝', 'AdminLTE蓝'),
-        ('企业紫', '企业紫'),
-        ('企业红', '企业红'),
-        ('清新绿', '清新绿'),
-        ('科技橙', '科技橙'),
-        ('深邃黑', '深邃黑'),
-        ('优雅灰', '优雅灰'),
-        ('天空蓝', '天空蓝'),
-        ('樱花粉', '樱花粉'),
-        ('极光紫', '极光紫'),
-        ('暗夜蓝', '暗夜蓝'),
-        ('薄荷青', '薄荷青'),
-        ('烈焰红', '烈焰红'),
-        ('商务蓝', '商务蓝'),
-        ('高端黑', '高端黑'),
-        ('活力橙', '活力橙'),
-        ('森林绿', '森林绿'),
-        ('深海蓝', '深海蓝'),
-        ('玫瑰金', '玫瑰金'),
-        ('极客绿', '极客绿'),
-        ('赛博朋克', '赛博朋克'),
     ]
     theme = models.CharField(max_length=20, default='默认深色', choices=THEME_CHOICES, verbose_name='主题')
     language = models.CharField(max_length=10, default='zh-hans', choices=(('zh-hans', '简体中文'), ('en', 'English')), verbose_name='语言')

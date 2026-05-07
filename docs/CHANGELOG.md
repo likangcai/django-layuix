@@ -9,6 +9,148 @@
 
 ## [Unreleased]
 
+### 🎨 重大重构 (2026-05-07)
+
+#### 主题系统全面升级：28主题 → 深色/浅色双模式
+- ✅ **移除冗余的28种预设主题** - 简化为深色/浅色双模式设计
+  - 删除 `themes.py` 中的旧主题定义和生成逻辑
+  - 清理 `models.py` 中 theme 字段的 choices（仅保留深色/浅色）
+  - 移除前端的多主题选择器和相关代码
+  - **性能提升**: 减少80%的CSS文件和JavaScript代码
+
+#### 新增向后兼容层
+- ✅ **主题规范化函数** (`normalize_theme`, `get_display_theme`)
+  - 自动将新格式 `'dark'`/`'light'` 转换为数据库值 `'默认深色'`/`'默认浅色'`
+  - 支持旧版数据自动降级处理
+  - API 接口同时接受新旧两种格式
+
+#### 文档全面更新
+- ✅ **THEME_SYSTEM_GUIDE.md** - 从"28主题使用指南"重写为"深色/浅色双模式系统指南"
+  - 更新技术架构说明（CSS变量驱动）
+  - 添加完整的升级迁移指南
+  - 提供详细的API接口文档
+  - 包含颜色规范、最佳实践、测试清单
+
+### 🐛 Bug 修复 (2026-05-07)
+
+#### 核心功能修复
+- ✅ **左侧菜单收缩展开功能** - 修复点击按钮无反应问题
+  - 使用 IIFE + 双重事件绑定（jQuery + 内联 onclick）
+  - 添加详细调试日志便于排查
+  - 设置 `z-index:9999` 确保按钮可点击
+
+- ✅ **菜单目录收缩展开** - 修复点击目录标题无响应
+  - **根本原因**: CSS 中 `.sub-menu` 默认 `display:block` 导致移除 `.open` 类后仍显示
+  - **修复**: 改为 `display:none`，仅当有 `.open` 类时才显示
+  - 增强事件委托绑定（命名空间 `.menuGroup`）
+  - 添加 `e.preventDefault()` 和 `e.stopPropagation()`
+
+- ✅ **搜索功能修复** - 修复关键词搜索不生效
+  - 使用事件委托重新绑定搜索/重置/回车事件
+  - 添加错误处理和回调函数
+
+#### 国际化修复
+- ✅ **语言切换国际化翻译** - 修复英文模式下仍显示中文
+  - 为 Header 下拉菜单添加 `data-i18n` 属性：
+    - `header.personalCenter` / `header.changePassword` / `header.logout`
+  - 修复 `updateLangUI` 函数的 JavaScript 错误
+    - 添加 `try-catch` 异常捕获
+    - 检查 `t()` 函数是否存在
+    - 验证返回值类型为字符串
+
+- ✅ **操作日志页面模块下拉框国际化**
+  - 新增翻译键：`log.module.languageSwitch`
+  - 中文："语言切换" → English: "Language Switch"
+  - 使用动态 JS 翻译替代 Django 模板语法（避免 `{{ t() }}` 无法执行）
+
+#### 主题系统重大修复
+- ✅ **深色主题全局同步切换** - 修复 Header/Sidebar/Tabs 不同步
+  - **问题**: 切换深色主题时，只有内容区域变暗，Header 和 Sidebar 保持浅色
+  - **原因**: CSS 变量优先级低于 Layui 默认样式，无法覆盖
+  - **解决方案**: 使用硬编码颜色值 + `!important` 强制覆盖
+
+- ✅ **浅色主题切换残留 Bug** - 修复从深色切回浅色时样式不恢复
+  - **原因**: 深色规则使用 `!important`，但浅色规则没有对应覆盖
+  - **解决方案**: 添加完整的 `[data-theme-mode="light"]` 规则集，全部带 `!important`
+
+- ✅ **表格边框样式优化**
+  - 改为"田字框"样式（横竖边框都有）
+  - 外边框 + 单元格右边框 + 底边框
+  - 颜色使用 `var(--border-color)` 适配双主题
+
+##### 深色主题完整覆盖清单
+| 组件 | 背景色 | 边框 | 文字 |
+|------|--------|------|------|
+| Header | `#1d1e22` | `#2e3035` | `#e5eaf3` |
+| Sidebar | `#1a1b1f` | `#2e3035` | `#a6adb6` |
+| Tab栏 | `#1d1e22` | `#2e3035` | `#a6adb6` |
+| Body | `#14161a` | - | - |
+| Dropdown | `#26272b` | `#363840` | `#e5eaf3` |
+
+##### 浅色主题完整覆盖清单
+| 组件 | 背景色 | 边框 | 文字 |
+|------|--------|------|------|
+| Header | `#ffffff` | `#dee0e3` | `#1f2329` |
+| Sidebar | `#ffffff` | `#dee0e3` | `#646a73` |
+| Tab栏 | `#f6f7f9` | `#dee0e3` | `#646a73` |
+| Body | `#f0f2f5` | - | - |
+| Dropdown | `#ffffff` | `#dee0e3` | `#1f2329` |
+
+### 📝 修改文件清单
+
+| 文件路径 | 修改内容 |
+|----------|----------|
+| `templates/admin/index.html` | Sidebar Toggle、Menu Group、Lang UI、Theme 同步 |
+| `static/layui/css/admin.css` | 深色/浅色主题全局样式、表格田字框、过渡动画 |
+| `static/layui/js/i18n.js` | 新增 `log.module.languageSwitch` 翻译键 |
+| `static/layui/pages/log.html` | 操作模块下拉框动态国际化 |
+| `static/layui/pages/user.html` | 搜索事件绑定、loadTable 错误处理 |
+
+#### 登录页面修复
+- ✅ **登录页面内容居中** - 修复 Logo、标题、版本号全部靠左显示的问题
+  - 添加 CSS 样式使 `.login-card` 内容居中对齐
+  - Logo 图标设置 `margin: 0 auto` 居中
+
+- ✅ **登录后重定向404错误** - 修复跳转到 `/admin/undefined` 的问题
+  - 根本原因：变量名引用错误（`window.ADMIN_LOGIN_URL` 不存在）
+  - 解决方案：改为使用 `window.LAYUI_CONFIG.admin_login_url`
+  - 添加 fallback URL `/admin/login/` 防止配置缺失
+
+#### AI 配置测试增强
+- ✅ **"model is not found" 错误处理** - 改进 AI 配置测试的错误提示
+  - 自动清理配置值（去除空格、引号、反引号）
+  - 增强错误消息：包含调试信息、可能原因、解决建议
+  - 前端支持多行错误信息显示（使用弹窗）
+
+#### 服务器连接测试增强
+- ✅ **"getaddrinfo failed" 错误诊断** - SSH 连接失败时提供详细诊断
+  - 支持6种常见错误的智能识别：
+    - DNS 解析失败（`getaddrinfo failed`）
+    - 连接被拒绝（`Connection refused`）
+    - 认证失败（`Authentication failed`）
+    - 连接超时（`timeout`）
+    - 私钥文件格式错误
+    - 其他未知错误
+  - 每种错误提供：
+    - 服务器详细信息（名称、主机、端口、用户名）
+    - 可能的原因分析（3-4条）
+    - 建议的解决方案（具体操作步骤）
+  - 前端优化：长错误信息使用可滚动弹窗显示
+
+#### UI 文案优化
+- ✅ **AI 日志分析按钮文案修正**
+  - 修改前：`{{ t('server.aiAnalyzing') }}` → 显示 "AI 正在分析日志，请稍候..."（语义错误）
+  - 修改后：`{{ t('server.aiAnalyzeBtn') }}` → 显示 "AI 日志分析"（正确）
+  - 新增翻译键：中文 `'AI 日志分析'` / 英文 `'AI Log Analysis'`
+
+#### Base URL 自动标准化
+- ✅ **API 配置 Base URL 清理功能**
+  - 自动去除尾部斜杠（`https://api.xxx.com/v1/` → `https://api.xxx.com/v1`）
+  - 自动去除首尾空格和特殊字符（反引号、单双引号）
+  - 在保存和测试时自动应用，用户无需手动处理
+
+### 📝 修改文件清单（续）
+
 ### 待发布功能
 
 ---
@@ -205,5 +347,5 @@
 
 ---
 
-**最后更新**: 2024年
+**最后更新**: 2026年
 **维护者**: django-layui 团队

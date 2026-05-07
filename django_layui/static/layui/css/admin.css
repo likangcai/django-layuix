@@ -94,6 +94,44 @@
     background-color: var(--bg-body);
 }
 
+/* 深色主题下弹窗样式修复 */
+[data-theme-mode="dark"] .layui-layer-page,
+[data-theme-mode="dark"] .layui-layer-dialog {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-title {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-content {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-btn {
+    background: var(--bg-primary) !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-btn a {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-btn a:hover {
+    background: var(--bg-hover) !important;
+    border-color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-layer-btn .layui-layer-btn0 {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    border-color: var(--primary-color) !important;
+}
+
 /* 浅色主题模式 */
 [data-theme-mode="light"] {
     --bg-body: #f0f2f5;
@@ -143,6 +181,17 @@ html, body {
     background-color: var(--bg-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.admin-header,
+.admin-sidebar,
+.layui-table,
+.page-container,
+.search-card,
+.table-card,
+.card {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 a {
@@ -371,20 +420,25 @@ a:hover {
 }
 
 .admin-header .sidebar-toggle {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    margin-right: 10px;
+    transition: all 0.2s ease;
+    margin-right: 12px;
     color: var(--header-text);
+    font-size: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .admin-header .sidebar-toggle:hover {
-    background: var(--bg-hover);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
 }
 
 .admin-header .logo-area {
@@ -498,79 +552,6 @@ a:hover {
 
 .admin-header .header-user-area.show .user-arrow {
     transform: rotate(180deg);
-}
-
-/* ---- Theme Dropdown ---- */
-.theme-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 15px;
-    width: 260px;
-    background: var(--dropdown-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow-lg);
-    padding: 8px;
-    display: none;
-    z-index: 200;
-    max-height: 380px;
-    overflow-y: auto;
-}
-
-.theme-dropdown.show {
-    display: block;
-}
-
-.theme-dropdown .theme-group {
-    margin-bottom: 12px;
-}
-
-.theme-dropdown .theme-group:last-child {
-    margin-bottom: 0;
-}
-
-.theme-dropdown .theme-group-title {
-    font-size: 12px;
-    color: var(--text-muted);
-    padding: 6px 8px;
-    border-radius: 4px;
-    margin-bottom: 6px;
-    background: var(--bg-secondary);
-}
-
-.theme-dropdown .theme-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    color: var(--text-primary);
-}
-
-.theme-dropdown .theme-item:hover {
-    background: var(--bg-hover);
-}
-
-.theme-dropdown .theme-item.active {
-    background: var(--primary-light);
-}
-
-.theme-dropdown .theme-item.active .theme-color {
-    box-shadow: 0 0 0 2px var(--primary-color);
-}
-
-.theme-dropdown .theme-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
-    margin-right: 10px;
-    border: 2px solid transparent;
-    transition: box-shadow 0.2s ease;
-}
-
-.theme-dropdown .theme-item span:last-child {
-    font-size: 13px;
 }
 
 /* ---- User Dropdown ---- */
@@ -735,7 +716,7 @@ a:hover {
 }
 
 .sub-menu {
-    display: block;
+    display: none;
 }
 
 .sub-menu.open {
@@ -870,14 +851,8 @@ a:hover {
 
 /* ---- Buttons ---- */
 .layui-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 16px;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
+    display: inline-block;
+    vertical-align: middle;
     cursor: pointer;
     transition: all 0.2s ease;
     outline: none;
@@ -885,37 +860,49 @@ a:hover {
 }
 
 .layui-btn-primary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background: #fff;
+    color: #333;
+    border: 1px solid #e6e6e6;
 }
 
 .layui-btn-primary:hover {
-    background: var(--bg-hover);
     border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 .layui-btn-normal {
     background: var(--primary-color);
     color: #fff;
+    border: 1px solid var(--primary-color);
 }
 
 .layui-btn-normal:hover {
     background: var(--primary-hover);
+    border-color: var(--primary-hover);
 }
 
 .layui-btn-danger {
     background: var(--danger-color);
     color: #fff;
+    border: 1px solid var(--danger-color);
 }
 
 .layui-btn-danger:hover {
     background: #e04516;
+    border-color: #e04516;
 }
 
-.layui-btn-sm {
-    padding: 4px 12px;
-    font-size: 12px;
+/* 深色主题下按钮样式 */
+[data-theme-mode="dark"] .layui-btn-primary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme-mode="dark"] .layui-btn-primary:hover {
+    background: var(--bg-hover);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 /* ---- Cards ---- */
@@ -989,27 +976,42 @@ a:hover {
 
 /* ---- Forms ---- */
 .layui-form-item {
-    margin-bottom: 16px;
+    margin-bottom: 15px;
 }
 
 .layui-form-label {
-    display: inline-block;
+    display: block;
     width: 100px;
-    padding-right: 15px;
+    padding: 9px 15px 9px 0;
     text-align: right;
     font-size: 13px;
     color: var(--text-primary);
     font-weight: 500;
-    vertical-align: middle;
+    float: left;
 }
 
 .layui-input-block {
-    display: inline-block;
-    vertical-align: middle;
+    margin-left: 110px;
+    min-height: 36px;
+}
+
+/* 弹窗中的表单样式 */
+.layui-layer-page .layui-form-item,
+.layui-layer-dialog .layui-form-item {
+    margin-bottom: 15px;
+}
+
+.layui-layer-page .layui-form-label,
+.layui-layer-dialog .layui-form-label {
+    width: 100px;
+}
+
+.layui-layer-page .layui-input-block,
+.layui-layer-dialog .layui-input-block {
+    margin-left: 110px;
 }
 
 .layui-input {
-    width: 280px;
     height: 36px;
     padding: 0 12px;
     border: 1px solid var(--border-color);
@@ -1030,7 +1032,6 @@ a:hover {
 }
 
 .layui-select {
-    width: 280px;
     height: 36px;
     padding: 0 12px;
     border: 1px solid var(--border-color);
@@ -1044,7 +1045,6 @@ a:hover {
 }
 
 .layui-textarea {
-    width: 280px;
     min-height: 80px;
     padding: 10px 12px;
     border: 1px solid var(--border-color);
@@ -1271,4 +1271,299 @@ a:hover {
     .layui-textarea {
         width: calc(100% - 95px);
     }
+}
+
+/* 分页组件样式 */
+.layui-table-page {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 10px 15px;
+}
+
+.layui-table-page .layui-laypage {
+    display: flex;
+    align-items: center;
+    float: none;
+}
+
+.layui-table-page .layui-laypage-count {
+    order: -1;
+    margin-right: auto;
+    margin-left: 0;
+}
+
+.layui-table-page .layui-laypage * {
+    display: inline-block;
+}
+
+/* 深色主题全局样式 - 覆盖所有组件 */
+[data-theme-mode="dark"] {
+    color-scheme: dark;
+}
+
+/* Header 深色 */
+[data-theme-mode="dark"] .admin-header {
+    background: #1d1e22 !important;
+    border-bottom: 1px solid #2e3035 !important;
+}
+
+[data-theme-mode="dark"] .admin-header .sidebar-toggle,
+[data-theme-mode="dark"] .admin-header .logo-text,
+[data-theme-mode="dark"] .admin-header .user-name,
+[data-theme-mode="dark"] .admin-header .header-action-btn,
+[data-theme-mode="dark"] .admin-header .user-arrow,
+[data-theme-mode="dark"] .admin-header .layui-icon {
+    color: #e5eaf3 !important;
+}
+
+[data-theme-mode="dark"] .admin-header .sidebar-toggle {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+[data-theme-mode="dark"] .admin-header .sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+[data-theme-mode="dark"] .admin-header .sidebar-toggle i {
+    color: #ffffff !important;
+    font-size: 20px !important;
+}
+
+[data-theme-mode="dark"] .admin-header .logo-icon {
+    background: #1e9fff !important;
+}
+
+/* Sidebar 深色 */
+[data-theme-mode="dark"] .admin-sidebar {
+    background: #1a1b1f !important;
+    border-right: 1px solid #2e3035 !important;
+}
+
+[data-theme-mode="dark"] .sidebar-menu .menu-item,
+[data-theme-mode="dark"] .sidebar-menu .menu-group-title,
+[data-theme-mode="dark"] .sidebar-menu .menu-arrow {
+    color: #a6adb6 !important;
+    border-color: #363840 !important;
+}
+
+[data-theme-mode="dark"] .sidebar-menu .menu-item:hover,
+[data-theme-mode="dark"] .sidebar-menu .menu-group-title:hover {
+    background: rgba(255,255,255,0.05) !important;
+}
+
+[data-theme-mode="dark"] .sidebar-menu .menu-item.active {
+    background: #1e9fff !important;
+    color: #ffffff !important;
+}
+
+[data-theme-mode="dark"] .sidebar-menu .menu-group-title.collapsed .menu-arrow {
+    border-left-color: #a6adb6 !important;
+}
+
+/* Tab 栏深色 */
+[data-theme-mode="dark"] .tab-header {
+    background: #1d1e22 !important;
+    border-bottom: 1px solid #2e3035 !important;
+}
+
+[data-theme-mode="dark"] .tab-item {
+    color: #a6adb6 !important;
+    border-bottom: 2px solid transparent !important;
+}
+
+[data-theme-mode="dark"] .tab-item.active {
+    color: #1e9fff !important;
+    border-bottom-color: #1e9fff !important;
+    background: rgba(30,159,255,0.08) !important;
+}
+
+[data-theme-mode="dark"] .tab-item:hover {
+    color: #e5eaf3 !important;
+}
+
+[data-theme-mode="dark"] .tab-close {
+    color: #6b7280 !important;
+}
+
+[data-theme-mode="dark"] .tab-close:hover {
+    color: #ff5722 !important;
+}
+
+/* 用户下拉菜单深色 */
+[data-theme-mode="dark"] .user-dropdown {
+    background: #26272b !important;
+    border: 1px solid #363840 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+[data-theme-mode="dark"] .user-dropdown .dropdown-item {
+    color: #e5eaf3 !important;
+}
+
+[data-theme-mode="dark"] .user-dropdown .dropdown-item:hover,
+[data-theme-mode="dark"] .user-dropdown .dropdown-item.danger:hover {
+    background: rgba(255,255,255,0.05) !important;
+}
+
+[data-theme-mode="dark"] .user-dropdown .dropdown-divider {
+    border-top-color: #363840 !important;
+}
+
+/* Body 背景 */
+[data-theme-mode="dark"] body,
+[data-theme-mode="dark"] .admin-body,
+[data-theme-mode="dark"] .tab-content {
+    background: #14161a !important;
+}
+
+/* 深色主题下表格样式 - 田字框（横竖边框） */
+[data-theme-mode="dark"] .layui-table {
+    border: 1px solid var(--border-color);
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+[data-theme-mode="dark"] .layui-table th,
+[data-theme-mode="dark"] .layui-table td {
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme-mode="dark"] .layui-table th {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+[data-theme-mode="dark"] .layui-table tr:hover td {
+    background-color: var(--bg-hover);
+}
+
+[data-theme-mode="dark"] .layui-table-view {
+    border: 1px solid var(--border-color);
+}
+
+/* ==================== 浅色主题强制覆盖（覆盖深色 !important） ==================== */
+[data-theme-mode="light"] {
+    color-scheme: light;
+}
+
+/* Header 浅色 */
+[data-theme-mode="light"] .admin-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #dee0e3 !important;
+}
+
+[data-theme-mode="light"] .admin-header .sidebar-toggle,
+[data-theme-mode="light"] .admin-header .logo-text,
+[data-theme-mode="light"] .admin-header .user-name,
+[data-theme-mode="light"] .admin-header .header-action-btn,
+[data-theme-mode="light"] .admin-header .user-arrow,
+[data-theme-mode="light"] .admin-header .layui-icon {
+    color: #1f2329 !important;
+}
+
+[data-theme-mode="light"] .admin-header .sidebar-toggle {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme-mode="light"] .admin-header .sidebar-toggle:hover {
+    background: rgba(0, 0, 0, 0.08) !important;
+    border-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+[data-theme-mode="light"] .admin-header .sidebar-toggle i {
+    color: #1f2329 !important;
+    font-size: 20px !important;
+}
+
+[data-theme-mode="light"] .admin-header .logo-icon {
+    background: #1e9fff !important;
+}
+
+/* Sidebar 浅色 */
+[data-theme-mode="light"] .admin-sidebar {
+    background: #ffffff !important;
+    border-right: 1px solid #dee0e3 !important;
+}
+
+[data-theme-mode="light"] .sidebar-menu .menu-item,
+[data-theme-mode="light"] .sidebar-menu .menu-group-title,
+[data-theme-mode="light"] .sidebar-menu .menu-arrow {
+    color: #646a73 !important;
+    border-color: transparent !important;
+}
+
+[data-theme-mode="light"] .sidebar-menu .menu-item:hover,
+[data-theme-mode="light"] .sidebar-menu .menu-group-title:hover {
+    background: #f5f5f5 !important;
+}
+
+[data-theme-mode="light"] .sidebar-menu .menu-item.active {
+    background: #e8f4fd !important;
+    color: #1e9fff !important;
+}
+
+[data-theme-mode="light"] .sidebar-menu .menu-group-title.collapsed .menu-arrow {
+    border-left-color: #646a73 !important;
+}
+
+/* Tab 栏浅色 */
+[data-theme-mode="light"] .tab-header {
+    background: #f6f7f9 !important;
+    border-bottom: 1px solid #dee0e3 !important;
+}
+
+[data-theme-mode="light"] .tab-item {
+    color: #646a73 !important;
+    border-bottom: 2px solid transparent !important;
+}
+
+[data-theme-mode="light"] .tab-item.active {
+    color: #1e9fff !important;
+    border-bottom-color: #1e9fff !important;
+    background: #ffffff !important;
+}
+
+[data-theme-mode="light"] .tab-item:hover {
+    color: #1f2329 !important;
+}
+
+[data-theme-mode="light"] .tab-close {
+    color: #c0c4cc !important;
+}
+
+[data-theme-mode="light"] .tab-close:hover {
+    color: #ff5722 !important;
+}
+
+/* 用户下拉菜单浅色 */
+[data-theme-mode="light"] .user-dropdown {
+    background: #ffffff !important;
+    border: 1px solid #dee0e3 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+
+[data-theme-mode="light"] .user-dropdown .dropdown-item {
+    color: #1f2329 !important;
+}
+
+[data-theme-mode="light"] .user-dropdown .dropdown-item:hover,
+[data-theme-mode="light"] .user-dropdown .dropdown-item.danger:hover {
+    background: #f5f5f5 !important;
+}
+
+[data-theme-mode="light"] .user-dropdown .dropdown-divider {
+    border-top-color: #dee0e3 !important;
+}
+
+/* Body 背景 */
+[data-theme-mode="light"] body,
+[data-theme-mode="light"] .admin-body,
+[data-theme-mode="light"] .tab-content {
+    background: #f0f2f5 !important;
 }

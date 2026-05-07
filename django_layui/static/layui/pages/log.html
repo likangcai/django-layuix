@@ -10,18 +10,18 @@
     <link rel="stylesheet" href="/static/layui/css/admin.css">
     <script>
         function syncParentTheme() {
-            var theme = 'light';
+            var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'light';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
                 }
             } catch(e) {}
-            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme-mode', themeMode);
         }
         syncParentTheme();
         window.addEventListener('message', function(e) {
             if (e.data && e.data.type === 'themeChange') {
-                document.documentElement.setAttribute('data-theme', e.data.theme);
+                document.documentElement.setAttribute('data-theme-mode', e.data.themeMode);
             }
         });
     </script>
@@ -73,16 +73,16 @@
                     <div class="layui-inline">
                         <label class="layui-form-label" data-i18n="log.search.module">操作模块</label>
                         <div class="layui-input-inline" style="width: 180px;">
-                            <select name="module" lay-filter="module">
-                                <option value="">{{ t('log.allModules') }}</option>
-                                <option value="菜单">{{ t('menu.title') }}</option>
-                                <option value="角色">{{ t('role.title') }}</option>
-                                <option value="用户">{{ t('user.title') }}</option>
-                                <option value="系统配置">{{ t('config.title') }}</option>
-                                <option value="个人中心">{{ t('profile.title') }}</option>
-                                <option value="服务器">{{ t('server.title') }}</option>
-                                <option value="AI配置">{{ t('ai.title') }}</option>
-                                <option value="语言切换">语言切换</option>
+                            <select name="module" lay-filter="module" id="moduleSelect">
+                                <option value="">{{ t('log.allModules') || '全部模块' }}</option>
+                                <option value="菜单">{{ t('menu.title') || '菜单管理' }}</option>
+                                <option value="角色">{{ t('role.title') || '角色管理' }}</option>
+                                <option value="用户">{{ t('user.title') || '用户管理' }}</option>
+                                <option value="系统配置">{{ t('config.title') || '系统配置' }}</option>
+                                <option value="个人中心">{{ t('profile.title') || '个人中心' }}</option>
+                                <option value="服务器">{{ t('server.title') || '服务器管理' }}</option>
+                                <option value="AI配置">{{ t('ai.title') || 'AI配置' }}</option>
+                                <option value="语言切换" id="langSwitchOption">语言切换</option>
                             </select>
                         </div>
                     </div>
@@ -149,6 +149,56 @@
         // 初始化 data-i18n 和 {{ t() }} 占位符
         $('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); $(this).text(t(key)); });
         renderI18n();
+
+        // 动态翻译下拉框选项（因为 {{ t() }} 在服务端渲染时无法执行）
+        if (typeof t === 'function') {
+            $('#moduleSelect option').each(function(){
+                var $opt = $(this);
+                var text = $opt.text();
+                if (text && text.indexOf('{{') === -1 && $opt.val()) {
+                    var mapKey = {
+                        '菜单': 'menu.title',
+                        '角色': 'role.title',
+                        '用户': 'user.title',
+                        '系统配置': 'config.title',
+                        '个人中心': 'profile.title',
+                        '服务器': 'server.title',
+                        'AI配置': 'ai.title',
+                        '语言切换': 'log.module.languageSwitch'
+                    };
+                    var key = mapKey[text];
+                    if (key) {
+                        var translated = t(key);
+                        if (translated && translated !== key) {
+                            $opt.text(translated);
+                        }
+                    }
+                }
+            });
+            // 翻译状态下拉框
+            $('#moduleSelect').siblings('.layui-form-select').find('dl dd').each(function(){
+                var $dd = $(this);
+                var text = $dd.text();
+                var mapKey = {
+                    '菜单': 'menu.title',
+                    '角色': 'role.title',
+                    '用户': 'user.title',
+                    '系统配置': 'config.title',
+                    '个人中心': 'profile.title',
+                    '服务器': 'server.title',
+                    'AI配置': 'ai.title',
+                    '语言切换': 'log.module.languageSwitch'
+                };
+                var key = mapKey[text];
+                if (key) {
+                    var translated = t(key);
+                    if (translated && translated !== key) {
+                        $dd.find('span').text(translated);
+                    }
+                }
+            });
+        }
+
         form.render('select');
 
         // 初始化日期范围选择器
@@ -229,9 +279,8 @@
                 page: true,
                 limit: 10,
                 limits: [10, 30, 50, 100],
-                skin: 'line',
                 even: true,
-                cols: [[
+                    cols: [[
                     {field: 'id', title: t('common.id'), width: 70, align: 'center', sort: true},
                     {field: 'user', title: t('log.user'), width: 110, align: 'center'},
                     {field: 'module', title: t('log.module'), width: 110, align: 'center', templet: function(d){

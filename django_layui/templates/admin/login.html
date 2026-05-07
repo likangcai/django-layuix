@@ -59,6 +59,44 @@
         .login-card .layui-input-wrap .layui-input-affix .layui-icon:hover {
             color: #1e9fff;
         }
+
+        /* 登录卡片内容居中 */
+        .login-card {
+            text-align: center;
+        }
+        .login-card .login-logo {
+            margin-bottom: 30px;
+        }
+        .login-card .login-logo-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1E9FFF 0%, #00BFFF 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            box-shadow: 0 4px 20px rgba(30, 159, 255, 0.3);
+        }
+        .login-card .login-logo-icon i {
+            font-size: 32px;
+            color: #fff;
+        }
+        .login-card .login-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin: 0 0 5px 0;
+            letter-spacing: 2px;
+        }
+        .login-card .login-logo p {
+            font-size: 14px;
+            color: #999;
+            margin: 0;
+        }
+        .login-card .layui-form {
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -127,7 +165,8 @@
             e.preventDefault();
             var username = document.getElementById('id_username').value.trim();
             var password = document.getElementById('id_password').value;
-            var nextUrl = '{{ next|escapejs }}' || '/admin/';
+            var rawNext = '{{ next|escapejs }}';
+            var nextUrl = (rawNext && rawNext !== 'undefined' && rawNext !== '') ? rawNext : '/admin/';
             var errorEl = document.getElementById('loginError');
             var btn = document.getElementById('loginBtn');
 

@@ -9,18 +9,18 @@
     <link rel="stylesheet" href="/static/layui/css/admin.css">
     <script>
         function syncParentTheme() {
-            var theme = 'dark';
+            var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    theme = window.parent.document.documentElement.getAttribute('data-theme') || 'dark';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
                 }
             } catch(e) {}
-            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme-mode', themeMode);
         }
         syncParentTheme();
         window.addEventListener('message', function(e) {
             if (e.data && e.data.type === 'themeChange') {
-                document.documentElement.setAttribute('data-theme', e.data.theme);
+                document.documentElement.setAttribute('data-theme-mode', e.data.themeMode);
             }
         });
     </script>
