@@ -824,9 +824,9 @@ python manage.py runserver
 ### 核心功能
 - [首页自定义快速链接配置](docs/HOME_QUICK_LINKS_GUIDE.md) - 仪表盘的快速入口配置
 - [菜单扩展指南](docs/MENU_EXTENSION_GUIDE.md) - 如何添加自定义应用菜单
-- [**权限系统使用指南**](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例 ⭐ **新增**
+- [权限系统使用指南](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例
 - [AJAX Admin 使用指南](docs/AJAX_ADMIN_GUIDE.md) - AJAX 增强功能
-- [**国际化 (i18n) 使用指南**](docs/I18N_GUIDE.md) - 中英文双语切换与多语言开发
+- [国际化 (i18n) 使用指南](docs/I18N_GUIDE.md) - 中英文双语切换与多语言开发
 
 ### 高级特性
 - [多主题系统使用指南](docs/THEME_SYSTEM_GUIDE.md) - 25种主题的切换与定制
@@ -839,3 +839,5 @@ python manage.py runserver
 ## 许可证
 
 MIT License
+
+
