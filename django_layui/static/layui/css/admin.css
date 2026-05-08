@@ -231,7 +231,7 @@ a:hover {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%);
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     position: relative;
     overflow: hidden;
     z-index: 1;
@@ -256,14 +256,14 @@ a:hover {
 
 .login-card {
     width: 400px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     border-radius: 12px;
     padding: 40px;
     position: relative;
     z-index: 1;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
 .login-card .logo-area {
@@ -291,7 +291,7 @@ a:hover {
 .login-card .logo-text {
     font-size: 20px;
     font-weight: 600;
-    color: #fff;
+    color: #1f2329;
     letter-spacing: 2px;
 }
 
@@ -302,7 +302,7 @@ a:hover {
 .login-card .form-label {
     display: block;
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.8);
+    color: #1f2329;
     margin-bottom: 8px;
     font-weight: 500;
 }

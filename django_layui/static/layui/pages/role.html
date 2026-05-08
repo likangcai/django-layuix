@@ -37,6 +37,26 @@
         .btn-disabled { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
         .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
         .layui-card-header { border-bottom: 1px solid var(--card-border); }
+        /* 半选状态样式 */
+        .layui-form-checkbox.layui-form-halfchecked {
+            background-color: #1E9FFF !important;
+            border-color: #1E9FFF !important;
+        }
+        .layui-form-checkbox.layui-form-halfchecked i {
+            background: none !important;
+            width: 10px !important;
+            height: 2px !important;
+            top: 50% !important;
+            margin-top: -1px !important;
+            margin-left: -5px !important;
+            background-color: #fff !important;
+            transform: rotate(0deg) !important;
+            border-radius: 0 !important;
+            border: none !important;
+            display: block !important;
+            line-height: 0 !important;
+            font-size: 0 !important;
+        }
     </style>
 </head>
 <body>
@@ -224,14 +244,16 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
     }
 
     // 构建权限树数据（layui tree格式）
-    function buildPermTreeData(menuTree) {
+    function buildPermTreeData(menuTree, checkedIdSet) {
         function convert(items) {
             var result = [];
             for (var i = 0; i < items.length; i++) {
                 var item = items[i];
+                var isChecked = checkedIdSet && checkedIdSet[String(item.id)];
                 result.push({
                     id: item.id,
                     title: item.name + (item.permission ? ' (' + item.permission + ')' : ''),
+                    checked: !!isChecked,
                     children: item.children ? convert(item.children) : []
                 });
             }
@@ -248,7 +270,16 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         getApi('/admin/api/rbac/menus/tree/', function(res) {
             if (res.code !== 200) return;
             var menuTree = res.data || [];
-            var permTreeData = buildPermTreeData(menuTree);
+            
+            // 准备选中的ID集合
+            var checkedIds = isEdit ? (roleData.menu_ids || []) : [];
+            var checkedIdSet = {};
+            for (var i = 0; i < checkedIds.length; i++) {
+                checkedIdSet[String(checkedIds[i])] = true;
+            }
+            
+            // 构建树数据时直接标记选中状态
+            var permTreeData = buildPermTreeData(menuTree, checkedIdSet);
 
             var layerIndex = layer.open({
                 type: 1,
@@ -257,7 +288,6 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 content: renderTpl('roleFormTpl'),
                 success: function(layero, index) {
                     // 渲染权限树
-                    var checkedIds = isEdit ? (roleData.menu_ids || []) : [];
                     tree.render({
                         elem: layero.find('#menuPermTree')[0],
                         data: permTreeData,
@@ -265,27 +295,6 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                         showCheckbox: true,
                         id: 'menuPermTreeInst'
                     });
-
-                    // 设置已选中的节点
-                    // 注意：不能用 tree.setChecked()，因为它会触发父子联动
-                    // （选中子节点 → 向上冒泡选中父节点 → 向下传播选中所有子节点）
-                    // 直接操作 checkbox DOM，只勾选指定 ID，不触发联动
-                    if (checkedIds.length > 0) {
-                        var idSet = {};
-                        for (var i = 0; i < checkedIds.length; i++) {
-                            idSet[checkedIds[i]] = true;
-                        }
-                        layero.find('.layui-tree-set').each(function() {
-                            var $set = $(this);
-                            var nodeId = $set.data('id');
-                            if (idSet[nodeId]) {
-                                var $input = $set.children('.layui-tree-entry').find('input[same="layuiTreeCheck"]');
-                                $input.prop('checked', true);
-                                // 同步 Layui checkbox 模拟层样式
-                                $input.next('.layui-form-checkbox').addClass('layui-form-checked');
-                            }
-                        });
-                    }
 
                     if (isEdit) {
                         form.val('roleForm', {
@@ -298,6 +307,76 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     }
 
                     form.render(null, 'roleForm');
+                    
+                    // 在 tree 渲染后，设置选中状态
+                    setTimeout(function() {
+                        var $treeContainer = layero.find('#menuPermTree');
+                        
+                        // 先清除所有勾选状态
+                        $treeContainer.find('.layui-tree-set').each(function() {
+                            var $input = $(this).find('input[type="checkbox"]').first();
+                            var $checkbox = $input.next('.layui-form-checkbox');
+                            $input.prop('checked', false);
+                            $checkbox.removeClass('layui-form-checked');
+                        });
+                        
+                        // 设置选中的节点
+                        if (checkedIds.length > 0) {
+                            var idSet = {};
+                            for (var i = 0; i < checkedIds.length; i++) {
+                                idSet[String(checkedIds[i])] = true;
+                            }
+                            
+                            $treeContainer.find('.layui-tree-set').each(function() {
+                                var $set = $(this);
+                                var nodeId = $set.data('id');
+                                if (nodeId !== undefined && nodeId !== null && idSet[String(nodeId)]) {
+                                    var $input = $set.find('input[type="checkbox"]').first();
+                                    var $checkbox = $input.next('.layui-form-checkbox');
+                                    $input.prop('checked', true);
+                                    $checkbox.addClass('layui-form-checked');
+                                }
+                            });
+                        }
+                    }, 300);
+                    
+                    // 添加 checkbox 点击事件，实现父节点勾选联动子节点
+                    layero.on('click', '.layui-form-checkbox', function(e) {
+                        var $checkbox = $(this);
+                        var $input = $checkbox.prev('input[type="checkbox"]');
+                        var $treeSet = $checkbox.closest('.layui-tree-set');
+                        var isChecked = !$input.prop('checked');
+                        
+                        // 先切换当前 checkbox 状态
+                        $input.prop('checked', isChecked);
+                        if (isChecked) {
+                            $checkbox.addClass('layui-form-checked');
+                        } else {
+                            $checkbox.removeClass('layui-form-checked');
+                        }
+                        
+                        // 递归设置所有子节点状态
+                        function setChildrenChecked($parent, checked) {
+                            $parent.children('.layui-tree-child').children('.layui-tree-set').each(function() {
+                                var $childSet = $(this);
+                                var $childInput = $childSet.find('input[type="checkbox"]').first();
+                                var $childCheckbox = $childInput.next('.layui-form-checkbox');
+                                
+                                $childInput.prop('checked', checked);
+                                if (checked) {
+                                    $childCheckbox.addClass('layui-form-checked');
+                                } else {
+                                    $childCheckbox.removeClass('layui-form-checked');
+                                }
+                                
+                                // 递归处理子节点的子节点
+                                setChildrenChecked($childSet, checked);
+                            });
+                        }
+                        
+                        // 联动子节点
+                        setChildrenChecked($treeSet, isChecked);
+                    });
                 }
             });
         });
@@ -307,17 +386,18 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             var field = data.field;
             var id = field.id;
 
-            var checkedData = tree.getChecked('menuPermTreeInst');
+            // 手动收集被勾选的节点，排除半选状态的父节点
             var menuIds = [];
-            function collectIds(nodes) {
-                for (var i = 0; i < nodes.length; i++) {
-                    menuIds.push(nodes[i].id);
-                    if (nodes[i].children && nodes[i].children.length > 0) {
-                        collectIds(nodes[i].children);
-                    }
+            $('#menuPermTree').find('.layui-tree-set').each(function() {
+                var $set = $(this);
+                var $input = $set.find('input[type="checkbox"]');
+                var $checkbox = $input.next('.layui-form-checkbox');
+                
+                // 只收集真正被勾选的节点（排除半选状态）
+                if ($input.prop('checked') && !$checkbox.hasClass('layui-form-halfchecked')) {
+                    menuIds.push($set.data('id'));
                 }
-            }
-            collectIds(checkedData);
+            });
 
             var submitData = {
                 name: field.name,

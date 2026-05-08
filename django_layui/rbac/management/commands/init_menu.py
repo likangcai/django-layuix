@@ -6,7 +6,6 @@
   python manage.py init_menu --force     # 强制清空后重新初始化
   python manage.py init_menu --fix-icons # 修复数据库中可能存在的无效 Layui 图标
 
-注意：fix_ai_config_permissions / fix_icons 两个历史补丁命令已合并入本命令，不再单独存在。
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
@@ -22,7 +21,7 @@ class Command(BaseCommand):
             action='store_true',
             dest='force',
             default=False,
-            help='强制重新初始化菜单数据（会删除现有菜单）',
+            help='强制更新菜单数据（保留角色权限关联）',
         )
         parser.add_argument(
             '--fix-icons',
@@ -47,10 +46,9 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('菜单数据已存在，跳过初始化。如需重新初始化，请使用 --force 参数。'))
             return
         
-        # 如果强制重新初始化，清空现有菜单
+        # 如果强制重新初始化，更新现有菜单而不是删除
         if force and Menu.objects.exists():
-            Menu.objects.all().delete()
-            self.stdout.write(self.style.WARNING('已清空现有菜单数据'))
+            self.stdout.write(self.style.WARNING('使用 --force 模式，将更新现有菜单数据（保留角色权限关联）'))
 
         # 创建菜单
         # (name, name_en, name_zh_hans, icon, path, menu_type, sort, parent_name_or_None)
@@ -94,18 +92,46 @@ class Command(BaseCommand):
                     'visible': True,
                 }
             )
-            # 如果菜单已存在，更新英文名称和简体中文字段
+            # 如果菜单已存在，在 --force 模式下更新所有字段，否则只更新名称
             if not is_new:
                 updated = False
-                if menu.name_en != name_en:
-                    menu.name_en = name_en
-                    updated = True
-                if menu.name_zh_hans != name_zh_hans:
-                    menu.name_zh_hans = name_zh_hans
-                    updated = True
+                if force:
+                    # --force 模式：更新所有字段（但保留角色关联）
+                    if menu.name_en != name_en:
+                        menu.name_en = name_en
+                        updated = True
+                    if menu.name_zh_hans != name_zh_hans:
+                        menu.name_zh_hans = name_zh_hans
+                        updated = True
+                    if menu.icon != icon:
+                        menu.icon = icon
+                        updated = True
+                    if menu.path != path:
+                        menu.path = path
+                        updated = True
+                    if menu.menu_type != menu_type:
+                        menu.menu_type = menu_type
+                        updated = True
+                    if menu.sort != sort:
+                        menu.sort = sort
+                        updated = True
+                    if parent and menu.parent_id != parent.id:
+                        menu.parent = parent
+                        updated = True
+                else:
+                    # 非 --force 模式：只更新名称字段
+                    if menu.name_en != name_en:
+                        menu.name_en = name_en
+                        updated = True
+                    if menu.name_zh_hans != name_zh_hans:
+                        menu.name_zh_hans = name_zh_hans
+                        updated = True
                 if updated:
                     menu.save()
-                    self.stdout.write(f'  更新菜单: {name} (name_en, name_zh_hans)')
+                    if force:
+                        self.stdout.write(f'  更新菜单: {name} (所有字段)')
+                    else:
+                        self.stdout.write(f'  更新菜单: {name} (name_en, name_zh_hans)')
             created[name] = menu
             if is_new:
                 self.stdout.write(self.style.SUCCESS(f'  创建菜单: {name}'))
@@ -163,18 +189,40 @@ class Command(BaseCommand):
                     'visible': True,
                 }
             )
-            # 如果按钮已存在，更新英文名称和简体中文字段
+            # 如果按钮已存在，在 --force 模式下更新所有字段，否则只更新名称
             if not is_new:
                 updated = False
-                if btn.name_en != btn_name_en:
-                    btn.name_en = btn_name_en
-                    updated = True
-                if btn.name_zh_hans != btn_name_zh_hans:
-                    btn.name_zh_hans = btn_name_zh_hans
-                    updated = True
+                if force:
+                    # --force 模式：更新所有字段
+                    if btn.name_en != btn_name_en:
+                        btn.name_en = btn_name_en
+                        updated = True
+                    if btn.name_zh_hans != btn_name_zh_hans:
+                        btn.name_zh_hans = btn_name_zh_hans
+                        updated = True
+                    if btn.parent_id != parent_menu.id:
+                        btn.parent = parent_menu
+                        updated = True
+                    if btn.permission != permission:
+                        btn.permission = permission
+                        updated = True
+                    if btn.sort != sort:
+                        btn.sort = sort
+                        updated = True
+                else:
+                    # 非 --force 模式：只更新名称字段
+                    if btn.name_en != btn_name_en:
+                        btn.name_en = btn_name_en
+                        updated = True
+                    if btn.name_zh_hans != btn_name_zh_hans:
+                        btn.name_zh_hans = btn_name_zh_hans
+                        updated = True
                 if updated:
                     btn.save()
-                    self.stdout.write(f'  更新按钮权限: {btn_name} (name_en, name_zh_hans)')
+                    if force:
+                        self.stdout.write(f'  更新按钮权限: {btn_name} (所有字段)')
+                    else:
+                        self.stdout.write(f'  更新按钮权限: {btn_name} (name_en, name_zh_hans)')
             if is_new:
                 self.stdout.write(self.style.SUCCESS(f'  创建按钮权限: {btn_name} ({permission})'))
             else:
@@ -200,7 +248,12 @@ class Command(BaseCommand):
                 admin_user.roles.add(admin_role)
             self.stdout.write(self.style.SUCCESS(f'  创建角色: 管理员'))
         else:
-            self.stdout.write(f'  角色已存在: 管理员')
+            # --force 模式下，重新同步管理员角色的所有菜单权限
+            if force:
+                admin_role.menus.set(Menu.objects.all())
+                self.stdout.write(self.style.SUCCESS(f'  已同步管理员角色权限（共 {Menu.objects.count()} 个菜单）'))
+            else:
+                self.stdout.write(f'  角色已存在: 管理员')
 
         # 创建注册用户角色
         registered_role, created = Role.objects.get_or_create(
@@ -213,10 +266,19 @@ class Command(BaseCommand):
             }
         )
         if created:
-            # 注册用户默认只能访问个人中心
+            # 注册用户默认只能访问仪表盘和个人中心（需要同时绑定父目录和子菜单）
+            dashboard = Menu.objects.filter(name='仪表盘').first()
+            system_management = Menu.objects.filter(name='系统管理').first()
             personal_center = Menu.objects.filter(name='个人中心').first()
+            menus_to_bind = []
+            if dashboard:
+                menus_to_bind.append(dashboard)
+            if system_management:
+                menus_to_bind.append(system_management)
             if personal_center:
-                registered_role.menus.set([personal_center])
+                menus_to_bind.append(personal_center)
+            if menus_to_bind:
+                registered_role.menus.set(menus_to_bind)
             self.stdout.write(self.style.SUCCESS(f'  创建角色: 注册用户'))
         else:
             self.stdout.write(f'  角色已存在: 注册用户')
@@ -261,9 +323,6 @@ class Command(BaseCommand):
     def _fix_icons(self):
         """修复数据库中无效的 Layui 图标（原 fix_icons 命令功能）"""
         # 图标映射：错误图标 -> 正确图标
-        # 覆盖场景：
-        #   - init_menu.py 旧版本的 layui-icon-menu (已修正为 menu-fill)
-        #   - init_data.py 错误使用的 layui-icon-template / layui-icon-website
         icon_mapping = {
             'layui-icon-menu': 'layui-icon-menu-fill',      # 菜单
             'layui-icon-template': 'layui-icon-menu-fill', # 菜单(init_data.py错误)

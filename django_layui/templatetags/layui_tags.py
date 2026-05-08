@@ -111,7 +111,7 @@ def login_bg_image():
 @register.simple_tag
 def copyright_text():
     """Return copyright text"""
-    return _get_db_config('copyright', 'Copyright © 2024 Django Layui Admin')
+    return _get_db_config('copyright', 'YingZi © 2024 Django Layui Admin')
 
 
 @register.simple_tag
