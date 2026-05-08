@@ -274,6 +274,9 @@
                 // Get system config
                 $.get('/admin/api/rbac/system/config/', function(configRes) {
                     if (configRes.code === 200 && configRes.data) {
+                        // 将配置存储到全局变量，供其他页面使用
+                        window.systemConfig = configRes.data;
+                        
                         var config = configRes.data;
                         if (config.system_name) {
                             $('.logo-text').text(config.system_name);

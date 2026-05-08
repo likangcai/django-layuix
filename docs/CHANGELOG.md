@@ -51,8 +51,16 @@
   - 登录页 JS 动态获取并应用：system_name / logo_icon / logo_url / favicon / version / copyright / login_bg_*
 
 - ✅ **login_bg_image 上传后登录页未生效**
-  - 根因：模板内联 `background` 简写属性覆盖 JS 设置的 `backgroundImage`
-  - 修复：图片优先逻辑 + 清除 background 简写残留 + 添加 no-repeat
+  - 根因1：模板内联 `background: transparent !important` 覆盖 JS 设置的背景
+  - 根因2：之前逻辑不严谨，只需 image 有值就显示（忽略 type）
+  - 修复：
+    1. 移除 CSS `!important` 强制透明
+    2. **严格按5条业务规则实现**：
+       - type=gradient → 渐变背景 + ✨ 粒子飘动（始终保留粒子）
+       - type=color + value有值 → 纯色背景 + 无粒子
+       - type=image + image有值 → 全屏图片 + 无粒子
+       - type必须是字符串且仅gradient/color/image有效
+       - 异常值/条件不满足 → 默认渐变+粒子（不做处理）
 
 - ✅ **系统配置初始化缺失** - 修复 `python manage.py init_menu` 不创建完整配置项
   - 补全 3 个登录页背景配置：`login_bg_type` / `login_bg_value` / `login_bg_image`
@@ -66,6 +74,12 @@
 #### UI 样式优化
 - ✅ **登录页版权信息颜色过淡** - 从 60% → 95% 透明度 + 增强阴影
 - ✅ **菜单收起/展开图标优化** - 尺寸缩小至 20px + 移至右侧
+
+#### 国际化修复
+- ✅ **登录按钮"登录中"显示原始键名** - 修复 `login.loading` 翻译缺失
+  - 根因1：中文翻译键拼写错误 `login.logging` ≠ `login.loading`
+  - 根因2：英文完全缺少该翻译键
+  - 修复：统一为 `login.loading`，中文 `'登录中...'` / 英文 `'Logging in...'`
 
 #### 数据模型清理
 - ✅ **删除 name_zh_hant（繁体中文）字段**
@@ -93,9 +107,10 @@
 | `rbac/migrations/0002_*.py` | 已删除（合并到 0001） |
 | `rbac/management/commands/init_menu.py` | 补全 12 个配置项 + 移除 name_zh_hant |
 | `templates/admin/index.html` | 目录菜单图标渲染 + footer 动态加载 |
-| `templates/admin/login.html` | 版权颜色优化 + 公开 API 配置动态应用 |
+| `templates/admin/login.html` | 版权颜色优化 + 5条业务规则背景逻辑 + 移除!important |
 | `static/layui/css/admin.css` | menu-dir-icon 样式 + admin-footer 样式 |
 | `static/layui/pages/config.html` | 编辑模式图片预览可点击 |
+| `static/layui/js/i18n.js` | 修复 login.loading 翻译键缺失+拼写错误 |
 
 ---
 

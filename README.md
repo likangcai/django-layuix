@@ -167,10 +167,14 @@ LAYUI_CONFIG = {
     'logo_url': '',                    # 自定义 Logo URL（设置后替换图标）
     'logo_icon': 'layui-icon-code-circle',  # Layui 图标类名
 
-    # 登录页面
-    'login_bg_type': 'gradient',       # gradient / color / image
+    # 登录页面背景（三选一，通过 login_bg_type 切换）
+    #   type='gradient'  → 使用 login_bg_value（CSS渐变值）+ ✨ 粒子动画叠加
+    #   type='color'     → 使用 login_bg_value（纯色值，如 #1a1a2e）+ 无粒子
+    #   type='image'     → 使用 login_bg_image（图片URL）+ 无粒子
+    #   其他/空值        → 默认深色渐变 + ✨ 粒子动画（不做处理）
+    'login_bg_type': 'gradient',       # gradient / color / image（字符串，仅此3个值有效）
     'login_bg_value': 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)',
-    'login_bg_image': '',              # 背景图片 URL
+    'login_bg_image': '',              # 背景图片 URL（仅当 type=image 且有值时生效）
 
     # 前端项目
     'frontend_url': '',                # 前端项目 URL（顶部"查看站点"按钮）
@@ -692,9 +696,16 @@ django_layui/templates/admin/change_form.html → 模型编辑页
 | `{% layui_cdn %}` | Layui CDN 地址 |
 | `{% layui_version %}` | Layui 版本号 |
 | `{% frontend_url %}` | 前端项目 URL |
-| `{% login_bg_type %}` | 登录背景类型 |
-| `{% login_bg_value %}` | 登录背景值 |
-| `{% login_bg_image %}` | 登录背景图片 URL |
+| `{% login_bg_type %}` | 登录背景类型（gradient/color/image，仅3个值有效） |
+| `{% login_bg_value %}` | 登录背景值（渐变/颜色CSS值，type为gradient或color时使用） |
+| `{% login_bg_image %}` | 登录背景图片URL（**仅当 type=image 且有值时生效**） |
+
+> **登录页背景业务规则（5条）：**
+> 1. `type='gradient'` → 深色渐变 + ✨ 粒子飘动（默认，最炫酷）
+> 2. `type='color'` + value有值 → 纯颜色值 + 无粒子（简洁清爽）
+> 3. `type='image'` + image有值 → 全屏图片 + 无粒子（自定义图片）
+> 4. type 必须是字符串，且只能是 gradient / color / image 之一
+> 5. 异常值/空值/条件不满足 → 默认深色渐变 + ✨ 粒子飘动
 | `{% copyright_text %}` | 版权信息 |
 | `{% layui_config key default %}` | 根据键获取配置值 |
 

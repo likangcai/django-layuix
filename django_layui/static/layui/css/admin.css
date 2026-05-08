@@ -234,6 +234,7 @@ a:hover {
     background: linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%);
     position: relative;
     overflow: hidden;
+    z-index: 1;
 }
 
 .login-page::before {
@@ -271,9 +272,9 @@ a:hover {
 }
 
 .login-card .logo-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
     background: linear-gradient(135deg, #1E9FFF 0%, #00BFFF 100%);
     display: flex;
     align-items: center;

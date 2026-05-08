@@ -104,7 +104,7 @@ AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'
 # ============================================================
 LAYUI_CONFIG = {
     'system_name': 'Layui Admin 演示',
-    'system_version': '1.0.3',
+    'system_version': '1.0.7',
     'system_description': 'django-layui 功能演示项目',
     'logo_icon': 'layui-icon-code-circle',
     # 使用自定义图片
