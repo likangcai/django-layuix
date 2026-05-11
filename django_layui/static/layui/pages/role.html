@@ -94,6 +94,8 @@
     <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
     {{# if(layui.$.inArray('role:edit', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
+    {{# } }}
+    {{# if(layui.$.inArray('role:copy', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="copy">{{ t('role.copy.title') }}</a>
     {{# } }}
     {{# if(d.is_system){ }}
@@ -407,8 +409,15 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 menu_ids: menuIds
             };
 
+            // 获取提交按钮并添加动画
+            var $btn = $('button[lay-filter="roleSubmit"]');
+            $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> ' + (t('common.submitting') || '提交中...'));
+
             if (id) {
                 putApi('/admin/api/rbac/roles/' + id + '/update/', submitData, function(res) {
+                    // 恢复按钮状态
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                    
                     if (res.code === 200) {
                         layer.msg(t('common.updateSuccess'), {icon: 1});
                         layer.closeAll();
@@ -419,6 +428,9 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 });
             } else {
                 postApi('/admin/api/rbac/roles/create/', submitData, function(res) {
+                    // 恢复按钮状态
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                    
                     if (res.code === 200) {
                         layer.msg(t('common.addSuccess'), {icon: 1});
                         layer.closeAll();
@@ -465,7 +477,15 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             layer.msg(t('role.missingSource'), {icon: 2});
             return false;
         }
+
+        // 获取提交按钮并添加动画
+        var $btn = $('button[lay-filter="copySubmit"]');
+        $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> ' + (t('common.submitting') || '提交中...'));
+
         postApi('/admin/api/rbac/roles/' + currentCopyRoleData.id + '/copy/', submitData, function(res) {
+            // 恢复按钮状态
+            $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+            
             if (res.code === 200) {
                 layer.msg(t('role.copy.success'), {icon: 1});
                 layer.closeAll();

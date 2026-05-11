@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前台首页</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/themes.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        .frontend-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+        }
+        .frontend-logo {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .frontend-logo i {
+            color: var(--primary-color);
+        }
+        .frontend-nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .frontend-nav-item {
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        .frontend-nav-item:hover {
+            color: var(--primary-color);
+            background: var(--hover-bg);
+        }
+        .frontend-nav-item.active {
+            color: var(--primary-color);
+            background: var(--active-bg);
+        }
+        .frontend-content {
+            padding: 20px;
+            min-height: calc(100vh - 56px);
+        }
+        .frontend-welcome {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .frontend-welcome h1 {
+            font-size: 32px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        .frontend-welcome p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+        .frontend-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <div class="frontend-header">
+        <div class="frontend-logo">
+            <i class="layui-icon layui-icon-home"></i>
+            <span>前台系统</span>
+        </div>
+        <div class="frontend-nav" id="frontendNav">
+            <!-- 动态加载菜单 -->
+        </div>
+        <div>
+            <span id="userDisplayName" style="margin-right: 15px; color: var(--text-secondary);"></span>
+            <button class="layui-btn layui-btn-sm layui-btn-primary" onclick="handleLogout()">退出</button>
+        </div>
+    </div>
+
+    <!-- 内容区域 -->
+    <div class="frontend-content">
+        <div class="frontend-welcome">
+            <h1>欢迎使用前台系统</h1>
+            <p>这是一个前台页面示例，演示如何根据 frontend_visible 控制菜单显示</p>
+            <div class="frontend-card" id="menuInfo">
+                <h3>菜单说明</h3>
+                <p>上方的导航菜单是根据您的角色权限和 <code>frontend_visible</code> 设置动态加载的</p>
+                <p>在后台菜单管理中，将菜单的"前台可见"设置为"否"，该菜单就不会出现在这里</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/layui/lib/layui.js"></script>
+    <script src="/static/layui/js/common.js"></script>
+    <script>
+        var currentUser = null;
+        var currentLang = 'zh-hans';
+
+        // 初始化
+        layui.use(['layer'], function() {
+            loadUserInfo();
+        });
+
+        // 加载用户信息
+        function loadUserInfo() {
+            getApi('/admin/api/rbac/userinfo/', function(res) {
+                if (res.code === 200) {
+                    currentUser = res.data;
+                    currentLang = currentUser.language || 'zh-hans';
+                    document.getElementById('userDisplayName').textContent = currentUser.nickname || currentUser.username;
+                    loadFrontendMenus();
+                } else {
+                    // 未登录，跳转到登录页
+                    window.top.location.href = '/admin/';
+                }
+            });
+        }
+
+        // 加载前台菜单
+        function loadFrontendMenus() {
+            getApi('/admin/api/rbac/menus/frontend/', function(res) {
+                if (res.code === 200) {
+                    var menus = res.data || [];
+                    renderFrontendNav(menus);
+                }
+            });
+        }
+
+        // 渲染前台导航
+        function renderFrontendNav(menus) {
+            var navHtml = '';
+            menus.forEach(function(menu) {
+                // 只渲染菜单类型（menu_type = 2），不渲染目录和按钮
+                if (menu.menu_type === 2 && menu.path) {
+                    navHtml += '<div class="frontend-nav-item" data-url="' + escapeHtml(menu.path) + '" data-title="' + escapeHtml(menu.name) + '">' +
+                               escapeHtml(menu.name) + '</div>';
+                }
+            });
+
+            document.getElementById('frontendNav').innerHTML = navHtml || '<div style="color: var(--text-muted);">暂无菜单</div>';
+
+            // 绑定点击事件
+            document.querySelectorAll('.frontend-nav-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.frontend-nav-item').forEach(function(i) {
+                        i.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    var url = this.getAttribute('data-url');
+                    var title = this.getAttribute('data-title');
+                    
+                    // 这里可以跳转到对应页面或加载内容
+                    layer.msg('导航到: ' + title + ' (' + url + ')', {icon: 1});
+                });
+            });
+        }
+
+        // 转义HTML
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 退出登录
+        function handleLogout() {
+            layer.confirm('确定要退出登录吗？', {icon: 3, title: '提示'}, function(index) {
+                postApi('/admin/api/rbac/logout/', {}, function(res) {
+                    layer.close(index);
+                    if (res.code === 200) {
+                        window.top.location.href = '/admin/';
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>

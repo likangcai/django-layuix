@@ -38,6 +38,7 @@ urlpatterns = [
 
     # Menu CRUD
     path('menus/tree/', views.menu_tree, name='rbac_menu_tree'),
+    path('menus/frontend/', views.frontend_menu_tree, name='rbac_frontend_menu_tree'),
     path('menus/create/', views.menu_create, name='rbac_menu_create'),
     path('menus/<int:pk>/', views.menu_detail, name='rbac_menu_detail'),
 

@@ -331,8 +331,13 @@
 
         function renderDirectory(menu) {
             var children = menu.children || [];
-            var hasVisibleChildren = children.some(function(c) { return c.visible !== false; });
+            // 检查是否有可见的子菜单（考虑 backend_visible）
+            var hasVisibleChildren = children.some(function(c) { 
+                return c.visible !== false && (c.backend_visible === undefined || c.backend_visible === true);
+            });
             if (!hasVisibleChildren) return '';
+            // 如果目录本身不可见，也不显示
+            if (menu.visible === false || (menu.backend_visible !== undefined && menu.backend_visible === false)) return '';
             var name = menu.name;
             var icon = menu.icon || 'layui-icon-app';
             if (window.LANG === 'en' && menu.name_en) {
@@ -344,7 +349,9 @@
             html += '<div class="menu-group-title"><i class="layui-icon ' + escapeAttr(icon) + ' menu-dir-icon"></i><i class="menu-arrow"></i><span>' + escapeHtml(name) + '</span></div>';
             html += '<div class="sub-menu open">';
             children.forEach(function(child) {
+                // 检查子菜单的可见性
                 if (child.visible === false) return;
+                if (child.backend_visible !== undefined && child.backend_visible === false) return;
                 if (child.menu_type === 1) {
                     html += renderDirectory(child);
                 } else if (child.menu_type === 2) {
@@ -369,7 +376,9 @@
         };
 
         function renderMenuItem(menu) {
+            // 检查菜单是否可见（visible 和 backend_visible）
             if (menu.visible === false) return '';
+            if (menu.backend_visible !== undefined && menu.backend_visible === false) return '';
             var icon = menu.icon || 'layui-icon-app';
             var rawUrl = menu.path || menu.component || '';
             var url = menuPathMap[rawUrl] || rawUrl;
@@ -654,19 +663,32 @@
                     layero.find('input[name="confirm_password"]').attr('placeholder', t('profile.confirmPassword') || '确认密码');
                     form.render(null, 'changePasswordForm');
                     layero.find('#submitPasswordBtn').on('click', function() {
+                        var $btn = $(this);
                         var oldPwd = layero.find('input[name="old_password"]').val().trim();
                         var newPwd = layero.find('input[name="new_password"]').val().trim();
                         var confirmPwd = layero.find('input[name="confirm_password"]').val().trim();
                         if (!oldPwd || !newPwd || !confirmPwd) { layer.msg(t('common.inputRequired', [t('login.password')]), {icon: 0}); return; }
                         if (newPwd.length < 6) { layer.msg(t('profile.password.minLen'), {icon: 0}); return; }
                         if (newPwd !== confirmPwd) { layer.msg(t('profile.password.diff'), {icon: 0}); return; }
+                        
+                        // 按钮点击动画：禁用按钮 + 显示加载状态
+                        $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> 提交中...');
+                        
                         putApi('/admin/api/rbac/profile/password/', {
                             old_password: oldPwd, new_password: newPwd, confirm_password: confirmPwd
                         }, function(res) {
+                            // 恢复按钮状态
+                            $btn.prop('disabled', false).removeClass('layui-btn-disabled').html('<span>确认修改</span>');
+                            
                             if (res.code === 200) {
-                                layer.msg(t('profile.password.success'), {icon: 1, time: 1500}, function() {
-                                    location.href = window.LAYUI_CONFIG.admin_login_url || '/admin/login/';
-                                });
+                                layer.msg(t('profile.password.success'), {icon: 1, time: 1500, end: function() {
+                                    // 使用 window.top 确保在顶层窗口跳转，跳出 iframe
+                                    if (window.top) {
+                                        window.top.location.href = '/admin/login/';
+                                    } else {
+                                        location.href = '/admin/login/';
+                                    }
+                                }});
                             } else {
                                 layer.msg(res.msg || t('common.fail'), {icon: 2});
                             }

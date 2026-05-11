@@ -191,6 +191,8 @@
     <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
     {{# if(layui.$.inArray('ai_config:edit', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
+    {{# } }}
+    {{# if(layui.$.inArray('ai_config:test', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="test">{{ t('ai.testConnection') }}</a>
     {{# } }}
     {{# if(layui.$.inArray('ai_config:set_default', perms) > -1){ }}
@@ -379,7 +381,14 @@ layui.use(['form', 'table', 'layer'], function(){
 
         fields.is_default = layero.find('[name="is_default"]').is(':checked');
 
+        // 获取提交按钮并添加动画
+        var $btn = layero.find('#submitAiConfigBtn');
+        $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> ' + (t('common.submitting') || '提交中...'));
+
         postApi('/admin/api/ops/ai/config/save/', fields, function(res){
+            // 恢复按钮状态
+            $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+            
             if (res.code === 200) {
                 layer.msg(res.msg || '保存成功', {icon:1});
                 layer.close(closeIdx);

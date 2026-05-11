@@ -123,18 +123,18 @@ def user_info(request):
 
 
 def _get_user_menus(user):
-    """Get menus available to the user"""
+    """Get menus available to the user (后台侧边栏使用,只返回 backend_visible=True 的菜单)"""
     from .models import Menu
     
     # Get user's language preference
     user_lang = getattr(user, 'language', 'zh-hans') if hasattr(user, 'language') else 'zh-hans'
 
     if user.is_superuser:
-        menus = Menu.objects.filter(status=True, visible=True).order_by('sort', 'id')
+        menus = Menu.objects.filter(status=True, visible=True, backend_visible=True).order_by('sort', 'id')
     else:
         # Get menus through roles
         menus = Menu.objects.filter(
-            status=True, visible=True,
+            status=True, visible=True, backend_visible=True,
             roles__users=user
         ).distinct().order_by('sort', 'id')
 
@@ -156,6 +156,49 @@ def _get_user_menus(user):
             'permission': m.permission,
             'sort': m.sort,
             'visible': m.visible,
+            'backend_visible': m.backend_visible,
+            'frontend_visible': m.frontend_visible,
+        })
+
+    return _build_menu_tree(menu_list)
+
+
+def _get_frontend_menus(user):
+    """Get menus available to the user (前台使用,只返回 frontend_visible=True 的菜单)"""
+    from .models import Menu
+    
+    # Get user's language preference
+    user_lang = getattr(user, 'language', 'zh-hans') if hasattr(user, 'language') else 'zh-hans'
+
+    if user.is_superuser:
+        menus = Menu.objects.filter(status=True, visible=True, frontend_visible=True).order_by('sort', 'id')
+    else:
+        # Get menus through roles
+        menus = Menu.objects.filter(
+            status=True, visible=True, frontend_visible=True,
+            roles__users=user
+        ).distinct().order_by('sort', 'id')
+
+    menu_list = []
+    for m in menus:
+        # Use localized menu name based on user's language
+        menu_name = m.get_name_by_lang(user_lang)
+        
+        menu_list.append({
+            'id': m.id,
+            'parent_id': m.parent_id,
+            'name': menu_name,
+            'name_zh_hans': m.name_zh_hans,
+            'name_en': m.name_en,
+            'icon': m.icon,
+            'path': m.path,
+            'component': m.component,
+            'menu_type': m.menu_type,
+            'permission': m.permission,
+            'sort': m.sort,
+            'visible': m.visible,
+            'backend_visible': m.backend_visible,
+            'frontend_visible': m.frontend_visible,
         })
 
     return _build_menu_tree(menu_list)
@@ -644,7 +687,7 @@ def profile_password(request):
 
     user.set_password(new_password)
     user.save()
-    update_session_auth_hash(request, user)
+    # 注意：不调用 update_session_auth_hash，让 session 失效，强制重新登录
     return success_response(msg='密码修改成功')
 
 
@@ -841,12 +884,22 @@ def menu_tree(request):
             'sort': m.sort,
             'visible': m.visible,
             'status': m.status,
+            'backend_visible': m.backend_visible,
+            'frontend_visible': m.frontend_visible,
             'create_time': m.create_time.strftime('%Y-%m-%d %H:%M:%S') if m.create_time else '',
             'update_time': m.update_time.strftime('%Y-%m-%d %H:%M:%S') if m.update_time else '',
         })
 
     tree = _build_menu_tree(menu_list)
     return success_response(tree)
+
+
+@csrf_exempt
+@api_login_required
+def frontend_menu_tree(request):
+    """GET /api/rbac/menus/frontend/ - 获取前台菜单树（只返回 frontend_visible=True 的菜单）"""
+    menus = _get_frontend_menus(request.user)
+    return success_response(menus)
 
 
 @csrf_exempt
@@ -876,6 +929,8 @@ def menu_detail(request, pk):
             'sort': menu.sort,
             'visible': menu.visible,
             'status': menu.status,
+            'backend_visible': menu.backend_visible,
+            'frontend_visible': menu.frontend_visible,
             'create_time': menu.create_time.strftime('%Y-%m-%d %H:%M:%S') if menu.create_time else '',
             'update_time': menu.update_time.strftime('%Y-%m-%d %H:%M:%S') if menu.update_time else '',
         }
@@ -907,6 +962,10 @@ def menu_detail(request, pk):
             menu.visible = bool(body['visible'])
         if 'status' in body:
             menu.status = bool(body['status'])
+        if 'backend_visible' in body:
+            menu.backend_visible = bool(body['backend_visible'])
+        if 'frontend_visible' in body:
+            menu.frontend_visible = bool(body['frontend_visible'])
         menu.save()
         return success_response(msg='更新成功')
 
@@ -948,6 +1007,8 @@ def menu_create(request):
         sort=int(body.get('sort', 0)),
         visible=bool(body.get('visible', True)),
         status=bool(body.get('status', True)),
+        backend_visible=bool(body.get('backend_visible', True)),
+        frontend_visible=bool(body.get('frontend_visible', True)),
     )
     menu.save()
     return success_response({'id': menu.id}, msg='创建成功')

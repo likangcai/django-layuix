@@ -298,19 +298,28 @@
                         layui.form.render(null, 'changePwdForm');
                         layero.find('#btnCancelPwd').on('click', function() { layer.close(index); });
                         layero.find('#btnSubmitPwd').on('click', function() {
+                            var $btn = $(this);
                             var oldPwd = layero.find('input[name="old_password"]').val().trim();
                             var newPwd = layero.find('input[name="new_password"]').val().trim();
                             var confirmPwd = layero.find('input[name="confirm_password"]').val().trim();
                             if (!oldPwd) { layer.msg(t('common.inputRequired', [t('profile.oldPassword')]), {icon: 2}); return; }
                             if (!newPwd || newPwd.length < 6) { layer.msg(t('profile.password.minLen'), {icon: 2}); return; }
                             if (newPwd !== confirmPwd) { layer.msg(t('profile.password.diff'), {icon: 2}); return; }
+                            
+                            // 按钮点击动画：禁用按钮 + 显示加载状态
+                            $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> 提交中...');
+                            
                             putApi('/admin/api/rbac/profile/password/', {
                                 old_password: oldPwd, new_password: newPwd, confirm_password: confirmPwd
                             }, function(res) {
+                                // 恢复按钮状态
+                                $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm'));
+                                
                                 if (res.code === 200) {
-                                    layer.msg(t('profile.password.success'), {icon: 1, time: 2000}, function() {
-                                        try { window.parent.location.href = window.parent.ADMIN_LOGIN_URL || '/admin/login/'; } catch(e) {}
-                                    });
+                                    layer.msg(t('profile.password.success'), {icon: 1, time: 2000, end: function() {
+                                        // 跳转到登录页面（顶层窗口）
+                                        window.top.location.href = '/admin/login/';
+                                    }});
                                 } else { layer.msg(res.msg || t('common.fail'), {icon: 2}); }
                             });
                         });

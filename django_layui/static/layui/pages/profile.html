@@ -417,6 +417,7 @@
 
         // 修改密码（使用回调模式）
         $('#btnChangePassword').on('click', function() {
+            var $btn = $(this);
             var formData = form.val('passwordForm');
             var oldPassword = (formData.old_password || '').trim();
             var newPassword = (formData.new_password || '').trim();
@@ -429,6 +430,10 @@
             if (newPassword !== confirmPassword) { layer.msg(t('profile.password.diff'), {icon: 2}); return; }
             if (oldPassword === newPassword) { layer.msg(t('profile.password.same'), {icon: 2}); return; }
 
+            // 按钮点击动画：禁用按钮 + 显示加载状态
+            $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> 提交中...');
+            
+            // 同时显示全局 loading
             var loadIndex = layer.load(1);
 
             putApi('/admin/api/rbac/profile/password/', {
@@ -437,21 +442,32 @@
                 confirm_password: confirmPassword
             }, function(res) {
                 layer.close(loadIndex);
+                // 恢复按钮状态
+                $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
+                
                 if (res.code === 200) {
-                    layer.msg(t('profile.password.success'), {icon: 1, time: 2000}, function() {
+                    layer.msg(t('profile.password.success'), {icon: 1, time: 2000, end: function() {
                         form.val('passwordForm', {
                             old_password: '',
                             new_password: '',
                             confirm_password: ''
                         });
+                        // 跳转到登录页面（使用顶层窗口）
+                        var loginUrl = '/admin/login/';
                         try {
-                            if (window.parent) {
-                                window.parent.location.href = (window.parent.ADMIN_LOGIN_URL || '/admin/login/');
+                            if (window.parent && window.parent.ADMIN_LOGIN_URL) {
+                                loginUrl = window.parent.ADMIN_LOGIN_URL;
                             }
                         } catch (e) {
-                            window.location.href = '/login/';
+                            // ignore
                         }
-                    });
+                        // 使用 window.top 确保在顶层窗口跳转，跳出 iframe
+                        if (window.top) {
+                            window.top.location.href = loginUrl;
+                        } else {
+                            window.location.href = loginUrl;
+                        }
+                    }});
                 } else {
                     layer.msg(res.msg || t('common.fail'), {icon: 2});
                 }

@@ -105,14 +105,16 @@
     <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
     {{# if(layui.$.inArray('user:edit', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
+    {{# } }}
+    {{# if(layui.$.inArray('user:reset_password', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="resetPwd">{{ t('user.resetPassword') }}</a>
+    {{# } }}
     {{# if(d.username === 'admin'){ }}
     <a class="layui-btn layui-btn-xs layui-btn-primary btn-disabled" title="{{ t('user.adminCannotDisable') }}">{{ t('common.disable') }}</a>
-    {{# } else { }}
+    {{# } else if(layui.$.inArray('user:toggle_status', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs {{ d.is_active ? 'layui-btn-warm' : 'layui-btn-normal' }}" lay-event="toggleStatus">
         {{ d.is_active ? t('common.disable') : t('common.enable') }}
     </a>
-    {{# } }}
     {{# } }}
     {{# if(d.username === 'admin'){ }}
     <a class="layui-btn layui-btn-xs layui-btn-danger btn-disabled" title="{{ t('user.adminCannotDelete') }}">{{ t('common.delete') }}</a>
@@ -299,19 +301,144 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
         });
     }
 
-    // 构建角色多选下拉HTML
+    // 构建角色多选下拉HTML - 使用自定义多选下拉框，支持点击勾选多个选项，显示为标签
     function buildRoleSelectHtml(containerId, selectedIds) {
         selectedIds = selectedIds || [];
-        var html = '<select name="role_ids" multiple lay-filter="roleSelect">';
-        html += '<option value="">' + t('user.selectRole') + '</option>';
+        
+        // 根据是否已选择角色决定初始背景色
+        var wrapperBg = selectedIds.length > 0 ? '#fff' : 'transparent';
+        
+        var html = '<div class="layui-form-select role-multi-select" style="position:relative;">';
+        // 隐藏的输入框（仅用于占位和表单提交）
+        html += '<input type="text" readonly style="position:absolute;top:0;left:0;width:100%;height:38px;z-index:0;opacity:0;" />'; 
+        // 自定义placeholder - z-index为1，显示在wrapper下方
+        html += '<div class="role-placeholder" style="position:absolute;top:50%;left:10px;transform:translateY(-50%);color:#999;font-size:14px;z-index:1;pointer-events:none;' + (selectedIds.length > 0 ? 'display:none;' : '') + '">' + t('user.selectRole') + '</div>';
+        // 标签显示层（覆盖在placeholder上方）
+        html += '<div class="role-tags-wrapper" style="position:relative;z-index:2;min-height:38px;padding:3px 30px 3px 10px;cursor:pointer;background:' + wrapperBg + ';border:1px solid #e6e6e6;border-radius:2px;">';
+        html += '<div class="role-tags-container" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:32px;">';
+        html += '</div>';
+        html += '</div>';
+        html += '<i class="layui-edge" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:3;pointer-events:none;"></i>';
+        // 下拉列表
+        html += '<dl class="layui-anim layui-anim-upbit" style="max-height:300px;overflow-y:auto;z-index:9999;border:1px solid #e6e6e6;border-top:none;background:#fff;">';
         for (var i = 0; i < roleList.length; i++) {
             var role = roleList[i];
-            var selected = selectedIds.indexOf(role.id) > -1 ? ' selected' : '';
-            html += '<option value="' + role.id + '"' + selected + '>' + role.name + ' (' + role.code + ')</option>';
+            var selectedClass = selectedIds.indexOf(role.id) > -1 ? 'layui-this' : '';
+            html += '<dd data-value="' + role.id + '" data-name="' + role.name + '" class="' + selectedClass + '">' + role.name + ' (' + role.code + ')</dd>';
         }
-        html += '</select>';
+        html += '</dl>';
+        // 隐藏字段存储选中的ID
+        html += '<input type="hidden" name="role_ids" value="' + selectedIds.join(',') + '" />';
+        html += '</div>';
+        
         $('#' + containerId).html(html);
-        form.render('select');
+        
+        // 初始化多选下拉框事件
+        initRoleMultiSelect(containerId, selectedIds);
+    }
+    
+    // 初始化角色多选下拉框
+    function initRoleMultiSelect(containerId, initialSelectedIds) {
+        var $container = $('#' + containerId);
+        var $select = $container.find('.layui-form-select');
+        var $wrapper = $select.find('.role-tags-wrapper');
+        var $tagsContainer = $select.find('.role-tags-container');
+        var $dl = $select.find('dl');
+        var $input = $select.find('input[type="text"]');
+        var $hiddenInput = $select.find('input[type="hidden"]');
+        var selectedIds = initialSelectedIds || [];
+        
+        // 渲染标签
+        function renderTags() {
+            $tagsContainer.empty();
+            selectedIds.forEach(function(id) {
+                var $dd = $dl.find('dd[data-value="' + id + '"]');
+                if ($dd.length) {
+                    var name = $dd.data('name');
+                    var $tag = $('<span class="role-tag" style="display:inline-flex;align-items:center;background:#5FB878;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;cursor:default;">');
+                    $tag.html('<span>' + name + '</span><i class="layui-icon layui-icon-close" style="margin-left:4px;cursor:pointer;font-size:14px;line-height:1;"></i>');
+                    $tagsContainer.append($tag);
+                    
+                    // 点击×删除标签
+                    $tag.find('.layui-icon-close').on('click', function(e) {
+                        e.stopPropagation();
+                        var idx = selectedIds.indexOf(id);
+                        if (idx > -1) {
+                            selectedIds.splice(idx, 1);
+                            $hiddenInput.val(selectedIds.join(','));
+                            $dl.find('dd[data-value="' + id + '"]').removeClass('layui-this');
+                            renderTags();
+                        }
+                    });
+                }
+            });
+            
+            // 控制placeholder显示/隐藏和wrapper背景
+            var $placeholder = $select.find('.role-placeholder');
+            if (selectedIds.length === 0) {
+                $placeholder.show();
+                // 没有选中时，wrapper背景透明，让placeholder可见
+                $wrapper.css('background', 'transparent');
+            } else {
+                $placeholder.hide();
+                // 有选中时，wrapper背景白色，遮挡placeholder
+                $wrapper.css('background', '#fff');
+            }
+        }
+        
+        // 点击wrapper展开/收起
+        $wrapper.on('click', function(e) {
+            e.stopPropagation();
+            var isShow = $dl.is(':visible');
+            if (isShow) {
+                $dl.hide();
+                $select.removeClass('layui-form-selected');
+            } else {
+                // 关闭其他下拉框
+                $('.role-multi-select').not($select).find('dl').hide();
+                $('.role-multi-select').not($select).removeClass('layui-form-selected');
+                $dl.show();
+                $select.addClass('layui-form-selected');
+            }
+        });
+        
+        // 点击选项切换选中状态
+        $dl.find('dd').on('click', function(e) {
+            e.stopPropagation();
+            var $dd = $(this);
+            var value = $dd.data('value');
+            
+            // 切换选中状态
+            if ($dd.hasClass('layui-this')) {
+                $dd.removeClass('layui-this');
+                // 从已选列表中移除
+                var idx = selectedIds.indexOf(value);
+                if (idx > -1) {
+                    selectedIds.splice(idx, 1);
+                }
+            } else {
+                $dd.addClass('layui-this');
+                // 添加到已选列表
+                if (selectedIds.indexOf(value) === -1) {
+                    selectedIds.push(value);
+                }
+            }
+            
+            // 更新隐藏字段和标签
+            $hiddenInput.val(selectedIds.join(','));
+            renderTags();
+        });
+        
+        // 点击外部收起
+        $(document).on('click.roleSelect_' + containerId, function(e) {
+            if (!$(e.target).closest($select).length) {
+                $dl.hide();
+                $select.removeClass('layui-form-selected');
+            }
+        });
+        
+        // 初始化标签
+        renderTags();
     }
 
     // 加载用户列表
@@ -421,13 +548,11 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
     // 新增用户表单提交（绑定一次，避免重复绑定）
     form.on('submit(addUserSubmit)', function(data) {
         var field = data.field;
+        
+        // 收集所有选中的角色（从隐藏字段获取，值是逗号分隔的字符串）
         var roleIds = [];
-        if (field.role_ids) {
-            if (Array.isArray(field.role_ids)) {
-                roleIds = field.role_ids.map(function(id) { return parseInt(id); });
-            } else {
-                roleIds = [parseInt(field.role_ids)];
-            }
+        if (field.role_ids && field.role_ids !== '') {
+            roleIds = field.role_ids.split(',').map(function(id) { return parseInt(id); });
         }
 
         var submitData = {
@@ -488,13 +613,11 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
     // 编辑用户表单提交（绑定一次，避免重复绑定）
     form.on('submit(editUserSubmit)', function(data) {
         var field = data.field;
+        
+        // 收集所有选中的角色（从隐藏字段获取，值是逗号分隔的字符串）
         var roleIds = [];
-        if (field.role_ids) {
-            if (Array.isArray(field.role_ids)) {
-                roleIds = field.role_ids.map(function(id) { return parseInt(id); });
-            } else {
-                roleIds = [parseInt(field.role_ids)];
-            }
+        if (field.role_ids && field.role_ids !== '') {
+            roleIds = field.role_ids.split(',').map(function(id) { return parseInt(id); });
         }
 
         var submitData = {
@@ -509,6 +632,7 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
             layer.msg(t('user.missingInfo'), {icon: 2});
             return false;
         }
+        
         putApi('/admin/api/rbac/users/' + currentEditUserData.id + '/update/', submitData, function(res) {
             if (res.code === 200) {
                 layer.msg(t('common.updateSuccess'), {icon: 1});

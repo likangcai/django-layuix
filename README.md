@@ -182,7 +182,7 @@ LAYUI_CONFIG = {
     # 版权信息
     'copyright': '',
     
-    # 首页自定义快速链接（类似 django-simpleui 的 SIMPLEUI_HOME_QUICK）
+    # 首页自定义快速链接
     'home_quick_links': [
         {'name': '个人中心', 'icon': 'layui-icon-user', 'url': '/static/layui/pages/profile.html'},
         {'name': '修改密码', 'icon': 'layui-icon-password', 'url': 'javascript:openChangePassword();'},
@@ -550,7 +550,7 @@ def ready(self):
 
 | 方式 | 优点 | 缺点 | 适用场景 |
 |------|------|------|----------|
-| **自动扫描** ✅ | 零配置，类似 django-simpleui，自动识别新模型 | 自定义程度较低 | 大部分场景，特别是快速开发 |
+| **自动扫描** ✅ | 零配置，自动识别新模型 | 自定义程度较低 | 大部分场景，特别是快速开发 |
 | **手动注册** | 完全控制菜单结构、图标、路径 | 需要手动维护 | 需要复杂嵌套或自定义图标的场景 |
 
 #### 注意事项

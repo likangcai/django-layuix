@@ -22,6 +22,9 @@ class Menu(models.Model):
     sort = models.IntegerField(default=0, verbose_name='排序')
     visible = models.BooleanField(default=True, verbose_name='是否显示')
     status = models.BooleanField(default=True, verbose_name='状态')
+    # 前后端可见性控制
+    backend_visible = models.BooleanField(default=True, verbose_name='后台可见')
+    frontend_visible = models.BooleanField(default=True, verbose_name='前台可见')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 

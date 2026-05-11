@@ -511,9 +511,16 @@ layui.use(['table', 'form', 'layer'], function(){
             sort: parseInt(field.sort) || 0
         };
 
+        // 获取提交按钮并添加动画
+        var $btn = $('button[lay-filter="configSubmit"]');
+        $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> ' + (t('common.submitting') || '提交中...'));
+
         var isEdit = !!field.id;
         if (isEdit) {
             putApi('/admin/api/rbac/configs/' + field.id + '/update/', submitData, function(res) {
+                // 恢复按钮状态
+                $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                
                 if (res.code === 200) {
                     layer.msg(t('common.updateSuccess'), {icon: 1});
                     layer.closeAll();
@@ -563,6 +570,9 @@ layui.use(['table', 'form', 'layer'], function(){
             });
         } else {
             postApi('/admin/api/rbac/configs/create/', submitData, function(res) {
+                // 恢复按钮状态
+                $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                
                 if (res.code === 200) {
                     layer.msg(t('common.addSuccess'), {icon: 1});
                     layer.closeAll();

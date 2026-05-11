@@ -90,6 +90,8 @@ class Command(BaseCommand):
                     'parent': parent,
                     'status': True,
                     'visible': True,
+                    'backend_visible': True,
+                    'frontend_visible': True,
                 }
             )
             # 如果菜单已存在，在 --force 模式下更新所有字段，否则只更新名称
@@ -117,6 +119,12 @@ class Command(BaseCommand):
                         updated = True
                     if parent and menu.parent_id != parent.id:
                         menu.parent = parent
+                        updated = True
+                    if menu.backend_visible != True:
+                        menu.backend_visible = True
+                        updated = True
+                    if menu.frontend_visible != True:
+                        menu.frontend_visible = True
                         updated = True
                 else:
                     # 非 --force 模式：只更新名称字段
@@ -162,15 +170,18 @@ class Command(BaseCommand):
             ('新增配置', 'Add Config', '新增配置', created['系统配置'], 'config:add', 1),
             ('编辑配置', 'Edit Config', '编辑配置', created['系统配置'], 'config:edit', 2),
             ('删除配置', 'Delete Config', '删除配置', created['系统配置'], 'config:delete', 3),
-            # 服务器管理下：新增、编辑、删除
+            # 服务器管理下：新增、编辑、删除、查看日志、终端
             ('新增服务器', 'Add Server', '新增服务器', created['服务器管理'], 'server:add', 1),
             ('编辑服务器', 'Edit Server', '编辑服务器', created['服务器管理'], 'server:edit', 2),
             ('删除服务器', 'Delete Server', '删除服务器', created['服务器管理'], 'server:delete', 3),
-             # AI 配置下：新增、编辑、删除、设默认
+            ('查看日志', 'View Log', '查看日志', created['服务器管理'], 'server:view_log', 4),
+            ('终端连接', 'Terminal', '终端连接', created['服务器管理'], 'server:terminal', 5),
+            # AI 配置下：新增、编辑、删除、测试连接、设默认
             ('新增 AI 配置', 'Add AI Config', '新增 AI 配置', created['AI 配置'], 'ai_config:add', 1),
             ('编辑 AI 配置', 'Edit AI Config', '编辑 AI 配置', created['AI 配置'], 'ai_config:edit', 2),
             ('删除 AI 配置', 'Delete AI Config', '删除 AI 配置', created['AI 配置'], 'ai_config:delete', 3),
-            ('设为默认', 'Set Default', '设为默认', created['AI 配置'], 'ai_config:set_default', 4),
+            ('测试连接', 'Test Connection', '测试连接', created['AI 配置'], 'ai_config:test', 4),
+            ('设为默认', 'Set Default', '设为默认', created['AI 配置'], 'ai_config:set_default', 5),
         ]
         for btn_name, btn_name_en, btn_name_zh_hans, parent_menu, permission, sort in buttons_data:
             btn, is_new = Menu.objects.get_or_create(
@@ -187,6 +198,8 @@ class Command(BaseCommand):
                     'sort': sort,
                     'status': True,
                     'visible': True,
+                    'backend_visible': True,
+                    'frontend_visible': True,
                 }
             )
             # 如果按钮已存在，在 --force 模式下更新所有字段，否则只更新名称
@@ -208,6 +221,12 @@ class Command(BaseCommand):
                         updated = True
                     if btn.sort != sort:
                         btn.sort = sort
+                        updated = True
+                    if btn.backend_visible != True:
+                        btn.backend_visible = True
+                        updated = True
+                    if btn.frontend_visible != True:
+                        btn.frontend_visible = True
                         updated = True
                 else:
                     # 非 --force 模式：只更新名称字段
@@ -282,6 +301,61 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'  创建角色: 注册用户'))
         else:
             self.stdout.write(f'  角色已存在: 注册用户')
+
+        # 创建普通用户角色
+        normal_user_role, created = Role.objects.get_or_create(
+            name='普通用户',
+            defaults={
+                'code': 'normal_user',
+                'description': '普通用户，拥有基本功能权限',
+                'is_system': True,
+                'status': True,
+            }
+        )
+        if created:
+            # 普通用户可以访问：仪表盘、用户管理及其按钮权限、个人中心、操作日志
+            dashboard = Menu.objects.filter(name='仪表盘').first()
+            permission_management = Menu.objects.filter(name='权限管理').first()
+            user_management = Menu.objects.filter(name='用户管理').first()
+            system_management = Menu.objects.filter(name='系统管理').first()
+            personal_center = Menu.objects.filter(name='个人中心').first()
+            operation_log = Menu.objects.filter(name='操作日志').first()
+            
+            # 获取用户管理下的按钮权限
+            add_user_btn = Menu.objects.filter(name='新增用户', parent=user_management).first() if user_management else None
+            edit_user_btn = Menu.objects.filter(name='编辑用户', parent=user_management).first() if user_management else None
+            delete_user_btn = Menu.objects.filter(name='删除用户', parent=user_management).first() if user_management else None
+            toggle_status_btn = Menu.objects.filter(name='启用/禁用', parent=user_management).first() if user_management else None
+            
+            menus_to_bind = []
+            if dashboard:
+                menus_to_bind.append(dashboard)
+            if permission_management:
+                menus_to_bind.append(permission_management)
+            if user_management:
+                menus_to_bind.append(user_management)
+            if system_management:
+                menus_to_bind.append(system_management)
+            if personal_center:
+                menus_to_bind.append(personal_center)
+            if operation_log:
+                menus_to_bind.append(operation_log)
+            
+            # 添加按钮权限
+            if add_user_btn:
+                menus_to_bind.append(add_user_btn)
+            if edit_user_btn:
+                menus_to_bind.append(edit_user_btn)
+            if delete_user_btn:
+                menus_to_bind.append(delete_user_btn)
+            if toggle_status_btn:
+                menus_to_bind.append(toggle_status_btn)
+            
+            if menus_to_bind:
+                normal_user_role.menus.set(menus_to_bind)
+            self.stdout.write(self.style.SUCCESS(f'  创建角色: 普通用户'))
+        else:
+            self.stdout.write(f'  角色已存在: 普通用户')
 
         # 创建默认系统配置
         self._init_default_configs()

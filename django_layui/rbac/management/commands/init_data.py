@@ -28,6 +28,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('系统数据初始化完成!'))
         self.stdout.write(self.style.SUCCESS('超级管理员账号: admin / admin123'))
+        self.stdout.write(self.style.SUCCESS('已创建角色: 管理员、注册用户、普通用户'))
 
     def _create_admin(self):
         """创建超级管理员用户"""
@@ -36,16 +37,13 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('    超级管理员已存在，跳过'))
             return
 
-        # 创建超级管理员（不传入 status 参数，创建后单独设置）
+        # 创建超级管理员（is_active默认为True）
         admin = UserProfile.objects.create_superuser(
             username='admin',
             email='admin@example.com',
             password='admin123',
             nickname='超级管理员',
         )
-        # 单独设置 status 字段
-        admin.status = True
-        admin.save()
         
         self.stdout.write(self.style.SUCCESS('    超级管理员创建成功'))
 

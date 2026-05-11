@@ -111,7 +111,7 @@ LAYUI_CONFIG = {
     # 'logo_url': '/static/your-logo.png',
     'login_bg_type': 'gradient',                    # gradient / color / image
     'login_bg_value': 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-    'copyright': 'Copyright © 2025 django-layui Demo',
+    'copyright': 'Yingzi © 2026 Django Layui Admin',
     
     # 首页自定义链接
     'home_quick_links': [

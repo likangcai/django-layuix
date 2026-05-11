@@ -181,7 +181,7 @@ class RbacConfig(AppConfig):
                 {'key': 'logo_icon', 'value': 'layui-icon-code-circle', 'description': 'Logo图标（layui-icon类名）', 'config_type': 'string', 'sort': 4},
                 {'key': 'logo_url', 'value': '', 'description': 'Logo图片URL（优先于图标）', 'config_type': 'image', 'sort': 5},
                 {'key': 'favicon_url', 'value': '', 'description': '网站图标URL', 'config_type': 'image', 'sort': 6},
-                {'key': 'copyright', 'value': 'Copyright © 2024 Django Layui Admin', 'description': '版权信息', 'config_type': 'string', 'sort': 7},
+                {'key': 'copyright', 'value': 'Yingzi © 2026 Django Layui Admin', 'description': '版权信息', 'config_type': 'string', 'sort': 7},
                 {'key': 'frontend_url', 'value': '', 'description': '前端项目地址', 'config_type': 'string', 'sort': 8},
                 {'key': 'login_bg_type', 'value': 'gradient', 'description': '登录页背景类型：gradient(渐变)/color(纯色)/image(图片)', 'config_type': 'string', 'sort': 9},
                 {'key': 'login_bg_value', 'value': 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)', 'description': '登录页背景渐变/颜色值', 'config_type': 'color', 'sort': 10},

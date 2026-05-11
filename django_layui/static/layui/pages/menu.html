@@ -185,13 +185,29 @@
         <div class="layui-form-item">
             <label class="layui-form-label">{{ t('menu.visible') }}</label>
             <div class="layui-input-block">
-                <input type="checkbox" name="visible" lay-skin="switch" lay-text="{{ t('common.yes') }}|{{ t('common.no') }}" checked>
+                <input type="checkbox" name="visible" lay-skin="switch" lay-text="{{ t('common.show') || '显示' }}|{{ t('common.hide') || '隐藏' }}" checked lay-filter="visibleSwitch" style="margin-right: 10px;">
+                <span style="color: var(--text-muted); font-size: 12px; line-height: 30px;">总开关：关闭后前后台菜单均不显示</span>
             </div>
         </div>
         <div class="layui-form-item">
             <label class="layui-form-label">{{ t('menu.status') }}</label>
             <div class="layui-input-block">
-                <input type="checkbox" name="status" lay-skin="switch" lay-text="{{ t('common.enable') }}|{{ t('common.disable') }}" checked>
+                <input type="checkbox" name="status" lay-skin="switch" lay-text="{{ t('common.enable') }}|{{ t('common.disable') }}" checked lay-filter="statusSwitch" style="margin-right: 10px;">
+                <span style="color: var(--text-muted); font-size: 12px; line-height: 30px;">状态开关：禁用后API接口也无法调用</span>
+            </div>
+        </div>
+        <div class="layui-form-item visibility-fields">
+            <label class="layui-form-label">{{ t('menu.backendVisible') || '后台可见' }}</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="backend_visible" lay-skin="switch" lay-text="{{ t('common.show') || '显示' }}|{{ t('common.hide') || '隐藏' }}" checked style="margin-right: 10px;">
+                <span style="color: var(--text-muted); font-size: 12px; line-height: 30px;">仅控制后台菜单显示（受"可见"总开关影响）</span>
+            </div>
+        </div>
+        <div class="layui-form-item visibility-fields">
+            <label class="layui-form-label">{{ t('menu.frontendVisible') || '前台可见' }}</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="frontend_visible" lay-skin="switch" lay-text="{{ t('common.show') || '显示' }}|{{ t('common.hide') || '隐藏' }}" checked style="margin-right: 10px;">
+                <span style="color: var(--text-muted); font-size: 12px; line-height: 30px;">仅控制前台菜单显示（受"可见"总开关影响）</span>
             </div>
         </div>
         <div class="layui-form-item" style="text-align:center;padding-top:10px;">
@@ -263,6 +279,8 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 sort: item.sort,
                 visible: item.visible,
                 status: item.status,
+                backend_visible: item.backend_visible !== undefined ? item.backend_visible : true,
+                frontend_visible: item.frontend_visible !== undefined ? item.frontend_visible : true,
                 path: item.path,
                 component: item.component,
                 parent_id: item.parent_id || 0,
@@ -375,13 +393,23 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                         {field: 'sort', title: t('menu.sort'), width: 80, align: 'center'},
                         {field: 'visible', title: t('menu.visible'), width: 80, align: 'center', templet: function(d) {
                             return d.visible
-                                ? '<span class="layui-badge layui-bg-green">' + t('common.visible') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + t('common.hidden') + '</span>';
+                                ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
+                                : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
                         }},
                         {field: 'status', title: t('menu.status'), width: 80, align: 'center', templet: function(d) {
                             return d.status
                                 ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
                                 : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
+                        }},
+                        {field: 'backend_visible', title: t('menu.backendVisible') || '后台可见', width: 100, align: 'center', templet: function(d) {
+                            return d.backend_visible
+                                ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
+                                : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
+                        }},
+                        {field: 'frontend_visible', title: t('menu.frontendVisible') || '前台可见', width: 100, align: 'center', templet: function(d) {
+                            return d.frontend_visible
+                                ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
+                                : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
                         }},
                         {field: 'permission', title: t('menu.permission'), width: 160},
                         {title: t('common.operation'), width: 320, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
@@ -424,10 +452,19 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                             permission: menuData.permission || '',
                             sort: menuData.sort || 0,
                             visible: menuData.visible,
-                            status: menuData.status
+                            status: menuData.status,
+                            backend_visible: menuData.backend_visible !== undefined ? menuData.backend_visible : true,
+                            frontend_visible: menuData.frontend_visible !== undefined ? menuData.frontend_visible : true
                         });
                         if (menuData.icon) {
                             layero.find('#iconPreview').html('<i class="layui-icon ' + menuData.icon + '"></i> ' + menuData.icon);
+                        }
+                        
+                        // 初始化联动状态：如果 visible=false，禁用前后端可见性开关
+                        if (!menuData.visible) {
+                            layero.find('input[name="backend_visible"]').prop('disabled', true);
+                            layero.find('input[name="frontend_visible"]').prop('disabled', true);
+                            layero.find('.visibility-fields').css('opacity', '0.5');
                         }
                     } else if (menuData && menuData._parentId) {
                         form.val('menuForm', {
@@ -436,6 +473,25 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     }
 
                     form.render(null, 'menuForm');
+
+                    // ===== 联动逻辑：visible 总开关控制 =====
+                    form.on('switch(visibleSwitch)', function(data) {
+                        var isVisible = data.elem.checked;
+                        var $layero = $(layero);
+                        
+                        if (!isVisible) {
+                            // visible=false 时，自动关闭 backend_visible 和 frontend_visible 并禁用
+                            $layero.find('input[name="backend_visible"]').prop('checked', false).prop('disabled', true);
+                            $layero.find('input[name="frontend_visible"]').prop('checked', false).prop('disabled', true);
+                            $layero.find('.visibility-fields').css('opacity', '0.5');
+                        } else {
+                            // visible=true 时，恢复 backend_visible 和 frontend_visible 的控制
+                            $layero.find('input[name="backend_visible"]').prop('checked', true).prop('disabled', false);
+                            $layero.find('input[name="frontend_visible"]').prop('checked', true).prop('disabled', false);
+                            $layero.find('.visibility-fields').css('opacity', '1');
+                        }
+                        form.render('checkbox', 'menuForm');
+                    });
 
                     layero.find('input[name="icon"]').on('input', function() {
                         var val = $(this).val();
@@ -477,11 +533,20 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 sort: parseInt(field.sort) || 0,
                 visible: field.visible === 'on',
                 status: field.status === 'on',
+                backend_visible: field.backend_visible === 'on',
+                frontend_visible: field.frontend_visible === 'on',
                 parent_id: field.parent_id ? parseInt(field.parent_id) : null
             };
 
+            // 获取提交按钮并添加动画
+            var $btn = $('button[lay-filter="menuSubmit"]');
+            $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> ' + (t('common.submitting') || '提交中...'));
+
             if (id) {
                 putApi('/admin/api/rbac/menus/' + id + '/', submitData, function(res) {
+                    // 恢复按钮状态
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                    
                     if (res.code === 200) {
                         layer.msg(t('common.updateSuccess'), {icon: 1});
                         layer.closeAll();
@@ -493,6 +558,9 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 });
             } else {
                 postApi('/admin/api/rbac/menus/create/', submitData, function(res) {
+                    // 恢复按钮状态
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                    
                     if (res.code === 200) {
                         layer.msg(t('common.addSuccess'), {icon: 1});
                         layer.closeAll();
