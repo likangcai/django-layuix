@@ -1489,11 +1489,25 @@ def config_create(request):
     if SystemConfig.objects.filter(key=key).exists():
         return error_response('配置键已存在', 400)
 
+    # 验证 config_type
+    config_type = body.get('config_type', 'string')
+    valid_types = [choice[0] for choice in SystemConfig.CONFIG_TYPE_CHOICES]
+    if config_type not in valid_types:
+        return error_response(f'无效的配置类型: {config_type}，支持的类型: {", ".join(valid_types)}', 400)
+
+    # 如果是 json 类型，验证 JSON 格式
+    if config_type == 'json':
+        value = body.get('value', '')
+        try:
+            json.loads(value)
+        except (json.JSONDecodeError, TypeError) as e:
+            return error_response(f'JSON 格式错误: {str(e)}', 400)
+
     config = SystemConfig(
         key=key,
         value=body.get('value', ''),
         description=body.get('description', ''),
-        config_type=body.get('config_type', 'string'),
+        config_type=config_type,
         sort=int(body.get('sort', 0)),
     )
     config.save()
@@ -1515,12 +1529,34 @@ def config_update(request, pk):
         return error_response('配置不存在', 404)
 
     body = get_request_body(request)
+    
+    # 验证 config_type
+    if 'config_type' in body:
+        config_type = body['config_type']
+        valid_types = [choice[0] for choice in SystemConfig.CONFIG_TYPE_CHOICES]
+        if config_type not in valid_types:
+            return error_response(f'无效的配置类型: {config_type}，支持的类型: {", ".join(valid_types)}', 400)
+        
+        # 如果是 json 类型，验证 JSON 格式
+        if config_type == 'json':
+            value = body.get('value', config.value)
+            try:
+                json.loads(value)
+            except (json.JSONDecodeError, TypeError) as e:
+                return error_response(f'JSON 格式错误: {str(e)}', 400)
+        
+        config.config_type = config_type
+    
     if 'value' in body:
+        # 如果 config_type 是 json，验证 JSON 格式
+        if config.config_type == 'json':
+            try:
+                json.loads(body['value'])
+            except (json.JSONDecodeError, TypeError) as e:
+                return error_response(f'JSON 格式错误: {str(e)}', 400)
         config.value = body['value']
     if 'description' in body:
         config.description = body['description']
-    if 'config_type' in body:
-        config.config_type = body['config_type']
     if 'sort' in body:
         config.sort = int(body['sort'])
     config.save()

@@ -157,10 +157,26 @@ class OperationLog(models.Model):
 
 class SystemConfig(models.Model):
     """系统配置模型"""
+    CONFIG_TYPE_CHOICES = [
+        ('string', '字符串'),
+        ('integer', '整数'),
+        ('boolean', '布尔值'),
+        ('json', 'JSON'),
+        ('image', '图片'),
+        ('color', '颜色'),
+        ('text', '文本'),
+        ('url', 'URL'),
+    ]
+    
     key = models.CharField(max_length=100, unique=True, verbose_name='配置键')
     value = models.TextField(blank=True, default='', verbose_name='配置值')
     description = models.CharField(max_length=200, blank=True, default='', verbose_name='描述')
-    config_type = models.CharField(max_length=20, default='string', verbose_name='配置类型')
+    config_type = models.CharField(
+        max_length=20, 
+        default='string', 
+        choices=CONFIG_TYPE_CHOICES,
+        verbose_name='配置类型'
+    )
     sort = models.IntegerField(default=0, verbose_name='排序')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')

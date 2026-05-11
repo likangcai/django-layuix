@@ -3,7 +3,7 @@
 初始化默认菜单数据
 用法:
   python manage.py init_menu             # 初始化菜单、角色、系统配置（已存在则跳过）
-  python manage.py init_menu --force     # 强制清空后重新初始化
+  python manage.py init_menu --force     # 强制更新所有菜单、角色权限、系统配置（重置为默认值）
   python manage.py init_menu --fix-icons # 修复数据库中可能存在的无效 Layui 图标
 
 """
@@ -40,16 +40,29 @@ class Command(BaseCommand):
             self._fix_icons()
             return
 
-        # 如果已有菜单数据且不强制重新初始化，则跳过
-        if Menu.objects.exists() and not force:
-            self._init_default_configs()
-            self.stdout.write(self.style.WARNING('菜单数据已存在，跳过初始化。如需重新初始化，请使用 --force 参数。'))
-            return
-        
-        # 如果强制重新初始化，更新现有菜单而不是删除
-        if force and Menu.objects.exists():
-            self.stdout.write(self.style.WARNING('使用 --force 模式，将更新现有菜单数据（保留角色权限关联）'))
+        # 检查 rbac 核心菜单是否已存在（通过检查'权限管理'目录菜单）
+        # 不使用 Menu.objects.exists()，因为其他 app（如 store）可能已通过 auto_register_admin_apps 创建了菜单
+        try:
+            rbac_menu_exists = Menu.objects.filter(name='权限管理').exists()
+        except Exception:
+            # 如果表不存在（例如首次迁移前），则视为不存在
+            rbac_menu_exists = False
+            
+        if rbac_menu_exists and not force:
+            self.stdout.write(self.style.WARNING('rbac 菜单数据已存在，跳过菜单初始化。'))
+        else:
+            if force and rbac_menu_exists:
+                self.stdout.write(self.style.WARNING('使用 --force 模式，将更新现有 rbac 菜单数据（保留角色权限关联）'))
+            self._init_menus(force)
+            
+        # 无论菜单是否已存在，都继续执行角色和配置的初始化
+        # 这确保了即使其他 app 抢跑了菜单注册，角色和配置也能正确创建
+        self._init_roles(force)
+        self._init_default_configs(force)
+        self.stdout.write(self.style.SUCCESS('\n初始化完成！'))
 
+    def _init_menus(self, force=False):
+        """初始化菜单数据"""
         # 创建菜单
         # (name, name_en, name_zh_hans, icon, path, menu_type, sort, parent_name_or_None)
         # menu_type: 1=目录, 2=菜单
@@ -247,6 +260,8 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f'  按钮权限已存在: {btn_name}')
 
+    def _init_roles(self, force=False):
+        """初始化默认角色"""
         # 创建默认角色
         admin_role, created = Role.objects.get_or_create(
             name='管理员',
@@ -300,7 +315,23 @@ class Command(BaseCommand):
                 registered_role.menus.set(menus_to_bind)
             self.stdout.write(self.style.SUCCESS(f'  创建角色: 注册用户'))
         else:
-            self.stdout.write(f'  角色已存在: 注册用户')
+            # --force 模式下，重新同步注册用户的默认权限
+            if force:
+                dashboard = Menu.objects.filter(name='仪表盘').first()
+                system_management = Menu.objects.filter(name='系统管理').first()
+                personal_center = Menu.objects.filter(name='个人中心').first()
+                menus_to_bind = []
+                if dashboard:
+                    menus_to_bind.append(dashboard)
+                if system_management:
+                    menus_to_bind.append(system_management)
+                if personal_center:
+                    menus_to_bind.append(personal_center)
+                if menus_to_bind:
+                    registered_role.menus.set(menus_to_bind)
+                self.stdout.write(self.style.WARNING(f'  已重置注册用户权限'))
+            else:
+                self.stdout.write(f'  角色已存在: 注册用户')
 
         # 创建普通用户角色
         normal_user_role, created = Role.objects.get_or_create(
@@ -355,14 +386,52 @@ class Command(BaseCommand):
                 normal_user_role.menus.set(menus_to_bind)
             self.stdout.write(self.style.SUCCESS(f'  创建角色: 普通用户'))
         else:
-            self.stdout.write(f'  角色已存在: 普通用户')
+            # --force 模式下，重新同步普通用户的默认权限
+            if force:
+                dashboard = Menu.objects.filter(name='仪表盘').first()
+                permission_management = Menu.objects.filter(name='权限管理').first()
+                user_management = Menu.objects.filter(name='用户管理').first()
+                system_management = Menu.objects.filter(name='系统管理').first()
+                personal_center = Menu.objects.filter(name='个人中心').first()
+                operation_log = Menu.objects.filter(name='操作日志').first()
+                
+                # 获取用户管理下的按钮权限
+                add_user_btn = Menu.objects.filter(name='新增用户', parent=user_management).first() if user_management else None
+                edit_user_btn = Menu.objects.filter(name='编辑用户', parent=user_management).first() if user_management else None
+                delete_user_btn = Menu.objects.filter(name='删除用户', parent=user_management).first() if user_management else None
+                toggle_status_btn = Menu.objects.filter(name='启用/禁用', parent=user_management).first() if user_management else None
+                
+                menus_to_bind = []
+                if dashboard:
+                    menus_to_bind.append(dashboard)
+                if permission_management:
+                    menus_to_bind.append(permission_management)
+                if user_management:
+                    menus_to_bind.append(user_management)
+                if system_management:
+                    menus_to_bind.append(system_management)
+                if personal_center:
+                    menus_to_bind.append(personal_center)
+                if operation_log:
+                    menus_to_bind.append(operation_log)
+                
+                # 添加按钮权限
+                if add_user_btn:
+                    menus_to_bind.append(add_user_btn)
+                if edit_user_btn:
+                    menus_to_bind.append(edit_user_btn)
+                if delete_user_btn:
+                    menus_to_bind.append(delete_user_btn)
+                if toggle_status_btn:
+                    menus_to_bind.append(toggle_status_btn)
+                
+                if menus_to_bind:
+                    normal_user_role.menus.set(menus_to_bind)
+                self.stdout.write(self.style.WARNING(f'  已重置普通用户权限'))
+            else:
+                self.stdout.write(f'  角色已存在: 普通用户')
 
-        # 创建默认系统配置
-        self._init_default_configs()
-
-        self.stdout.write(self.style.SUCCESS('\n初始化完成！'))
-
-    def _init_default_configs(self):
+    def _init_default_configs(self, force=False):
         """初始化默认系统配置项"""
         self.stdout.write(self.style.MIGRATE_HEADING('\n  初始化系统配置:'))
         configs = [
@@ -378,21 +447,47 @@ class Command(BaseCommand):
             ('login_bg_type', 'gradient', '登录页背景类型：gradient(渐变)/color(纯色)/image(图片)', 'string', 10),
             ('login_bg_value', 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)', '登录页背景渐变/颜色值（当type为gradient或color时生效）', 'color', 11),
             ('login_bg_image', '', '登录页背景图片URL（当type为image时生效，支持本地上传）', 'image', 12),
+            # 以下配置不会在 ready() 中提前创建，只在 init_menu 中创建
+            ('home_stats_cards', '[{"title":"系统用户","icon":"layui-icon-user","color":"#1E9FFF","api_field":"user_count"},{"title":"系统角色","icon":"layui-icon-template-1","color":"#5FB878","api_field":"role_count"},{"title":"菜单数量","icon":"layui-icon-app","color":"#FFB800","api_field":"menu_count"},{"title":"操作日志","icon":"layui-icon-log","color":"#FF5722","api_field":"log_count"}]', '首页统计卡片配置（JSON 格式）', 'json', 13),
+            ('home_quick_links', '[{"name":"Django官网","icon":"layui-icon-website","url":"https://www.djangoproject.com/"},{"name":"Layui文档","icon":"layui-icon-template","url":"https://www.layui.dev/"},{"name":"GitHub","icon":"layui-icon-github","url":"https://github.com/likangcai/django-layui"},{"name":"Gitee","icon":"layui-icon-gitee","url":"https://gitee.com/yingzi_shadow/django_layui"}]', '首页快速链接配置（JSON 格式）', 'json', 14),
         ]
+        created_count = 0
+        updated_count = 0
+        skipped_count = 0
         for key, value, desc, config_type, sort in configs:
-            _, is_new = SystemConfig.objects.get_or_create(
-                key=key,
-                defaults={
-                    'value': value,
-                    'description': desc,
-                    'config_type': config_type,
-                    'sort': sort,
-                }
-            )
-            if is_new:
+            try:
+                cfg = SystemConfig.objects.get(key=key)
+                if force:
+                    # --force 模式：更新为默认值
+                    cfg.value = value
+                    cfg.description = desc
+                    cfg.config_type = config_type
+                    cfg.sort = sort
+                    cfg.save()
+                    updated_count += 1
+                    self.stdout.write(self.style.WARNING(f'  更新配置: {key} (重置为默认值)'))
+                else:
+                    skipped_count += 1
+                    self.stdout.write(f'  配置已存在: {key}')
+            except SystemConfig.DoesNotExist:
+                # 配置不存在，创建新的
+                SystemConfig.objects.create(
+                    key=key,
+                    value=value,
+                    description=desc,
+                    config_type=config_type,
+                    sort=sort,
+                )
+                created_count += 1
                 self.stdout.write(self.style.SUCCESS(f'  创建配置: {key}'))
-            else:
-                self.stdout.write(f'  配置已存在: {key}')
+        
+        if force:
+            if updated_count > 0:
+                self.stdout.write(self.style.SUCCESS(f'  已更新 {updated_count} 个系统配置为默认值。'))
+        elif created_count > 0:
+            self.stdout.write(self.style.SUCCESS(f'  成功创建 {created_count} 个系统配置。'))
+        elif skipped_count > 0:
+            self.stdout.write(self.style.WARNING(f'  提示：{skipped_count} 个系统配置已存在，未作修改。如需重置为默认值，请使用 --force 参数。'))
 
     def _fix_icons(self):
         """修复数据库中无效的 Layui 图标（原 fix_icons 命令功能）"""

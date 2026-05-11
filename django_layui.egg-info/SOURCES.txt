@@ -40,6 +40,7 @@ django_layui/rbac/management/commands/init_data.py
 django_layui/rbac/management/commands/init_menu.py
 django_layui/rbac/migrations/0001_initial.py
 django_layui/rbac/migrations/0002_menu_backend_visible_menu_frontend_visible.py
+django_layui/rbac/migrations/0003_alter_systemconfig_config_type.py
 django_layui/rbac/migrations/__init__.py
 django_layui/static/layui/favicon.ico
 django_layui/static/layui/css/admin.css

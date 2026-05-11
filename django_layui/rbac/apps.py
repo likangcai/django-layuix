@@ -174,6 +174,12 @@ class RbacConfig(AppConfig):
         """Ensure default system configs exist in database"""
         try:
             from .models import SystemConfig
+            # Check if table exists first to avoid errors during initial migrations
+            from django.db import connection
+            table_exists = 'sys_systemconfig' in connection.introspection.table_names()
+            if not table_exists:
+                return
+            
             default_configs = [
                 {'key': 'system_name', 'value': 'Django Layui Admin', 'description': '系统名称', 'config_type': 'string', 'sort': 1},
                 {'key': 'system_version', 'value': '1.0.0', 'description': '系统版本号', 'config_type': 'string', 'sort': 2},
@@ -193,3 +199,5 @@ class RbacConfig(AppConfig):
                     SystemConfig.objects.create(**cfg)
         except Exception:
             pass
+
+

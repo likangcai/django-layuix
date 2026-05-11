@@ -228,7 +228,40 @@ OPERATION_LOG = {
 
 安装 RBAC 后，可在后台「系统管理 → 系统配置」页面动态管理系统参数，**修改后实时生效，无需重启服务**。
 
-配置优先级：**数据库 `sys_config` 表 > `settings.LAYUI_CONFIG` > 默认值**
+**配置优先级：** 数据库 `sys_config` 表 > `settings.LAYUI_CONFIG` > 默认值
+
+**业务逻辑说明：**
+
+1. **默认值**：代码中定义的初始值（在 `init_menu` 命令中设置）
+2. **settings.py 配置**：开发者在项目中自定义的默认值
+3. **数据库配置**：通过后台界面动态修改的值（**最高优先级**）
+
+**工作流程：**
+- 用户登录时，系统首先从 `settings.LAYUI_CONFIG` 读取默认配置
+- 然后查询数据库 `sys_config` 表，如果存在同名配置，则覆盖 settings.py 中的值
+- 最终将合并后的配置传递给前端模板
+
+**示例场景：**
+```python
+# settings.py 中配置
+LAYUI_CONFIG = {
+    'home_quick_links': [
+        {'name': '个人中心', 'icon': 'layui-icon-user', 'url': '/static/layui/pages/profile.html'},
+    ],
+}
+
+# 数据库中 sys_config 表配置（通过后台界面修改）
+key: home_quick_links
+value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages/dashboard.html"}]'
+
+# 最终生效的是数据库中的配置（仪表盘链接）
+```
+
+**支持的配置类型：** 字符串、整数、布尔、JSON、URL、图片、颜色、文本。
+
+**重要提示：**
+- 使用 `python manage.py init_menu --force` 会重置所有系统配置为代码中的默认值
+- 如需保留自定义配置，请避免使用 `--force` 参数，或直接在后台界面修改
 
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|

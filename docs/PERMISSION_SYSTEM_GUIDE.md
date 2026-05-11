@@ -279,7 +279,61 @@ LAYUI_CONFIG = {
 返回结果（有权限→执行，无权限→拒绝）
 ```
 
-### 4.2 数据关系图
+### 4.2 系统配置优先级逻辑
+
+**配置加载顺序：**
+
+1. **默认值**：代码中定义的初始值（在 `init_menu` 命令中设置）
+2. **settings.py 配置**：开发者在项目中自定义的默认值
+3. **数据库配置**：通过后台界面动态修改的值（**最高优先级**）
+
+**业务场景示例：**
+
+```python
+# settings.py 中的默认配置
+LAYUI_CONFIG = {
+    'home_quick_links': [
+        {'name': '个人中心', 'icon': 'layui-icon-user', 'url': '/static/layui/pages/profile.html'},
+    ],
+}
+
+# 数据库中 sys_config 表配置（通过后台界面修改）
+key: home_quick_links
+value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages/dashboard.html"}]'
+
+# 最终生效的是数据库中的配置（仪表盘链接）
+```
+
+**实现原理：**
+
+在 [`admin.py`](file:///D:/chengxu/django_layui/django_layui/admin.py) 的 `LayuiAdminSite.each_context()` 方法中：
+
+```python
+# 1. 从 settings.py 读取默认配置
+layui_config = getattr(settings, 'LAYUI_CONFIG', {})
+
+# 2. 从数据库读取配置并覆盖
+try:
+    from .rbac.models import SystemConfig
+    db_configs = SystemConfig.objects.all()
+    for cfg in db_configs:
+        if cfg.config_type == 'text' and cfg.key in ('home_quick_links', 'home_stats_cards'):
+            import json
+            try:
+                layui_config[cfg.key] = json.loads(cfg.value)
+            except (json.JSONDecodeError, TypeError):
+                layui_config[cfg.key] = cfg.value
+        else:
+            layui_config[cfg.key] = cfg.value
+except Exception:
+    pass
+```
+
+**重要提示：**
+- 使用 `python manage.py init_menu --force` 会重置所有系统配置为代码中的默认值
+- 如需保留自定义配置，请避免使用 `--force` 参数，或直接在后台界面修改
+
+### 4.3 数据关系图
 
 ```
 ┌─────────────┐       ┌─────────────┐       ┌─────────────┐
@@ -294,7 +348,7 @@ LAYUI_CONFIG = {
                      └─────────────┘       └─────────────┘
 ```
 
-### 4.3 权限继承规则
+### 4.4 权限继承规则
 
 | 规则 | 说明 |
 |------|------|
@@ -661,8 +715,24 @@ Object.assign(window.menuPathMap || {}, {
 ```bash
 cd your_project
 python manage.py migrate
-python manage.py init_menu  # 会自动注册新菜单
+
+# 初始化菜单、角色和系统配置（已存在则跳过）
+python manage.py init_menu
+
+# 强制更新所有菜单、角色权限和系统配置（重置为默认值）
+python manage.py init_menu --force
+
+# 创建超级管理员 + 初始化菜单
+python manage.py init_data
+
+# 强制重新初始化所有数据
+python manage.py init_data --force
+
+# 修复无效的 Layui 图标
+python manage.py init_menu --fix-icons
 ```
+
+> **注意**：使用 `--force` 参数会重置系统配置为代码中的默认值（包括 `home_quick_links`、`home_stats_cards` 等）。
 
 ### 7.2 为现有角色分配权限
 
