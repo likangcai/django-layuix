@@ -113,6 +113,9 @@ python manage.py migrate
 
 # 初始化默认菜单、角色、权限、系统配置（仅首次运行）
 python manage.py init_menu
+
+# 需要同步创建测试数据的也可以执行以下命令
+python manage.py init_data
 ```
 
 `init_menu` 命令会自动创建：
@@ -198,10 +201,10 @@ LAYUI_CONFIG = {
 }
 
 # 可选：自定义 Layui CDN
-LAYUI_CDN = 'https://cdn.jsdelivr.net/npm/layui@2.13.5/dist/'
+LAYUI_CDN = 'https://cdn.jsdelivr.net/npm/layui@2.13.7/dist/'
 
 # 可选：自定义 Layui 版本
-LAYUI_VERSION = '2.13.5'
+LAYUI_VERSION = '2.13.7'
 ```
 
 #### 4.2 操作日志配置（可选）
@@ -422,55 +425,48 @@ INSTALLED_APPS = [
 
 ### 5.1 自定义应用菜单注册（无需修改库源码）
 
-django-layui 提供了两种菜单注册方式，允许外部项目动态添加菜单，无需修改库源码。
+django-layui 提供了手动注册菜单的 API，允许外部项目动态添加菜单，无需修改库源码。
 
-> **重要**：在 `ready()` 方法中调用 `auto_register_admin_apps()` 之前，**必须先导入应用的 `admin.py` 模块**，否则 `@admin.register` 装饰器不会生效，模型不会被注册到 Admin 中。
+> ⚠️ **推荐使用 `register_menus` 手动注册**，不要使用已废弃的 `auto_register_admin_apps`。
+> 手动注册可以完全控制菜单结构、路径、图标和按钮权限，且避免孤儿菜单问题。
+
+#### 方式一（推荐）：手动注册菜单 + API 路由
+
+如果你的应用需要自定义前端页面（Layui 静态页面），需要完成**三步**：
+
+**Step 1：创建 REST API 视图**
 
 ```python
-# myapp/apps.py
-from django.apps import AppConfig
+# myapp/views_api.py
+from django.views.decorators.csrf import csrf_exempt
+from django_layui.rbac.views import api_login_required, get_request_body, success_response, error_response
+from .models import MyModel
 
-class MyappConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'myapp'
-    verbose_name = '我的应用'
-    
-    def ready(self):
-        """
-        自动扫描并注册所有已注册到 Admin 的模型
-        这是推荐的方式，类似于 django-simpleui
-        """
-        try:
-            from django_layui.rbac import auto_register_admin_apps
-            
-            # ⚠️ 重要：必须先导入 admin.py，确保 @admin.register 装饰器生效
-            # Django 不会自动导入应用的 admin 模块
-            import myapp.admin  # noqa: F401
-            
-            # 自动扫描 Admin 中的模型
-            auto_register_admin_apps(
-                exclude_apps=['auth', 'contenttypes', 'sessions'],  # 排除不需要显示的 app
-                menu_sort_order={
-                    'store': 1,           # store 应用排在第1位
-                    'myapp': 2,           # myapp 应用排在第2位
-                    'django_layui.rbac': 3,  # RBAC 管理排在第3位
-                }
-            )
-        except Exception as e:
-            print(f"Warning: Could not register menus: {e}")
+
+@csrf_exempt
+@api_login_required
+def mymodel_list(request):
+    """GET /admin/api/myapp/mymodel/ - 列表"""
+    queryset = MyModel.objects.all().order_by('-id')
+    total = queryset.count()
+    # 分页...
+    data = [{'id': m.id, 'name': m.name} for m in queryset]
+    return success_response({'list': data, 'total': total})
 ```
 
-**特性：**
-- ✅ 自动识别 `admin.site.register()` 注册的所有模型
-- ✅ 自动生成目录（App）和子菜单（Model）结构
-- ✅ 自动创建增删改查按钮权限
-- ✅ 支持自定义排序和排除特定 app
-- ✅ 幂等性，多次调用不会重复创建
-- ⚠️ **重要**：必须在 `ready()` 中显式导入 `admin.py`（如 `import myapp.admin`）
+**Step 2：注册 URL + 菜单（在 apps.py 中）**
 
-#### 方式二：手动注册菜单
+```python
+# myapp/urls.py
+from django.urls import path
+from . import views_api
 
-如果需要更精细的控制（自定义图标、路径、嵌套结构），可以手动定义菜单。
+urlpatterns = [
+    path('mymodel/', views_api.mymodel_list, name='myapp_mymodel_list'),
+    path('mymodel/create/', views_api.mymodel_create, name='myapp_mymodel_create'),
+    path('mymodel/<int:pk>/', views_api.mymodel_detail, name='myapp_mymodel_detail'),
+]
+```
 
 ```python
 # myapp/apps.py
@@ -480,120 +476,132 @@ class MyappConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'myapp'
     verbose_name = '我的应用'
-    
+
     def ready(self):
-        """
-        手动注册菜单
-        适用于需要自定义图标、路径、排序等场景
-        """
         try:
-            from django_layui.rbac import register_menus
-            
-            # 注册菜单
+            from django_layui.rbac.menu_registry import register_menus
+
+            import myapp.admin  # noqa: F401
+
+            # 注册菜单，path 指向 Layui 静态页面
             register_menus(
                 menus_data=[
-                    # 目录：演示应用
-                    ('演示应用', 'layui-icon-app', '', 1, 4, None),
-                    # 子菜单：商品管理
-                    ('商品管理', 'layui-icon-cart-simple', '/store/product', 2, 1, '演示应用'),
-                    # 子菜单：订单管理
-                    ('订单管理', 'layui-icon-form', '/store/order', 2, 2, '演示应用'),
+                    ('我的应用', 'layui-icon-app', '', 1, 10, None),
+                    ('数据管理', 'layui-icon-table',
+                     '/static/myapp/pages/mymodel.html', 2, 1, '我的应用'),
                 ],
                 buttons_data=[
-                    # 商品管理按钮权限
-                    ('新增商品', '商品管理', 'product:add', 1),
-                    ('编辑商品', '商品管理', 'product:edit', 2),
-                    ('删除商品', '商品管理', 'product:delete', 3),
-                    # 订单管理按钮权限
-                    ('查看订单', '订单管理', 'order:view', 1),
-                    ('订单发货', '订单管理', 'order:ship', 2),
+                    ('新增数据', '数据管理', 'mymodel:add', 1),
+                    ('编辑数据', '数据管理', 'mymodel:edit', 2),
+                    ('删除数据', '数据管理', 'mymodel:delete', 3),
                 ]
             )
+
+            # ⚠️ 必须通过 site.get_urls 补丁注入到 admin site 内部
+            self._register_api_urls()
+
         except Exception as e:
-            print(f"Warning: Could not register menus: {e}")
+            print(f"Warning: Could not initialize myapp: {e}")
+
+    def _register_api_urls(self):
+        """注册 API 路由到 admin site 内部（不能写在项目级 urls.py）"""
+        from django.contrib.admin import site
+        from django.urls import path, include
+        from . import urls as myapp_urls
+
+        original_get_urls = site.get_urls
+
+        def patched_get_urls():
+            urls = original_get_urls()
+            custom_urls = [
+                path('api/myapp/', include((myapp_urls.urlpatterns, 'myapp'))),
+            ]
+            return custom_urls + urls
+
+        site.get_urls = patched_get_urls
 ```
 
-**参数说明：**
+**Step 3：创建 Layui 前端页面**
 
-- `menus_data`: 菜单列表，每个元素为元组：
-  ```python
-  (name, icon, path, menu_type, sort, parent_name_or_None)
-  ```
-  - `name`: 菜单名称
-  - `icon`: Layui图标类名（如 `'layui-icon-app'`）
-  - `path`: 路由地址（如 `'/store/product'`）
-  - `menu_type`: 1=目录, 2=菜单, 3=按钮
-  - `sort`: 排序号
-  - `parent_name`: 父菜单名称，顶级菜单为None
-  
-- `buttons_data`: 按钮权限列表（可选），每个元素为元组：
-  ```python
-  (btn_name, parent_menu_name, permission, sort)
-  ```
-  - `btn_name`: 按钮名称
-  - `parent_menu_name`: 所属菜单名称
-  - `permission`: 权限标识（如 `'product:add'`）
-  - `sort`: 排序号
+前端页面放在 `myapp/static/myapp/pages/mymodel.html`，访问路径为 `/static/myapp/pages/mymodel.html`。
 
-#### 前端页面映射（可选）
+> **重要**：表格渲染必须使用 `url` 服务端分页模式，不要用 `data: list` + `page.count`，
+> 否则分页总数显示不准确。
 
-如果你的应用有自定义的前端页面，需要在模板中添加路径映射。可以通过继承 `admin/index.html` 来实现：
-
-```html
-<!-- templates/admin/index.html -->
-{% extends "admin/index.html" %}
-
-{% block extra_js %}
-{{ block.super }}
-<script>
-// 扩展菜单路径映射
-Object.assign(menuPathMap, {
-    '/store/category': '/static/myapp/pages/store-category.html',
-    '/store/product': '/static/myapp/pages/store-product.html',
-    '/store/order': '/static/myapp/pages/store-order.html',
+```javascript
+// myapp/static/myapp/pages/mymodel.html 中的 table.render
+tableIns = table.render({
+    elem: '#mytable',
+    url: '/admin/api/myapp/mymodel/',      // ✅ 服务端分页
+    page: {limit: 10},
+    parseData: function(res) {
+        return {
+            "code": res.code === 200 ? 0 : res.code,
+            "count": res.data ? res.data.total : 0,
+            "data": res.data ? res.data.list : []
+        };
+    },
+    request: { pageName: 'page', limitName: 'page_size' },  // ✅ 参数映射
+    cols: [[/* ... */]]
 });
-</script>
-{% endblock %}
 ```
 
-#### 高级用法
+#### 方式二：自动扫描（已废弃，不推荐）
 
-**注销菜单：**
+> ⚠️ `auto_register_admin_apps` **已废弃**，不推荐使用。它创建的按钮权限在菜单重建后
+> 会变为"孤儿菜单"（parent=None），且只能使用 Django admin 原生页面作为菜单路径，
+> 无法利用 Layui 前端 CRUD 的优势。请使用方式一手动注册。
 
-```python
-from django_layui.rbac import unregister_menus
+#### 参数说明
 
-# 谨慎使用，会删除菜单及其子菜单
-unregister_menus(['演示应用'])
-```
+**menus_data 格式：** `(name, icon, path, menu_type, sort, parent_name)`
 
-**条件注册：**
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| name | 菜单名称 | `'数据管理'` |
+| icon | Layui图标类名 | `'layui-icon-table'` |
+| path | 前端页面路径 | `'/static/myapp/pages/mymodel.html'` |
+| menu_type | 1=目录, 2=菜单 | `2` |
+| sort | 排序号 | `1` |
+| parent_name | 父菜单名 | `'我的应用'` |
 
-```python
-def ready(self):
-    from django.conf import settings
-    from django_layui.rbac import auto_register_admin_apps
-    
-    # 根据配置决定是否注册
-    if getattr(settings, 'ENABLE_STORE_APP', False):
-        auto_register_admin_apps()
-```
+**buttons_data 格式：** `(btn_name, parent_menu_name, permission, sort)`
 
-#### 对比两种方式
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| btn_name | 按钮名称 | `'新增数据'` |
+| parent_menu_name | 所属菜单 | `'数据管理'` |
+| permission | 权限标识 | `'mymodel:add'` |
+| sort | 排序号 | `1` |
 
-| 方式 | 优点 | 缺点 | 适用场景 |
-|------|------|------|----------|
-| **自动扫描** ✅ | 零配置，自动识别新模型 | 自定义程度较低 | 大部分场景，特别是快速开发 |
-| **手动注册** | 完全控制菜单结构、图标、路径 | 需要手动维护 | 需要复杂嵌套或自定义图标的场景 |
+#### 常见问题
 
-#### 注意事项
+**❌ 菜单显示有了，但页面访问不到？**
+检查 `path` 格式是否以 `/static/` 开头，且页面文件放在 `<app>/static/<app>/pages/` 目录下。
 
-- 菜单注册是**幂等的**，多次调用不会重复创建
-- 新创建的菜单会自动分配给管理员角色
-- 建议在 `ready()` 方法中使用 `try-except` 包裹，避免启动失败
-- 示例代码参考：`example/store/apps.py`
+**❌ 按钮权限在菜单管理中显示为顶级菜单（孤儿菜单）？**
+旧版 `auto_register_admin_apps` 创建的按钮在菜单重建后 parent 字段丢失。
+解决方案：先删除孤儿按钮（`Menu.objects.filter(parent__isnull=True, menu_type=3).delete()`），
+然后重启 Django 让 `register_menus` 重新创建。
 
----### 6. 启用 Web SSH 终端（可选）
+**❌ API 路由返回登录页面？**
+路由必须通过 `site.get_urls` 补丁注册到 admin site 内部，**不能**写在项目级 `urls.py` 中。
+
+#### 完整示例代码
+
+参考 `example/store/` 目录：
+
+| 文件 | 说明 |
+|------|------|
+| `store/apps.py` | 菜单注册 + API 路由注册 |
+| `store/views_api.py` | Category/Product/Order 三个模型的 CRUD API |
+| `store/urls.py` | API 路由 |
+| `store/admin.py` | Django admin 注册（精简） |
+| `store/static/store/pages/*.html` | Layui 前端页面 |
+
+详细文档请参考：[docs/MENU_EXTENSION_GUIDE.md](docs/MENU_EXTENSION_GUIDE.md)
+
+### 6. 启用 Web SSH 终端（可选）
 
 Web SSH 使用独立的 [webssh](https://pypi.org/project/webssh/) 服务：
 
@@ -915,69 +923,6 @@ Django-Layui 内置深色/浅色双模式切换功能：
 
 ---
 
-## 配置项目
-
-### urls.py 最简配置
-
-```python
-# urls.py
-from django.contrib import admin
-from django.urls import path
-from django.conf import settings
-from django.conf.urls.static import static
-
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    # 你的应用路由 ...
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-```
-
-> **🔑 核心原理**：
-> - `admin.site` 在 Django 启动时会被自动替换为 `layui_admin_site`（由 `django_layui.apps.DjangoLayuiConfig.ready()` 完成）
-> - 因此使用 `admin.site.urls` 即可自动获得所有 API 路由（`/admin/api/rbac/`, `/admin/api/ops/`）
-> - **无需手动导入或配置 `layui_admin_site`**（除非您需要自定义 AdminSite 行为）
->
-> **⚠️ 常见错误**：
-> - ❌ 忘记在 `INSTALLED_APPS` 中添加 `'django_layui'` 或 `'django_layui.rbac'`
-> - ❌ 未运行 `python manage.py migrate`（数据库表未创建）
-> - ❌ 未运行 `python manage.py init_menu`（菜单和权限数据未初始化）
-> - ❌ 使用了错误的 admin site 实例（如自定义的 AdminSite 未继承模型注册）
->
-> **✅ 正确配置检查清单**：
-> - [ ] `INSTALLED_APPS` 包含 `'django_layui'`（必须在 `django.contrib.admin` 之前）
-> - [ ] `INSTALLED_APPS` 包含 `'django_layui.rbac'`（**必需组件**，不是可选的！）
-> - [ ] 已设置 `AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'`
-> - [ ] 已运行 `python manage.py makemigrations && python manage.py migrate`
-> - [ ] 已运行 `python manage.py init_menu`（初始化默认数据，仅首次）
-> - [ ] 已创建超级用户 `python manage.py createsuperuser`
-> - [ ] 重启开发服务器 `python manage.py runserver`
-
-> **注意**：无需手动注册 `django_layui.ops.urls`，ops 模块的 API 路由（`/admin/api/ops/`）由 `AppConfig.ready()` 自动注册。手动重复注册反而会导致路由冲突。
-
-### 执行数据库迁移
-
-```bash
-# 如果已完成"快速开始"中的 Step 3，则无需重复执行此步骤
-python manage.py migrate
-python manage.py createsuperuser
-```
-
-### 收集静态文件
-
-```bash
-python manage.py collectstatic
-```
-
-### 启动项目
-
-```bash
-python manage.py runserver
-```
-
-访问 http://127.0.0.1:8000/admin/ 即可看到 Layui 风格的后台。
-
----
-
 ## 三、功能开启对照表
 
 | 功能 | 需要的包 | 需要的配置 | 必需性 |
@@ -1007,7 +952,8 @@ python manage.py runserver
 - [国际化 (i18n) 使用指南](docs/I18N_GUIDE.md) - 中英文双语切换与多语言开发
 
 ### 高级特性
-- [多主题系统使用指南](docs/THEME_SYSTEM_GUIDE.md) - 25种主题的切换与定制
+- [多主题系统使用指南](docs/THEME_SYSTEM_GUIDE.md) - 深色/浅色双模式切换与定制
+- [前台菜单可见性控制指南](docs/FRONTEND_MENU_GUIDE.md) - frontend_visible 前后台菜单独立控制
 
 ### 版本信息
 - [**更新日志 (CHANGELOG)**](docs/CHANGELOG.md) - 版本历史和更新记录
@@ -1403,5 +1349,4 @@ python manage.py runserver
 ## 许可证
 
 MIT License
-
 

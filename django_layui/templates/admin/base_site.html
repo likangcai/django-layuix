@@ -1,5 +1,5 @@
 {% extends "admin/base.html" %}
-{% load i18n %}
+{% load i18n sidebar_menu %}
 {% block sidebar %}
-{# Sidebar is empty - main navigation is handled by index.html SPA #}
+{% render_sidebar_menu %}
 {% endblock %}

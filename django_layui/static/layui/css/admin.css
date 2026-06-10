@@ -132,6 +132,42 @@
     border-color: var(--primary-color) !important;
 }
 
+/* 深色主题模式 */
+[data-theme-mode="dark"] {
+    --bg-body: #14161a;
+    --bg-primary: #1d1e22;
+    --bg-secondary: #26272b;
+    --bg-tertiary: #2e3035;
+    --text-primary: #e5eaf3;
+    --text-secondary: #a6adb6;
+    --text-muted: #6b7280;
+    --border-color: #363840;
+    --header-bg: #1d1e22;
+    --header-text: #e5eaf3;
+    --header-border: #2e3035;
+    --sidebar-bg: #1a1b1f;
+    --sidebar-text: #a6adb6;
+    --sidebar-active-bg: #1e9fff;
+    --sidebar-active-text: #ffffff;
+    --sidebar-hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --card-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    --card-bg: #1d1e22;
+    --card-border: #363840;
+    --bg-hover: rgba(255,255,255,0.05);
+    --scrollbar-thumb: #4a4d55;
+    --scrollbar-thumb-hover: #5a5d65;
+    --dropdown-bg: #26272b;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --input-bg: #26272b;
+    --table-stripe: var(--bg-primary);
+    --table-hover: rgba(255,255,255,0.08);
+    --input-border: #363840;
+    --input-text: #e5eaf3;
+    --btn-secondary-bg: #363840;
+    --btn-secondary-text: #e5eaf3;
+}
+
 /* 浅色主题模式 */
 [data-theme-mode="light"] {
     --bg-body: #f0f2f5;
@@ -187,6 +223,7 @@ html, body {
 .admin-header,
 .admin-sidebar,
 .layui-table,
+#result_list,
 .page-container,
 .search-card,
 .table-card,
@@ -1028,31 +1065,37 @@ a:hover {
     overflow-x: auto;
 }
 
-.layui-table {
+.layui-table,
+#result_list {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
 }
 
 .layui-table th,
-.layui-table td {
+.layui-table td,
+#result_list th,
+#result_list td {
     padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
 }
 
-.layui-table th {
+.layui-table th,
+#result_list th {
     background: var(--bg-secondary);
     font-weight: 600;
     color: var(--text-primary);
     white-space: nowrap;
 }
 
-.layui-table tr:hover {
+.layui-table tr:hover,
+#result_list tr:hover {
     background: var(--table-hover);
 }
 
-.layui-table tr:nth-child(even) {
+.layui-table tr:nth-child(even),
+#result_list tr:nth-child(even) {
     background: var(--table-stripe);
 }
 
@@ -1510,30 +1553,389 @@ a:hover {
 }
 
 /* 深色主题下表格样式 - 田字框（横竖边框） */
-[data-theme-mode="dark"] .layui-table {
+[data-theme-mode="dark"] .layui-table,
+[data-theme-mode="dark"] #result_list {
     border: 1px solid var(--border-color);
     border-collapse: separate;
     border-spacing: 0;
 }
 
 [data-theme-mode="dark"] .layui-table th,
-[data-theme-mode="dark"] .layui-table td {
+[data-theme-mode="dark"] .layui-table td,
+[data-theme-mode="dark"] #result_list th,
+[data-theme-mode="dark"] #result_list td {
     border-right: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
 }
 
-[data-theme-mode="dark"] .layui-table th {
+[data-theme-mode="dark"] .layui-table th,
+[data-theme-mode="dark"] #result_list th {
     background-color: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
     font-weight: 600;
 }
 
-[data-theme-mode="dark"] .layui-table tr:hover td {
+[data-theme-mode="dark"] .layui-table tr:hover td,
+[data-theme-mode="dark"] #result_list tr:hover td {
     background-color: var(--bg-hover);
 }
 
 [data-theme-mode="dark"] .layui-table-view {
     border: 1px solid var(--border-color);
+}
+
+/* LayUI table 渲染容器深色 */
+[data-theme-mode="dark"] .layui-table {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-header {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-body {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-box {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-view:after {
+    background-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-mend {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-tool {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-tool-panel {
+    background: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-tool-panel li:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-page {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-col-set {
+    background: var(--bg-secondary) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-grid-down {
+    background: var(--bg-primary) !important;
+    color: var(--text-muted) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-grid-down:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-edit {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-tips-main {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-cell {
+    color: var(--text-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-cell-c {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-click,
+[data-theme-mode="dark"] .layui-table-hover,
+[data-theme-mode="dark"] .layui-table[lay-even] tbody tr:nth-child(even) {
+    background-color: var(--bg-hover) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-checked {
+    background-color: rgba(30, 159, 255, 0.12) !important;
+}
+
+[data-theme-mode="dark"] .layui-table-checked.layui-table-click,
+[data-theme-mode="dark"] .layui-table-checked.layui-table-hover {
+    background-color: rgba(30, 159, 255, 0.18) !important;
+}
+
+/* #changelist-filter 深色 */
+[data-theme-mode="dark"] #changelist-filter {
+    background: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] #changelist-filter h2 {
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+/* LayUI 表单控件深色 */
+[data-theme-mode="dark"] .layui-form-select dl {
+    background: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-select dl dd {
+    color: var(--text-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-select dl dd.layui-this {
+    background: var(--primary-light) !important;
+    color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-select dl dd:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-select dl dd.layui-disabled {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-checkbox {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-checkbox > div {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-checkbox:hover > div {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-checkbox[lay-skin=primary] > i {
+    background: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-checkbox[lay-skin=primary]:hover > i {
+    border-color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-checked[lay-skin=primary] > i {
+    border-color: var(--primary-color) !important;
+    background-color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-checkbox[lay-skin=primary] > .layui-icon-indeterminate {
+    border-color: var(--primary-color) !important;
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-switch {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-switch > i {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-onswitch {
+    border-color: var(--primary-color) !important;
+    background: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-onswitch > i {
+    background: #fff !important;
+}
+
+[data-theme-mode="dark"] .layui-form-onswitch > div {
+    color: #fff !important;
+}
+
+[data-theme-mode="dark"] .layui-form-radio > i {
+    color: var(--text-muted) !important;
+}
+
+[data-theme-mode="dark"] .layui-form-radioed > i {
+    color: var(--primary-color) !important;
+}
+
+/* LayUI 日期选择器深色 */
+[data-theme-mode="dark"] .layui-laydate,
+[data-theme-mode="dark"] .layui-laydate-hint {
+    background: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate-header {
+    border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate-header i,
+[data-theme-mode="dark"] .layui-laydate-header span {
+    color: var(--text-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate-header i:hover,
+[data-theme-mode="dark"] .layui-laydate-header span:hover {
+    color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate .layui-laydate-list {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate .layui-laydate-list > li {
+    color: var(--text-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate .layui-laydate-list > li:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate-footer {
+    border-top-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate-footer span {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate-footer span:hover {
+    border-color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate .laydate-day-holidays:before {
+    color: var(--danger-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laydate .layui-this .laydate-day-holidays:before {
+    color: #fff !important;
+}
+
+/* LayUI badge rim 深色 */
+[data-theme-mode="dark"] .layui-badge-rim {
+    background: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* LayUI upload 深色 */
+[data-theme-mode="dark"] .layui-upload-drag {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-muted) !important;
+}
+
+/* LayUI 面板深色 */
+[data-theme-mode="dark"] .layui-panel {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-menu {
+    background: var(--bg-primary) !important;
+}
+
+/* LayUI 穿梭框深色 */
+[data-theme-mode="dark"] .layui-transfer-box {
+    background: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* LayUI 分页组件深色 */
+[data-theme-mode="dark"] .layui-laypage a,
+[data-theme-mode="dark"] .layui-laypage span {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laypage a:hover {
+    background: var(--bg-hover) !important;
+    color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laypage a.layui-laypage-curr,
+[data-theme-mode="dark"] .layui-laypage span.layui-laypage-curr {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    border-color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laypage input,
+[data-theme-mode="dark"] .layui-laypage select,
+[data-theme-mode="dark"] .layui-laypage button {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laypage input:focus,
+[data-theme-mode="dark"] .layui-laypage select:focus {
+    border-color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laypage button:hover {
+    background: var(--bg-hover) !important;
+    color: var(--primary-color) !important;
+}
+
+[data-theme-mode="dark"] .layui-laypage .layui-laypage-skip {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme-mode="dark"] .layui-laypage .layui-laypage-count {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme-mode="dark"] .layui-laypage .layui-laypage-limits select {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* LayUI badge 深色 - 覆盖 layui-bg-gray 的浅色背景 */
+[data-theme-mode="dark"] .layui-badge.layui-bg-gray,
+[data-theme-mode="dark"] .layui-badge-rim {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* LayUI 卡片深色 */
+[data-theme-mode="dark"] .layui-card {
+    background: var(--card-bg) !important;
+}
+
+[data-theme-mode="dark"] .layui-card-header {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* 页面容器深色 */
+[data-theme-mode="dark"] .page-container {
+    background: var(--bg-primary) !important;
 }
 
 /* ==================== 浅色主题强制覆盖（覆盖深色 !important） ==================== */
@@ -1657,3 +2059,66 @@ a:hover {
 [data-theme-mode="light"] .tab-content {
     background: #f0f2f5 !important;
 }
+
+/* ======= Django Admin 表单控件覆盖 ======= */
+.aligned label { display:inline-block;padding:9px 0;font-weight:400;color:var(--text-primary) }
+.form-row input[type=text],.form-row input[type=number],.form-row input[type=email],.form-row input[type=url],.form-row input[type=password],.form-row textarea,.form-row select,.form-row .vTextField,.form-row .vIntegerField,.form-row .vLargeTextField,.form-row .vURLField,.form-row .vEmailField { height:38px;line-height:38px;padding:0 10px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-primary);color:var(--text-primary);transition:border .2s;box-sizing:border-box;max-width:100% }
+.form-row textarea,.form-row .vLargeTextField { height:auto;min-height:80px;padding:8px 10px;line-height:1.5;resize:vertical }
+.form-row select { padding:0 8px;cursor:pointer }
+.form-row input:focus,.form-row textarea:focus,.form-row select:focus { border-color:var(--primary-color);outline:0;box-shadow:0 0 0 2px rgba(30,159,255,.1) }
+.form-row .errors input,.form-row .errors textarea,.form-row .errors select { border-color:var(--danger-color) }
+.form-row .errorlist { list-style:none;margin:4px 0 0;padding:0;color:var(--danger-color);font-size:12px }
+.form-row { border-bottom:1px solid var(--border-light);padding:8px 0;margin:0 }
+.form-row.errors { background:rgba(255,87,34,.03) }
+.inline-group .tabular { overflow-x:auto;margin-bottom:15px }
+.inline-group .tabular table { min-width:600px }
+.inline-group .tabular .form-row { border:none;padding:0 }
+.inline-group h2 { font-size:15px;margin:20px 0 10px;padding:0 0 8px;border-bottom:1px solid var(--border-color) }
+.inline-group .add-row a { display:inline-block;margin-top:10px;padding:6px 16px;background:var(--primary-color);color:#fff;border-radius:4px;text-decoration:none }
+.inline-group .add-row a:hover { background:var(--primary-hover) }
+.selector { display:flex;gap:10px;align-items:center;flex-wrap:wrap }
+.selector select { min-width:200px;height:200px }
+.selector-available,.selector-chosen { flex:1;min-width:150px }
+.selector .selector-available h2,.selector .selector-chosen h2 { font-size:13px;margin-bottom:5px;color:var(--text-secondary) }
+.selector .selector-filter { margin-bottom:8px }
+.selector .selector-filter input { width:100%;box-sizing:border-box }
+.selector .selector-chooser { display:flex;flex-direction:column;gap:4px }
+.selector .selector-chooser a { display:block;padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;text-align:center;cursor:pointer;text-decoration:none;color:var(--text-primary) }
+.selector .selector-chooser a:hover { background:var(--bg-hover) }
+.datetimeshortcuts { font-size:12px;color:var(--text-muted);margin-left:4px }
+.datetimeshortcuts a { color:var(--primary-color);text-decoration:none }
+.clockbutton,.date-icon { display:inline-block;margin:0 0 0 4px;vertical-align:middle }
+.field-box { margin-bottom:8px }
+.field-box label { display:block;margin-bottom:2px;font-weight:400;color:var(--text-secondary);font-size:13px }
+/* action 操作下拉 */
+.actions { margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap }
+.actions select { height:36px;padding:0 8px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-primary);color:var(--text-primary);cursor:pointer }
+.actions button[type=submit] { height:36px;padding:0 16px;border:none;border-radius:4px;background:var(--primary-color);color:#fff;cursor:pointer }
+.actions button[type=submit]:hover { background:var(--primary-hover) }
+.actions .action-counter,.actions .all { font-size:13px;color:var(--text-secondary) }
+/* 日期筛选 */
+.date-hierarchy { margin-bottom:15px;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:13px }
+.date-hierarchy a { color:var(--primary-color);text-decoration:none;margin-right:8px;padding:2px 8px;border-radius:3px }
+.date-hierarchy a:hover,.date-hierarchy .active { background:var(--primary-light);color:var(--primary-color);font-weight:600 }
+/* 过滤器 */
+.filtered #content-main { float:left;width:75% }
+#changelist-filter { float:right;width:22%;margin-left:3%;border:1px solid var(--border-color);border-radius:4px;padding:10px 12px;box-sizing:border-box;background:var(--bg-primary) }
+#changelist-filter h2 { font-size:14px;margin:0 0 8px;padding:0 0 6px;border-bottom:1px solid var(--border-color);color:var(--text-primary) }
+#changelist-filter h3 { font-size:13px;margin:10px 0 5px;color:var(--text-secondary);font-weight:400 }
+#changelist-filter ul { list-style:none;margin:0 0 10px;padding:0 }
+#changelist-filter li { padding:2px 0 }
+#changelist-filter li a { color:var(--text-primary);text-decoration:none;font-size:13px;padding:2px 6px;border-radius:3px;display:block }
+#changelist-filter li a:hover,#changelist-filter li.selected a { background:var(--primary-light);color:var(--primary-color) }
+/* 操作列 checkbox */
+.action-checkbox-column { width:30px;text-align:center }
+.action-checkbox { text-align:center;width:30px }
+.action-checkbox input[type=checkbox] { width:16px;height:16px;cursor:pointer;accent-color:var(--primary-color) }
+.actions .action-select-all-label { display:none }
+/* 其他元素 */
+.quiet { color:var(--text-muted);font-size:13px }
+.help { color:var(--text-muted);font-size:12px }
+.nowrap { white-space:nowrap }
+.object-tools { float:right;display:flex;gap:6px }
+.object-tools a { display:inline-block;padding:6px 14px;background:var(--primary-color);color:#fff;border-radius:4px;text-decoration:none;font-size:13px }
+.object-tools a:hover { background:var(--primary-hover) }
+.object-tools a.addlink:before { content:"+";margin-right:4px;font-weight:700 }

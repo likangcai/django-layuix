@@ -232,8 +232,8 @@
             <button type="button" class="layui-btn layui-btn-warm" id="testConnectBtn" style="margin-right:8px;">
                 <i class="layui-icon layui-icon-engine"></i> {{ t('server.testConnect') }}
             </button>
-            <button type="button" class="layui-btn" lay-submit lay-filter="serverSubmit">{{ t('common.confirm') }}</button>
-            <button type="button" class="layui-btn layui-btn-primary" id="cancelServerForm">{{ t('common.cancel') }}</button>
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="serverSubmit">{{ t('common.confirm') }}</button>
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="cancelServerForm">{{ t('common.cancel') }}</button>
         </div>
     </form>
 </script>
@@ -321,65 +321,72 @@ layui.use(['table', 'form', 'layer'], function(){
     $('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); $(this).text(t(key)); });
     renderI18n();
 
-    var currentPage = 1;
-    var pageSize = 10;
-    var total = 0;
     var logRefreshTimer = null;
 
     // ==================== 服务器列表 ====================
     function loadTable() {
-        var url = '/admin/api/ops/servers/?page=' + currentPage + '&page_size=' + pageSize;
-        getApi(url, function(res) {
-            if (res.code === 200) {
-                var data = res.data || {};
-                total = data.total || 0;
-                table.render({
-                    elem: '#serverTable',
-                    toolbar: '#toolbarTpl',
-                    defaultToolbar: [],
-                    data: data.list || [],
-                    height: 'full-220',
-                    page: {
-                        limit: pageSize,
-                        limits: [10, 30, 50, 100],
-                        curr: currentPage,
-                        count: total,
-                        layout: ['prev', 'page', 'next', 'limit', 'skip', 'count'],
-                        jump: function(obj, first) {
-                            if (!first) {
-                                currentPage = obj.curr;
-                                pageSize = obj.limit;
-                                loadTable();
-                            }
-                        }
-                    },
-                    even: true,
-                    cols: [[
-                        {field: 'id', title: 'ID', width: 70, align: 'center'},
-                        {field: 'name', title: t('server.name'), minWidth: 120},
-                        {field: 'host', title: t('server.host'), minWidth: 140},
-                        {field: 'port', title: t('server.port'), width: 100, align: 'center'},
-                        {field: 'username', title: t('server.username'), minWidth: 130},
-                        {field: 'auth_type', title: t('server.authType'), width: 110, align: 'center', templet: function(d) {
-                            var type = d.auth_type || 'password';
-                            if (type === 'password') {
-                                return '<span class="auth-tag password">' + t('server.auth.password') + '</span>';
-                            } else if (type === 'key') {
-                                return '<span class="auth-tag key">' + t('server.auth.key') + '</span>';
-                            }
-                            return '<span class="auth-tag password">' + escapeHtml(type) + '</span>';
-                        }},
-                        {field: 'is_active', title: t('common.status'), width: 90, align: 'center', templet: function(d) {
-                            return d.is_active
-                                ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
-                        }},
-                        {field: 'description', title: t('server.description'), minWidth: 150, templet: function(d) {
-                            return d.description ? '<span style="color:var(--text-secondary);">' + escapeHtml(d.description) + '</span>' : '<span style="color:var(--text-muted);">-</span>';
-                        }},
-                        {title: t('common.operation'), minWidth: 420, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
-                    ]]
-                });
+        table.render({
+            elem: '#serverTable',
+            url: '/admin/api/ops/servers/',
+            method: 'get',
+            toolbar: '#toolbarTpl',
+            defaultToolbar: [],
+            height: 'full-220',
+            page: {
+                limit: 10,
+                limits: [10, 30, 50, 100],
+                groups: 5,
+                layout: ['count', 'prev', 'page', 'next', 'skip', 'limit']
+            },
+            even: true,
+            cols: [[
+                {field: 'id', title: 'ID', width: 70, align: 'center'},
+                {field: 'name', title: t('server.name'), minWidth: 120},
+                {field: 'host', title: t('server.host'), minWidth: 140},
+                {field: 'port', title: t('server.port'), width: 100, align: 'center'},
+                {field: 'username', title: t('server.username'), minWidth: 130},
+                {field: 'auth_type', title: t('server.authType'), width: 110, align: 'center', templet: function(d) {
+                    var type = d.auth_type || 'password';
+                    if (type === 'password') {
+                        return '<span class="auth-tag password">' + t('server.auth.password') + '</span>';
+                    } else if (type === 'key') {
+                        return '<span class="auth-tag key">' + t('server.auth.key') + '</span>';
+                    }
+                    return '<span class="auth-tag password">' + escapeHtml(type) + '</span>';
+                }},
+                {field: 'is_active', title: t('common.status'), width: 90, align: 'center', templet: function(d) {
+                    return d.is_active
+                        ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
+                        : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
+                }},
+                {field: 'description', title: t('server.description'), minWidth: 150, templet: function(d) {
+                    return d.description ? '<span style="color:var(--text-secondary);">' + escapeHtml(d.description) + '</span>' : '<span style="color:var(--text-muted);">-</span>';
+                }},
+                {title: t('common.operation'), minWidth: 420, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+            ]],
+            parseData: function(res) {
+                if (res.code === 200) {
+                    var list = Array.isArray(res.data) ? res.data : (res.data.list || []);
+                    return {
+                        'code': 0,
+                        'msg': res.msg || '',
+                        'count': Array.isArray(res.data) ? list.length : (res.data.total || 0),
+                        'data': list
+                    };
+                }
+                return {
+                    'code': 1,
+                    'msg': res.msg || t('common.requestFail'),
+                    'count': 0,
+                    'data': []
+                };
+            },
+            request: {
+                pageName: 'page',
+                limitName: 'page_size'
+            },
+            response: {
+                statusCode: 0
             }
         });
     }

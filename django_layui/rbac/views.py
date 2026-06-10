@@ -14,6 +14,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from django.contrib.auth import update_session_auth_hash
+from django.utils.timezone import localtime
+
+
+def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
+    """将 timezone-aware datetime 转为当前时区后格式化"""
+    if dt is None:
+        return ''
+    return localtime(dt).strftime(format_str)
 
 
 def api_login_required(view_func):
@@ -886,8 +894,8 @@ def menu_tree(request):
             'status': m.status,
             'backend_visible': m.backend_visible,
             'frontend_visible': m.frontend_visible,
-            'create_time': m.create_time.strftime('%Y-%m-%d %H:%M:%S') if m.create_time else '',
-            'update_time': m.update_time.strftime('%Y-%m-%d %H:%M:%S') if m.update_time else '',
+            'create_time': fmt_time(m.create_time),
+            'update_time': fmt_time(m.update_time),
         })
 
     tree = _build_menu_tree(menu_list)
@@ -931,8 +939,8 @@ def menu_detail(request, pk):
             'status': menu.status,
             'backend_visible': menu.backend_visible,
             'frontend_visible': menu.frontend_visible,
-            'create_time': menu.create_time.strftime('%Y-%m-%d %H:%M:%S') if menu.create_time else '',
-            'update_time': menu.update_time.strftime('%Y-%m-%d %H:%M:%S') if menu.update_time else '',
+            'create_time': fmt_time(menu.create_time),
+            'update_time': fmt_time(menu.update_time),
         }
         return success_response(data)
 
@@ -1033,8 +1041,8 @@ def role_list(request):
             'is_system': r.is_system,
             'status': r.status,
             'menu_ids': list(r.menus.values_list('id', flat=True)),
-            'create_time': r.create_time.strftime('%Y-%m-%d %H:%M:%S') if r.create_time else '',
-            'update_time': r.update_time.strftime('%Y-%m-%d %H:%M:%S') if r.update_time else '',
+            'create_time': fmt_time(r.create_time),
+            'update_time': fmt_time(r.update_time),
         })
     return success_response(data)
 
@@ -1059,8 +1067,8 @@ def role_detail(request, pk):
             'is_system': role.is_system,
             'status': role.status,
             'menu_ids': list(role.menus.values_list('id', flat=True)),
-            'create_time': role.create_time.strftime('%Y-%m-%d %H:%M:%S') if role.create_time else '',
-            'update_time': role.update_time.strftime('%Y-%m-%d %H:%M:%S') if role.update_time else '',
+            'create_time': fmt_time(role.create_time),
+            'update_time': fmt_time(role.update_time),
         }
         return success_response(data)
 
@@ -1230,8 +1238,8 @@ def user_list(request):
             'is_staff': u.is_staff,
             'is_tester': getattr(u, 'is_tester', False),
             'roles': roles,
-            'last_login': u.last_login.strftime('%Y-%m-%d %H:%M:%S') if u.last_login else '',
-            'date_joined': u.date_joined.strftime('%Y-%m-%d %H:%M:%S') if u.date_joined else '',
+            'last_login': fmt_time(u.last_login),
+            'date_joined': fmt_time(u.date_joined),
         })
     return success_response({'list': data, 'total': total})
 
@@ -1444,7 +1452,7 @@ def log_list(request):
             'url': log.url,
             'status': log.status,
             'status_display': '成功' if log.status == 1 else '失败',
-            'create_time': log.create_time.strftime('%Y-%m-%d %H:%M:%S') if log.create_time else '',
+            'create_time': fmt_time(log.create_time),
         })
     return success_response({'list': data, 'total': total})
 
@@ -1467,8 +1475,8 @@ def config_list(request):
             'description': c.description,
             'config_type': c.config_type,
             'sort': c.sort,
-            'create_time': c.create_time.strftime('%Y-%m-%d %H:%M:%S') if c.create_time else '',
-            'update_time': c.update_time.strftime('%Y-%m-%d %H:%M:%S') if c.update_time else '',
+            'create_time': fmt_time(c.create_time),
+            'update_time': fmt_time(c.update_time),
         })
     return success_response(data)
 

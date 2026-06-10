@@ -7,6 +7,17 @@ from django.conf import settings
 from .rbac.themes import get_all_themes
 
 
+class LayuiModelAdminMixin:
+    """Mixin：让 ModelAdmin 支持 ?per_page= 参数动态修改每页条数"""
+    
+    def get_changelist_instance(self, request):
+        """重写以支持 get_list_per_page 自定义钩子"""
+        # 如果子类定义了 get_list_per_page，则调用它获取动态每页条数
+        if hasattr(self, 'get_list_per_page'):
+            self.list_per_page = self.get_list_per_page(request)
+        return super().get_changelist_instance(request)
+
+
 class LayuiAdminSite(AdminSite):
     """自定义 AdminSite，传递 Layui 配置到模板"""
     
@@ -14,6 +25,17 @@ class LayuiAdminSite(AdminSite):
         super().__init__(*args, **kwargs)
         # 共享默认 admin.site 的注册表
         self._registry = site._registry
+
+    def register(self, model_or_iterable, admin_class=None, **options):
+        """注册模型时自动设置默认 list_per_page = 10"""
+        if admin_class is not None:
+            # 只在 ModelAdmin 未显式设置 list_per_page 时应用默认值 10
+            if 'list_per_page' not in admin_class.__dict__:
+                admin_class.list_per_page = 10
+        try:
+            super().register(model_or_iterable, admin_class=admin_class, **options)
+        except admin.sites.AlreadyRegistered:
+            pass
     
     def get_urls(self):
         """每次获取 URL 时同步注册表，确保包含所有最新注册的模型"""

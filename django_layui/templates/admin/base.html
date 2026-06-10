@@ -16,6 +16,19 @@
     </style>
     {% block extrahead %}{% endblock %}
     {% block blockbots %}<meta name="robots" content="NONE,NOARCHIVE">{% endblock %}
+    {% comment %}
+    BUG-10 FIX: iframe 内嵌模式支持
+    当页面在 SPA 的 iframe 中打开时，隐藏外部布局（header/sidebar），只显示内容区
+    {% endcomment %}
+    <style>
+        /* iframe 模式：隐藏重复的外壳布局，只保留内容区 */
+        body.in-iframe .admin-header,
+        body.in-iframe .admin-sidebar { display: none !important; }
+        body.in-iframe .admin-body { margin-left: 0 !important; }
+        body.in-iframe .admin-content { margin-left: 0 !important; padding: 15px !important; width: 100% !important; }
+        body.in-iframe .admin-layout { height: auto !important; min-height: auto !important; }
+        body.in-iframe .breadcrumbs { margin-top: 0 !important; }
+    </style>
 </head>
 <body>
     {% block body %}
@@ -53,7 +66,7 @@
                     <div class="user-avatar" id="userAvatar">
                         <i class="layui-icon layui-icon-user"></i>
                     </div>
-                    <span class="user-name" id="userName">{{ user.get_full_name|default:user.username }}</span>
+                    <span class="user-name" id="userName">{% if user %}{{ user.get_full_name|default:user.username }}{% else %}-{% endif %}</span>
                     <i class="user-arrow"></i>
                     <div class="user-dropdown" id="userDropdown">
                         <a class="dropdown-item" href="{% url 'admin:password_change' %}">
@@ -92,6 +105,21 @@
         </div>
     </div>
     {% endblock %}
+    {# BUG-10 FIX: iframe inner detection #}
+    <script>
+    (function(){
+        if (window.top !== window.self) {
+            document.body.classList.add('in-iframe');
+            window.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'themeChange') {
+                    var isDark = e.data.themeMode === 'dark';
+                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                    document.documentElement.setAttribute('data-theme-mode', isDark ? 'dark' : 'light');
+                }
+            });
+        }
+    })();
+    </script>
     <script src="{% static 'layui/lib/layui.js' %}"></script>
     <script src="{% static 'layui/js/common.js' %}"></script>
     <script src="{% static 'layui/js/i18n.js' %}"></script>
@@ -208,6 +236,41 @@
                 form.submit();
             });
         }
+    })();
+    </script>
+    <script>
+    // 侧边栏菜单点击事件：直接跳转（服务端渲染的菜单项）
+    (function(){
+        document.addEventListener('click', function(e) {
+            var target = e.target.closest('.menu-item[data-url]');
+            if (target) {
+                var url = target.getAttribute('data-url');
+                if (url) {
+                    document.querySelectorAll('.menu-item').forEach(function(el) {
+                        el.classList.remove('active');
+                    });
+                    target.classList.add('active');
+                    window.location.href = url;
+                }
+            }
+        });
+        // 目录展开/折叠
+        document.addEventListener('click', function(e) {
+            var title = e.target.closest('.menu-group-title');
+            if (title) {
+                e.preventDefault();
+                var subMenu = title.nextElementSibling;
+                if (subMenu && subMenu.classList.contains('sub-menu')) {
+                    if (title.classList.contains('collapsed')) {
+                        title.classList.remove('collapsed');
+                        subMenu.classList.add('open');
+                    } else {
+                        title.classList.add('collapsed');
+                        subMenu.classList.remove('open');
+                    }
+                }
+            }
+        });
     })();
     </script>
 </body>

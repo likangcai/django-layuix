@@ -52,6 +52,22 @@ MODULE_NAME_MAP = {
 }
 
 
+class ForceUtf8Middleware:
+    """强制所有响应使用 UTF-8 编码
+    解决静态 HTML 文件在中文 Windows 浏览器中因默认 GBK 编码显示乱码的问题
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        content_type = response.get('Content-Type', '')
+        # 只处理 text/* 类型的响应，添加 charset=utf-8
+        if content_type.startswith('text/') and 'charset' not in content_type:
+            response['Content-Type'] = content_type + '; charset=utf-8'
+        return response
+
+
 class OperationLogMiddleware:
     """自动记录操作日志的中间件
 

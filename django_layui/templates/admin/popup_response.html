@@ -1,0 +1,23 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html>
+<head><title></title>
+<script src="{% static 'admin/js/actions.min.js' %}"></script>
+<script>
+(function() {
+    var data = {{ popup_response_data|default:"{}" }};
+    if (window.dismissRelatedObjectPopup) {
+        window.dismissRelatedObjectPopup(window, data);
+    } else {
+        if (data.action === 'change') {
+            var win = window.opener ? window.opener : window.parent;
+            if (win && win.dismissChangeRelatedObjectPopup) {
+                win.dismissChangeRelatedObjectPopup(window, data);
+            }
+        }
+    }
+})();
+</script>
+</head>
+<body></body>
+</html>

@@ -1,23 +1,353 @@
 {% extends "admin/base_site.html" %}
-{% load i18n admin_list %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static "admin/css/changelists.css" %}">
+{{ media.css }}
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media.js }}
+<script src="{% static "admin/js/filters.js" %}" defer></script>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-list{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs" style="padding:8px 24px;font-size:13px;color:var(--text-secondary)">
+<a href="{% url "admin:index" %}" style="color:var(--primary-color);text-decoration:none">{% translate "Home" %}</a>
+&rsaquo; <a href="{% url "admin:app_list" app_label=cl.opts.app_label %}" style="color:var(--primary-color);text-decoration:none">{{ cl.opts.app_config.verbose_name }}</a>
+&rsaquo; {{ cl.opts.verbose_name_plural|capfirst }}
+</div>
+{% endblock %}
 {% block content %}
 <div class="page-container" style="padding: 20px 24px;">
-    <div class="admin-card">
-        <div class="card-header">
-            <h3><i class="layui-icon layui-icon-table"></i> {{ title }}</h3>
-            {% block object-tools %}{% endblock %}
+<style>
+/* 预留滚动条空间，防止内容替换时页面宽度抖动 */
+#result-list-container { scrollbar-gutter: stable; }
+/* 隐藏动作下拉框和提交按钮（保留复选框供操作列使用） */
+.actions { display: none !important; }
+/* 表格区域固定高度，超出滚动 */
+#content-main { overflow-y: auto; }
+</style>
+    <div class="layui-card">
+        <div class="layui-card-header" style="display:flex;align-items:center;justify-content:space-between;font-size:16px;font-weight:600">
+            <span><i class="layui-icon layui-icon-table"></i> {{ title }}</span>
+            {% block object-tools %}{% change_list_object_tools %}{% endblock %}
         </div>
-        <div class="card-body">
+        <div class="layui-card-body">
             {% block search %}{% search_form cl %}{% endblock %}
+            <div style="height:16px"></div>
             {% block date_hierarchy %}{% date_hierarchy cl %}{% endblock %}
-            {% block filters %}{% endblock %}
-            <div id="content-main">
-                {% block result_list %}
-                    {% result_list cl %}
-                {% endblock %}
+            {% block filters %}
+                {% if cl.has_filters %}
+                    <div id="changelist-filter">
+                    {% for spec in cl.filter_specs %}{% admin_list_filter cl spec %}{% endfor %}
+                    </div>
+                {% endif %}
+            {% endblock %}
+            <div id="result-list-container" style="min-height:200px">
+                <form id="changelist-form" method="post" novalidate>{% csrf_token %}
+                <div id="content-main">
+                    {% block result_list %}
+                        {% if action_form and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+                        {% result_list cl %}
+                        {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+                    {% endblock %}
+                </div>
+                <div class="changelist-footer">
+                {% block pagination %}{% pagination cl %}{% endblock %}
+                </div>
+                </form>
             </div>
-            {% block pagination %}{% pagination cl %}{% endblock %}
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    'use strict';
+
+    var AJAX_TIMEOUT = 15000;
+
+    var currentUrl = '';
+    var container = document.getElementById('result-list-container');
+    if (!container) return;
+
+    function showLoading() {
+        // 不做透明度变化，避免闪烁
+    }
+
+    function hideLoading() {
+        // 不做透明度变化
+    }
+
+    function addCacheBust(url) {
+        // Django admin 对 GET 参数敏感，不加额外缓存参数
+        return url;
+    }
+
+    function isSamePageLink(url) {
+        try {
+            var parsed = new URL(url, window.location.href);
+            var current = window.location;
+            return parsed.origin === current.origin
+                && parsed.pathname === current.pathname;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function isExcludedArea(el) {
+        return !!el.closest('.object-tools, .admin-header, .admin-sidebar, thead');
+    }
+
+    function navigate(url) {
+        if (url === currentUrl) return;
+        currentUrl = url;
+
+        showLoading();
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.timeout = AJAX_TIMEOUT;
+        // 不设置 X-Requested-With 头，让 Django 以正常方式返回页面
+
+        xhr.onload = function() {
+            try {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    var html = xhr.responseText;
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(html, 'text/html');
+
+                    var newContainer = doc.getElementById('result-list-container');
+                    if (newContainer) {
+                        // 在下一帧统一替换，避免与当前渲染冲突
+                        requestAnimationFrame(function() {
+                            var temp = document.createElement('div');
+                            temp.innerHTML = newContainer.innerHTML;
+                            container.replaceChildren(...temp.children);
+
+                            if (window.history && window.history.replaceState) {
+                                window.history.replaceState({ url: url }, '', url);
+                            }
+
+                            hideLoading();
+                            setTimeout(addOperationColumn, 50);
+                            adjustTableHeight();
+                        });
+                    } else {
+                        window.location.href = url;
+                        return;
+                    }
+                } else {
+                    window.location.href = url;
+                }
+            } catch(e) {
+                window.location.href = url;
+            }
+        };
+
+        xhr.onerror = function() {
+            hideLoading();
+            window.location.href = url;
+        };
+
+        xhr.ontimeout = function() {
+            hideLoading();
+            window.location.href = url;
+        };
+
+        xhr.send();
+    }
+
+    // 暴露全局 navigateTo（供外部调用，含降级保护）
+    window.navigateTo = function(url) {
+        navigate(url);
+    };
+
+    // ==================== 自适应表格高度 ====================
+    function adjustTableHeight() {
+        var contentMain = document.getElementById('content-main');
+        if (!contentMain) return;
+
+        // 类似 LayUI 的 full-220：视口高度减去头部/搜索/筛选/分页等固定占用
+        // 约 240px：面包屑(40) + 卡片头(50) + 搜索(50) + 日期导航(40) + 间距(30) + 分页(30)
+        var offset = 240;
+        // iframe 模式使用 documentElement.clientHeight，否则使用 window.innerHeight
+        var viewHeight = window.innerHeight || document.documentElement.clientHeight || 600;
+        var availableHeight = viewHeight - offset;
+        contentMain.style.maxHeight = Math.max(200, availableHeight) + 'px';
+    }
+
+    // 初始调整
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', adjustTableHeight);
+    } else {
+        adjustTableHeight();
+    }
+    // 窗口大小变化时重新计算
+    window.addEventListener('resize', adjustTableHeight);
+
+    // ==================== 翻页/排序/筛选链接 AJAX 拦截 ====================
+    // 使用 capture: true 在捕获阶段拦截，确保在其他脚本之前执行
+    document.addEventListener('click', function(e) {
+        try {
+            var link = e.target.closest('a');
+            if (!link) return;
+
+            var href = link.getAttribute('href');
+            if (!href || href === '#' || href.startsWith('#')) return;
+
+            // 排除不需要拦截的区域
+            if (isExcludedArea(link)) return;
+
+            // 只拦截同页面链接（翻页 ?page=2、排序 ?o=1、筛选等）
+            if (!isSamePageLink(href)) return;
+
+            // 如果是重置链接（href="?"），先清空搜索框（搜索框在 container 外部）
+            if (href === '?') {
+                var searchInput = document.querySelector('#changelist-search input[name="q"]');
+                if (searchInput) searchInput.value = '';
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+            navigate(href);
+        } catch(e) {
+            console.warn('[django-layui] AJAX navigate error:', e);
+            window.location.href = e.target.closest('a') ? e.target.closest('a').getAttribute('href') : window.location.href;
+        }
+    }, true);  // capture phase
+
+    // 额外保险：直接在 paginator 上拦截（某些浏览器/场景下 capture 可能失效）
+    document.addEventListener('click', function(e) {
+        var paginator = e.target.closest('.paginator');
+        if (!paginator) return;
+        var link = e.target.closest('a');
+        if (!link) return;
+        var href = link.getAttribute('href');
+        if (!href || href === '#' || href.startsWith('#')) return;
+        if (!isSamePageLink(href)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        navigate(href);
+    });  // bubble phase
+
+    // ==================== 搜索/跳转/分页条数 AJAX 处理 ====================
+
+    // 搜索表单提交 → AJAX
+    document.addEventListener('submit', function(e) {
+        var form = e.target.closest('#changelist-search');
+        if (!form) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        var formData = new FormData(form);
+        var params = [];
+        formData.forEach(function(value, key) {
+            if (value) params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+        });
+        var searchUrl = '?' + params.join('&');
+        if (searchUrl === '?') searchUrl = '?';
+        navigate(searchUrl);
+    }, true);
+
+    // 跳转按钮 → AJAX（capture phase 确保在 pagination.html 的 handler 之前执行）
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'gotoBtn' || e.target.closest('#gotoBtn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            var input = document.getElementById('gotoPage');
+            if (!input) return;
+            var p = parseInt(input.value) || 1;
+            navigate('?p=' + p);
+        }
+    }, true);
+
+    // 每页条数切换 → AJAX（capture phase 确保在 pagination.html 的 handler 之前执行）
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'pageSizeSelect') {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate('?per_page=' + e.target.value);
+        }
+    }, true);
+
+    // 跳转输入框回车 → AJAX
+    document.addEventListener('keydown', function(e) {
+        if (e.target.id === 'gotoPage' && e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            var p = parseInt(e.target.value) || 1;
+            navigate('?p=' + p);
+        }
+    }, true);
+
+    window.addEventListener('popstate', function(e) {
+        try {
+            if (e.state && e.state.url) {
+                navigate(e.state.url);
+            }
+        } catch(e) {}
+    });
+
+    // ==================== 统一添加操作列（查看/编辑/删除） ====================
+    function addOperationColumn() {
+        var table = document.querySelector('#result_list');
+        if (!table || !table.tHead || !table.tBodies.length) return;
+
+        // 检查是否已有操作列
+        var thead = table.tHead;
+        var headerRow = thead.rows[0];
+        if (headerRow.querySelector('.ops-header')) return;
+
+        var adminUrl = window.location.pathname.replace(/\/$/, '');
+        // 基础路径 = 当前页面的完整路径（如 /admin/store/product）
+        var basePath = adminUrl;
+
+        // 添加操作列头
+        var th = document.createElement('th');
+        th.className = 'ops-header';
+        th.style.cssText = 'width:160px;text-align:center;white-space:nowrap;font-weight:600';
+        th.textContent = '操作';
+        headerRow.appendChild(th);
+
+        // 只处理数据行（包含 action-select checkbox 的行）
+        var tbody = table.tBodies[0];
+        Array.from(tbody.rows).forEach(function(row) {
+            var checkbox = row.querySelector('.action-select');
+            if (!checkbox) return;  // 跳过非数据行（报错行、空行等）
+
+            var id = checkbox.value;
+
+            var td = document.createElement('td');
+            td.style.cssText = 'text-align:center;white-space:nowrap;padding:6px 8px';
+
+            if (id) {
+                var viewUrl = basePath + '/' + id + '/change/';
+                var editUrl = basePath + '/' + id + '/change/';
+                var delUrl = basePath + '/' + id + '/delete/';
+
+                td.innerHTML =
+                    '<a href="' + viewUrl + '" class="layui-btn layui-btn-xs layui-btn-primary" title="查看" style="margin:0 2px"><i class="layui-icon layui-icon-about"></i></a>' +
+                    '<a href="' + editUrl + '" class="layui-btn layui-btn-xs" title="编辑" style="margin:0 2px"><i class="layui-icon layui-icon-edit"></i></a>' +
+                    '<a href="' + delUrl + '" class="layui-btn layui-btn-xs layui-btn-danger" title="删除" style="margin:0 2px"><i class="layui-icon layui-icon-delete"></i></a>';
+            } else {
+                td.innerHTML = '<span style="color:var(--text-muted);font-size:12px">--</span>';
+            }
+            row.appendChild(td);
+        });
+    }
+
+    // 页面加载完成后添加操作列
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addOperationColumn);
+    } else {
+        addOperationColumn();
+    }
+})();
+</script>
 {% endblock %}

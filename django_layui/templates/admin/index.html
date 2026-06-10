@@ -47,7 +47,7 @@
                 <div class="header-action-btn" id="langBtn" title="中文">
                     <i class="layui-icon layui-icon-flag"></i>
                 </div>
-                <div class="header-action-btn" id="themeToggle" title="深色/浅色切换">
+                <div class="header-action-btn" id="themeToggle" title="深色/浅色鍒囨崲">
                     <i class="layui-icon layui-icon-light" id="themeIcon"></i>
                 </div>
                 <div class="header-action-btn" id="frontendBtn" title="访问前台">
@@ -87,7 +87,7 @@
                 <div class="sidebar-menu" id="sidebarMenu">
                     <div class="empty-state" style="padding: 40px 20px;">
                         <i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i>
-                        <p data-i18n="common.loading">加载中...</p>
+                        <p data-i18n="common.loading">加载中..</p>
                     </div>
                 </div>
             </aside>
@@ -128,7 +128,7 @@
                                placeholder="" autocomplete="new-password" class="layui-input">
                     </div>
                 </div>
-                <div class="layui-form-item" style="text-align: center; margin-top: 10px;">
+                <div class="layui-form-item" style="display:flex;justify-content:flex-end;margin-top:10px;">
                     <button type="button" class="layui-btn layui-btn-normal" id="submitPasswordBtn"
                             style="width: 160px; border-radius: 6px;">
                         <span>确认修改</span>
@@ -170,7 +170,7 @@
                                class="layui-input layui-disabled" style="background: var(--bg-tertiary);">
                     </div>
                 </div>
-                <div class="layui-form-item" style="text-align: center; margin-top: 20px;">
+                <div class="layui-form-item" style="display:flex;justify-content:flex-end;margin-top:20px;">
                     <button type="button" class="layui-btn layui-btn-normal" id="submitProfileBtn"
                             style="width: 160px; border-radius: 6px;">
                         <span>保存修改</span>
@@ -331,8 +331,9 @@
 
         function renderDirectory(menu) {
             var children = menu.children || [];
-            // 检查是否有可见的子菜单（考虑 backend_visible）
-            var hasVisibleChildren = children.some(function(c) { 
+            // 检查可见子菜单（考虑 backend_visible）
+            var hasVisibleChildren = children.some(function(c) {
+
                 return c.visible !== false && (c.backend_visible === undefined || c.backend_visible === true);
             });
             if (!hasVisibleChildren) return '';
@@ -672,13 +673,13 @@
                         if (newPwd !== confirmPwd) { layer.msg(t('profile.password.diff'), {icon: 0}); return; }
                         
                         // 按钮点击动画：禁用按钮 + 显示加载状态
-                        $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> 提交中...');
+                        $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> 提交中..');
                         
                         putApi('/admin/api/rbac/profile/password/', {
                             old_password: oldPwd, new_password: newPwd, confirm_password: confirmPwd
                         }, function(res) {
                             // 恢复按钮状态
-                            $btn.prop('disabled', false).removeClass('layui-btn-disabled').html('<span>确认修改</span>');
+                            $btn.prop('disabled', false).removeClass('layui-btn-disabled').html('确认修改');
                             
                             if (res.code === 200) {
                                 layer.msg(t('profile.password.success'), {icon: 1, time: 1500, end: function() {

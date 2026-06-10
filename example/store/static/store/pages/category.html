@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品分类</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <script>
+        function syncParentTheme() {
+            var themeMode = 'dark';
+            try {
+                if (window.parent && window.parent.document) {
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
+                }
+            } catch(e) {}
+            document.documentElement.setAttribute('data-theme-mode', themeMode);
+        }
+        syncParentTheme();
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'themeChange') {
+                document.documentElement.setAttribute('data-theme-mode', e.data.themeMode);
+            }
+        });
+    </script>
+    <style>
+        body { padding: 0; margin: 0; background: var(--bg-primary); }
+        .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
+        .search-bar { margin-bottom: 16px; }
+        .search-bar .layui-form-item { margin-bottom: 16px; }
+        .search-bar .layui-inline { margin-right: 16px; }
+        .search-bar .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
+        .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
+        .layui-card-header { border-bottom: 1px solid var(--card-border); }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <span style="font-size:15px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                <i class="layui-icon layui-icon-template-1" style="color:var(--primary-color);"></i> 商品分类
+            </span>
+        </div>
+        <div class="layui-card-body">
+            <!-- 搜索栏 -->
+            <div class="search-bar">
+                <form class="layui-form" lay-filter="searchForm">
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <label class="layui-form-label">关键词</label>
+                            <div class="layui-input-inline" style="width:200px;">
+                                <input type="text" name="keyword" id="searchKeyword" placeholder="分类名称/描述" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-inline">
+                            <button type="button" class="layui-btn layui-btn-sm" id="searchBtn">
+                                <i class="layui-icon layui-icon-search"></i> 搜索
+                            </button>
+                            <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary" id="resetBtn">
+                                <i class="layui-icon layui-icon-refresh"></i> 重置
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <!-- 表格 -->
+            <table id="categoryTable" lay-filter="categoryTable"></table>
+        </div>
+    </div>
+</div>
+
+<!-- 工具栏模板 -->
+<script type="text/html" id="toolbarTpl">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-sm layui-btn-normal" lay-event="add">
+            <i class="layui-icon layui-icon-add-1"></i> 新增分类
+        </button>
+        <button class="layui-btn layui-btn-sm layui-btn-primary" lay-event="refresh">
+            <i class="layui-icon layui-icon-refresh"></i> 刷新
+        </button>
+    </div>
+</script>
+
+<!-- 操作列模板：默认显示查看/编辑，多余操作在更多下拉菜单中 -->
+<script type="text/html" id="operateTpl">
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">查看</a>
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-xs" lay-event="more">更多<i class="layui-icon layui-icon-down" style="margin-left:3px;font-size:12px"></i></a>
+</script>
+
+<!-- 新增分类弹窗模板 (只有返回/保存按钮) -->
+<script type="text/html" id="addFormTpl">
+    <form class="layui-form" lay-filter="addForm" style="padding:20px 30px 0;">
+        <div class="layui-form-item">
+            <label class="layui-form-label">分类名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="name" lay-verify="required" placeholder="请输入分类名称" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">排序</label>
+            <div class="layui-input-block">
+                <input type="number" name="sort" value="0" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">描述</label>
+            <div class="layui-input-block">
+                <textarea name="description" placeholder="请输入分类描述" class="layui-textarea"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border-color);padding-top:15px;margin-top:10px;">
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="addFormCancel">返回</button>
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="addSubmit">保存</button>
+        </div>
+    </form>
+</script>
+
+<!-- 编辑分类弹窗模板 -->
+<script type="text/html" id="editFormTpl">
+    <form class="layui-form" lay-filter="editForm" style="padding:20px 30px 0;">
+        <input type="hidden" name="id" value="">
+        <div class="layui-form-item">
+            <label class="layui-form-label">分类名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="name" lay-verify="required" placeholder="请输入分类名称" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">排序</label>
+            <div class="layui-input-block">
+                <input type="number" name="sort" value="0" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">描述</label>
+            <div class="layui-input-block">
+                <textarea name="description" placeholder="请输入分类描述" class="layui-textarea"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border-color);padding-top:15px;margin-top:10px;">
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="editFormCancel">返回</button>
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="editSubmit">保存</button>
+        </div>
+    </form>
+</script>
+
+<script src="/static/layui/lib/layui.js"></script>
+<script src="/static/layui/js/common.js"></script>
+<script>
+inheritTheme();
+
+layui.use(['table', 'form', 'layer', 'dropdown'], function(){
+    var table = layui.table;
+    var form = layui.form;
+    var layer = layui.layer;
+    var dropdown = layui.dropdown;
+    var $ = layui.$;
+
+    var tableIns = null;
+
+    // 构建搜索参数
+    function getSearchParams() {
+        var params = {};
+        var keyword = $('#searchKeyword').val().trim();
+        if (keyword) params.keyword = keyword;
+        return params;
+    }
+
+    // 加载列表（使用 url 服务端分页）
+    function loadTable() {
+        tableIns = table.render({
+            elem: '#categoryTable',
+            url: '/admin/api/store/categories/',
+            toolbar: '#toolbarTpl',
+            defaultToolbar: [],
+            where: getSearchParams(),
+            height: 'full-220',
+            page: {
+                limit: 10,
+                limits: [10, 30, 50, 100],
+                layout: ['count', 'prev', 'page', 'next', 'skip', 'limit']
+            },
+            even: true,
+            parseData: function(res) {
+                return {
+                    "code": res.code === 200 ? 0 : res.code,
+                    "msg": res.msg,
+                    "count": res.data ? res.data.total : 0,
+                    "data": res.data ? res.data.list : []
+                };
+            },
+            request: {
+                pageName: 'page',
+                limitName: 'page_size'
+            },
+            cols: [[
+                {field: 'id', title: 'ID', width: 70, align: 'center'},
+                {field: 'name', title: '分类名称', minWidth: 120},
+                {field: 'description', title: '描述', minWidth: 200},
+                {field: 'sort', title: '排序', width: 80, align: 'center'},
+                {field: 'product_count', title: '商品数量', width: 100, align: 'center',
+                    templet: function(d) {
+                        return '<span style="color:#1890ff;font-weight:bold">' + d.product_count + '</span>';
+                    }
+                },
+                {field: 'create_time', title: '创建时间', width: 170, align: 'center'},
+                {title: '操作', width: 250, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+            ]]
+        });
+    }
+
+    // 打开新增弹窗 (只有返回/保存按钮)
+    function openAddForm() {
+        layer.open({
+            type: 1,
+            title: '新增分类',
+            area: ['500px', 'auto'],
+            content: $('#addFormTpl').html(),
+            success: function(layero, index) {
+                form.render(null, 'addForm');
+
+                // 返回按钮（关闭弹窗）
+                layero.find('#addFormCancel').on('click', function() {
+                    layer.close(index);
+                });
+            }
+        });
+    }
+
+    // 新增提交
+    form.on('submit(addSubmit)', function(data) {
+        var field = data.field;
+        postApi('/admin/api/store/categories/create/', field, function(res) {
+            if (res.code === 200) {
+                layer.msg('创建成功', {icon: 1});
+                layer.closeAll();
+                tableIns.reload({
+                    where: getSearchParams()
+                });
+            } else {
+                layer.msg(res.msg || '创建失败', {icon: 2});
+            }
+        });
+        return false;
+    });
+
+    // 打开编辑弹窗
+    function openEditForm(rowData) {
+        layer.open({
+            type: 1,
+            title: '编辑分类 - ' + rowData.name,
+            area: ['500px', 'auto'],
+            content: $('#editFormTpl').html(),
+            success: function(layero, index) {
+                form.val('editForm', {
+                    id: rowData.id,
+                    name: rowData.name,
+                    sort: rowData.sort,
+                    description: rowData.description
+                });
+                form.render(null, 'editForm');
+
+                // 返回按钮（关闭弹窗）
+                layero.find('#editFormCancel').on('click', function() {
+                    layer.close(index);
+                });
+            }
+        });
+    }
+
+    // 编辑提交
+    form.on('submit(editSubmit)', function(data) {
+        var field = data.field;
+        var id = field.id;
+        putApi('/admin/api/store/categories/' + id + '/', field, function(res) {
+            if (res.code === 200) {
+                layer.msg('更新成功', {icon: 1});
+                layer.closeAll();
+                tableIns.reload({
+                    where: getSearchParams()
+                });
+            } else {
+                layer.msg(res.msg || '更新失败', {icon: 2});
+            }
+        });
+        return false;
+    });
+
+    // 搜索 - 使用 table.reload 保持分页状态
+    $(document).off('click.catSearch').on('click.catSearch', '#searchBtn', function(e) {
+        e.preventDefault();
+        tableIns.reload({
+            where: getSearchParams(),
+            page: {curr: 1}
+        });
+    });
+
+    // 重置
+    $(document).off('click.catReset').on('click.catReset', '#resetBtn', function(e) {
+        e.preventDefault();
+        $('#searchKeyword').val('');
+        tableIns.reload({
+            where: {},
+            page: {curr: 1}
+        });
+    });
+
+    // 回车搜索
+    $(document).off('keydown.catSearch').on('keydown.catSearch', '#searchKeyword', function(e) {
+        if (e.keyCode === 13) {
+            e.preventDefault();
+            tableIns.reload({
+                where: getSearchParams(),
+                page: {curr: 1}
+            });
+        }
+    });
+
+    // 工具栏事件
+    table.on('toolbar(categoryTable)', function(obj) {
+        if (obj.event === 'add') {
+            openAddForm();
+        } else if (obj.event === 'refresh') {
+            tableIns.reload({
+                where: getSearchParams()
+            });
+        }
+    });
+
+    // 操作列事件
+    table.on('tool(categoryTable)', function(obj) {
+        var data = obj.data;
+        if (obj.event === 'view') {
+            var content = '<div style="padding:20px 30px;">' +
+                '<div class="layui-form-item"><label class="layui-form-label">分类名称</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">排序</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(String(data.sort || 0)) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">描述</label><div class="layui-input-block"><textarea class="layui-textarea" readonly>' + escapeHtml(data.description || '') + '</textarea></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">商品数量</label><div class="layui-input-block"><input type="text" value="' + (data.product_count || 0) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label">创建时间</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.create_time || '') + '" class="layui-input" readonly></div></div>' +
+                '</div>';
+            layer.open({
+                type: 1,
+                title: '查看分类 - ' + data.name,
+                area: ['500px', '400px'],
+                content: content,
+                btn: ['关闭']
+            });
+        } else if (obj.event === 'edit') {
+            openEditForm(data);
+        } else if (obj.event === 'more') {
+            dropdown.render({
+                elem: this,
+                show: true,
+                data: [{title: '删除分类', id: 'del'}],
+                click: function(menuitem) {
+                    layer.confirm('确认删除分类 <b>' + escapeHtml(data.name) + '</b> 吗？<br><span style="color:#ff4d4f">注意：分类下有商品时无法删除</span>', {
+                        icon: 3, title: '确认删除', btn: ['确认', '取消']
+                    }, function(index) {
+                        deleteApi('/admin/api/store/categories/' + data.id + '/', function(res) {
+                            if (res.code === 200) {
+                                layer.msg('删除成功', {icon: 1});
+                                layer.close(index);
+                                tableIns.reload({where: getSearchParams()});
+                            } else {
+                                layer.msg(res.msg || '删除失败', {icon: 2});
+                            }
+                        });
+                    });
+                }
+            });
+        }
+    });
+
+    // 初始化
+    loadTable();
+});
+</script>
+</body>
+</html>

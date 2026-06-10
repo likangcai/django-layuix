@@ -38,11 +38,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
+AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'
+
 # ============================================================
 # ② 中间件：不要加 XFrameOptionsMiddleware（否则 iframe 子页面无法加载）
 # ============================================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django_layui.rbac.middleware.ForceUtf8Middleware',  # 强制 UTF-8 编码，解决中文乱码
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',     # 国际化（rbac apps.py 会自动注入，手动加也没问题）
     'django.middleware.common.CommonMiddleware',

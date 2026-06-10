@@ -82,3 +82,43 @@ msgstr "昵称"
 #: templates/admin/index.html
 msgid "Phone"
 msgstr "手机号"
+
+#: templates/admin/search_form.html
+msgid "Search"
+msgstr "搜索"
+
+#: templates/admin/search_form.html
+msgid "Reset"
+msgstr "重置"
+
+#: templates/admin/search_form.html
+msgid "Show all"
+msgstr "显示全部"
+
+#: templates/admin/search_form.html
+msgid "%(counter)s result"
+msgid_plural "%(counter)s results"
+msgstr[0] "%(counter)s 条结果"
+msgstr[1] "%(counter)s 条结果"
+
+#: templates/admin/pagination.html
+msgid "Total %(total)s"
+msgid_plural "Total %(total)s"
+msgstr[0] "共 %(total)s 条"
+msgstr[1] "共 %(total)s 条"
+
+#: templates/admin/pagination.html
+msgid "Jump to"
+msgstr "到第"
+
+#: templates/admin/pagination.html
+msgid "page"
+msgstr "页"
+
+#: templates/admin/pagination.html
+msgid "Go"
+msgstr "确定"
+
+#: templates/admin/pagination.html
+msgid "条/页"
+msgstr "条/页"

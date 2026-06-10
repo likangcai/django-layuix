@@ -1,0 +1,43 @@
+{% load i18n %}
+{% if result_hidden_fields %}
+<div class="hiddenfields">
+{% for item in result_hidden_fields %}{{ item }}{% endfor %}
+</div>
+{% endif %}
+{% if results %}
+<div class="results" style="overflow-x:auto">
+<table id="result_list" class="layui-table" style="margin:0">
+<thead>
+<tr>
+{% for header in result_headers %}
+<th scope="col"{{ header.class_attrib }} style="white-space:nowrap;font-weight:600">
+<div style="display:flex;align-items:center;gap:4px">
+{% if header.sortable %}
+<a href="{{ header.url_primary }}" style="color:var(--text-primary);text-decoration:none;display:flex;align-items:center;gap:2px">
+{{ header.text|capfirst }}
+{% if header.sort_priority > 0 %}{% if header.ascending %}<i class="layui-icon layui-icon-ascending" style="font-size:14px;color:var(--primary-color)"></i>{% else %}<i class="layui-icon layui-icon-descending" style="font-size:14px;color:var(--primary-color)"></i>{% endif %}{% endif %}
+</a>
+{% if header.sort_priority > 0 %}
+<a href="{{ header.url_remove }}" title="Remove" style="color:var(--text-muted);text-decoration:none"><i class="layui-icon layui-icon-close" style="font-size:12px"></i></a>
+{% if num_sorted_fields > 1 %}<span style="font-size:11px;color:var(--text-muted)">{{ header.sort_priority }}</span>{% endif %}
+{% endif %}
+{% if header.sortable and header.sort_priority == 0 %}
+<a href="{{ header.url_primary }}" style="color:var(--text-muted);text-decoration:none;display:flex;align-items:center"><i class="layui-icon layui-icon-ascending" style="font-size:12px"></i></a>
+{% endif %}
+{% else %}
+<span style="color:var(--text-primary)">{{ header.text|capfirst }}</span>
+{% endif %}
+</div>
+</th>
+{% endfor %}
+</tr>
+</thead>
+<tbody>
+{% for result in results %}
+{% if result.form and result.form.non_field_errors %}<tr><td colspan="{{ result|length }}">{{ result.form.non_field_errors }}</td></tr>{% endif %}
+<tr>{% for item in result %}{{ item }}{% endfor %}</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endif %}

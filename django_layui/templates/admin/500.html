@@ -1,0 +1,13 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+{% block title %}{% translate 'Server error' %}{% endblock %}
+{% block content %}
+<div class="page-container" style="padding:40px 24px;text-align:center">
+<div class="layui-card" style="max-width:500px;margin:40px auto">
+<div class="layui-card-body" style="padding:40px">
+<i class="layui-icon layui-icon-face-cry" style="font-size:64px;color:var(--danger-color);display:block;margin-bottom:16px"></i>
+<h2 style="font-size:24px;margin-bottom:8px">500</h2>
+<p style="color:var(--text-secondary)">{% translate 'Server error. Please contact the administrator.' %}</p>
+<a href="{% url 'admin:index' %}" class="layui-btn" style="margin-top:16px">{% translate 'Back to home' %}</a>
+</div></div></div>
+{% endblock %}

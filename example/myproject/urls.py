@@ -4,6 +4,8 @@ URL 配置 - django-layui example project
 django_layui.rbac 的 AppConfig.ready() 会自动将 RBAC API 路由注册到
 /admin/api/rbac/ 和 /admin/api/ops/ 下，无需在此手动配置。
 
+store 的 API 路由通过 store/urls.py 注册到 /admin/api/store/ 下。
+
 只需保留 admin.site.urls 即可使用全部功能。
 
 WebSSH 集成（可选）：

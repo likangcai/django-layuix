@@ -139,9 +139,9 @@
                 <input type="checkbox" name="status" lay-skin="switch" lay-text="{{ t('common.enable') }}|{{ t('common.disable') }}" checked>
             </div>
         </div>
-        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
-            <button type="button" class="layui-btn" lay-submit lay-filter="roleSubmit">{{ t('common.confirm') }}</button>
-            <button type="reset" class="layui-btn layui-btn-primary">{{ t('common.reset') }}</button>
+        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="roleSubmit">{{ t('common.confirm') }}</button>
+            <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.reset') }}</button>
         </div>
     </form>
 </script>
@@ -173,9 +173,9 @@
                 <textarea name="description" placeholder="{{ t('common.inputRequired', [t('role.copy.description')]) }}" class="layui-textarea" style="height:80px;"></textarea>
             </div>
         </div>
-        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
-            <button type="button" class="layui-btn" lay-submit lay-filter="copySubmit">{{ t('common.confirm') }}</button>
-            <button type="reset" class="layui-btn layui-btn-primary">{{ t('common.reset') }}</button>
+        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="copySubmit">{{ t('common.confirm') }}</button>
+            <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.reset') }}</button>
         </div>
     </form>
 </script>
@@ -217,10 +217,13 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     toolbar: '#toolbarTpl',
                     defaultToolbar: [],
                     data: res.data || [],
-                    page: true,
                     height: 'full-220',
-                    limit: 10,
-                    limits: [10, 30, 50, 100],
+                    page: {
+                        limit: 10,
+                        limits: [10, 30, 50, 100],
+                        groups: 5,
+                        layout: ['count', 'prev', 'page', 'next', 'skip', 'limit']
+                    },
                     even: true,
                     cols: [[
                         {field: 'id', title: t('common.id'), width: 70, align: 'center'},

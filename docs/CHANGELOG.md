@@ -9,6 +9,33 @@
 
 ## [Unreleased]
 
+### 🔧 示例 App 全面重构 (2026-06-09)
+
+#### store 示例应用改用 Layui 前端 CRUD
+
+- ✅ **废弃 Django admin 原生页面** — store 的增删改查改为 `Layui 表格 + layer.open 弹窗 + REST API` 模式
+- ✅ **新增 REST API 视图** — Category/Product/Order 三个模型的完整 CRUD 接口（`store/views_api.py`）
+- ✅ **新增 Layui 前端页面** — `category.html` / `product.html` / `order.html`，使用 Layui table 渲染列表
+- ✅ **新增/编辑弹窗仅含「返回」「保存」按钮** — 其他原生按钮全部移除
+- ✅ **菜单路径改为指向静态页面** — `/static/store/pages/*.html`
+
+#### 🐛 Bug 修复
+
+- ✅ **修复 API 路由被 `catch_all_view` 拦截** — 改为通过 `site.get_urls` 补丁注入 admin site 内部
+- ✅ **修复分页总数显示错误** — `data: list + page.count` 模式下 Layui 忽略 `count`，改为 `url` 服务端分页模式
+- ✅ **修复按钮权限变为孤儿菜单** — 6 个旧按钮 `parent=None`，已删除并由 `register_menus` 正确重建
+- ✅ **修复全部 API 返回 UTC 时间而非本地时间** — `USE_TZ=True` 时 Django 以 UTC 存储时间，但代码直接用 `.strftime()` 未做时区转换
+  - `example/store/views_api.py`：新增 `fmt_time()` 辅助函数，替换所有 `strftime()` 调用
+  - `django_layui/rbac/views.py`：菜单/角色/用户/日志/配置共 7 处修复
+  - `django_layui/ops/views.py`：服务器列表 1 处修复
+
+#### 📚 文档更新
+
+- ✅ **`docs/MENU_EXTENSION_GUIDE.md`** 完全重写 — 包含新建 app 的完整三步模板、常见问题排查
+- ✅ **错误排查章节** — 分页问题、孤儿菜单、路由拦截、弹窗按钮等问题的根因与修复方案
+- ✅ **README.md 优化** — 修复"25种主题"为"深色/浅色双模式"；添加缺失的 `FRONTEND_MENU_GUIDE.md` 索引；删除与"快速开始"重复的"配置项目"章节（去重 64 行）
+- ✅ **删除旧的 `修复记录.txt`** — 内容已合并到 CHANGELOG.md
+
 ### 🎨 重大重构 (2026-05-07)
 
 #### 主题系统全面升级：28主题 → 深色/浅色双模式

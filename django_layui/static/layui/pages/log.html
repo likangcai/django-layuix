@@ -276,9 +276,12 @@
                 method: 'get',
                 where: params,
                 height: 'full-220',
-                page: true,
-                limit: 10,
-                limits: [10, 30, 50, 100],
+                page: {
+                    limit: 10,
+                    limits: [10, 30, 50, 100],
+                    groups: 5,
+                    layout: ['count', 'prev', 'page', 'next', 'skip', 'limit']
+                },
                 even: true,
                     cols: [[
                     {field: 'id', title: t('common.id'), width: 70, align: 'center', sort: true},

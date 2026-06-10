@@ -9,6 +9,14 @@ from functools import wraps
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.utils.timezone import localtime
+
+
+def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
+    """将 timezone-aware datetime 转为当前时区后格式化"""
+    if dt is None:
+        return ''
+    return localtime(dt).strftime(format_str)
 
 
 def api_login_required(view_func):
@@ -66,7 +74,7 @@ def server_list(request):
         'auth_type': s.auth_type,
         'description': s.description,
         'is_active': s.is_active,
-        'create_time': s.create_time.strftime('%Y-%m-%d %H:%M:%S') if s.create_time else '',
+        'create_time': fmt_time(s.create_time),
     } for s in servers]
 
     return success_response({'list': data, 'total': total, 'page': page, 'page_size': page_size})

@@ -1,0 +1,1 @@
+{% with id=widget.attrs.id %}<ul style="list-style:none;padding:0;margin:0">{% for group, options, index in widget.optgroups %}{% for option in options %}<li style="margin:4px 0">{% include option.template_name with widget=option %}</li>{% endfor %}{% endfor %}</ul>{% endwith %}

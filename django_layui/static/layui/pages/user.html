@@ -168,9 +168,9 @@
                 <input type="checkbox" name="is_tester" lay-skin="switch" lay-text="{{ t('common.yes') }}|{{ t('common.no') }}">
             </div>
         </div>
-        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
-            <button type="button" class="layui-btn" lay-submit lay-filter="addUserSubmit">{{ t('common.confirm') }}</button>
-            <button type="reset" class="layui-btn layui-btn-primary">{{ t('common.reset') }}</button>
+        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="addUserSubmit">{{ t('common.confirm') }}</button>
+            <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.reset') }}</button>
         </div>
     </form>
 </script>
@@ -215,9 +215,9 @@
                 <input type="checkbox" name="is_tester" lay-skin="switch" lay-text="{{ t('common.yes') }}|{{ t('common.no') }}">
             </div>
         </div>
-        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
-            <button type="button" class="layui-btn" lay-submit lay-filter="editUserSubmit">{{ t('common.confirm') }}</button>
-            <button type="reset" class="layui-btn layui-btn-primary">{{ t('common.reset') }}</button>
+        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="editUserSubmit">{{ t('common.confirm') }}</button>
+            <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.reset') }}</button>
         </div>
     </form>
 </script>
@@ -243,9 +243,9 @@
                 <input type="password" name="confirm_password" lay-verify="required|confirmPwd" lay-reqtext="{{ t('common.inputRequired', [t('user.resetPassword.confirmPwd')]) }}" placeholder="{{ t('user.resetPassword.confirmPwd') }}" autocomplete="off" class="layui-input">
             </div>
         </div>
-        <div class="layui-form-item" style="text-align:center;padding-top:10px;">
-            <button type="button" class="layui-btn" lay-submit lay-filter="resetPwdSubmit">{{ t('common.confirm') }}</button>
-            <button type="button" class="layui-btn layui-btn-primary" id="cancelResetPwd">{{ t('common.cancel') }}</button>
+        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="resetPwdSubmit">{{ t('common.confirm') }}</button>
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="cancelResetPwd">{{ t('common.cancel') }}</button>
         </div>
     </form>
 </script>
@@ -467,7 +467,7 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
                         limits: [10, 30, 50, 100],
                         curr: currentPage,
                         count: total,
-                        layout: ['prev', 'page', 'next', 'limit', 'skip', 'count'],
+                        layout: ['count', 'prev', 'page', 'next', 'skip', 'limit'],
                         jump: function(obj, first) {
                             if (!first) {
                                 currentPage = obj.curr;

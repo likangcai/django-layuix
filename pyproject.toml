@@ -4,17 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-layui"
-version = "1.0.8"
-description = "A Layui-based Django admin theme"
+version = "1.2.2"
+description = "基于 Layui 的 Django Admin 主题，集成 RBAC 权限系统和运维管理"
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.8"
 authors = [
     {name = "影子", email = "yingzilkq@163.com"},
 ]
-keywords = ["django", "admin", "layui", "theme", "rbac"]
+keywords = ["django", "admin", "layui", "theme", "rbac", "simpleui", "permission"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Framework :: Django",
     "Framework :: Django :: 3.2",
     "Framework :: Django :: 4.0",
@@ -35,6 +35,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
 ]
 dependencies = [
     "Django>=3.2",
@@ -58,4 +59,3 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["django_layui*"]
-

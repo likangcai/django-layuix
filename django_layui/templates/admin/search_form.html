@@ -1,0 +1,27 @@
+{% load i18n static %}
+{% if cl.search_fields %}
+<div id="toolbar">
+<form id="changelist-search" method="get" role="search">
+<div style="display:flex;align-items:stretch;max-width:450px;gap:8px">
+<input type="text" name="{{ search_var }}" value="{{ cl.query }}" class="layui-input"
+       placeholder="{% translate 'Search' %}"
+       style="flex:1;height:38px;border-radius:4px">
+<button type="submit" class="layui-btn" style="border-radius:4px;height:38px;line-height:38px;padding:0 16px;white-space:nowrap">
+  <i class="layui-icon layui-icon-search" style="font-size:16px"></i> {% translate 'Search' %}
+</button>
+<a href="?" class="layui-btn layui-btn-primary" style="border-radius:4px;height:38px;line-height:38px;padding:0 16px;white-space:nowrap">
+  <i class="layui-icon layui-icon-refresh" style="font-size:16px"></i> {% translate 'Reset' %}
+</a>
+</div>
+{% if show_result_count %}
+<div style="margin-top:8px;color:var(--text-secondary);font-size:13px">
+  {% blocktranslate count counter=cl.result_count %}{{ counter }} result{% plural %}{{ counter }} results{% endblocktranslate %}
+  (<a href="?" style="color:var(--primary-color)">{% translate 'Show all' %}</a>)
+</div>
+{% endif %}
+{% for pair in cl.params.items %}
+{% if pair.0 != search_var %}<input type="hidden" name="{{ pair.0 }}" value="{{ pair.1 }}">{% endif %}
+{% endfor %}
+</form>
+</div>
+{% endif %}

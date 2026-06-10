@@ -1,0 +1,12 @@
+{% load i18n admin_urls %}
+{% block object-tools-items %}
+<li>
+{% url opts|admin_urlname:'history' original.pk|admin_urlquote as history_url %}
+<a href="{% add_preserved_filters history_url %}" class="layui-btn layui-btn-xs layui-btn-primary">
+  <i class="layui-icon layui-icon-time"></i> {% translate 'History' %}
+</a>
+</li>
+{% if has_absolute_url %}
+<li><a href="{{ absolute_url }}" class="layui-btn layui-btn-xs layui-btn-primary" target="_blank">{% translate 'View on site' %}</a></li>
+{% endif %}
+{% endblock %}

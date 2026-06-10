@@ -1,0 +1,28 @@
+{% load i18n %}
+{% if app_list %}
+{% for app in app_list %}
+<div class="layui-card" style="margin-bottom:15px">
+<div class="layui-card-header">
+<h3 style="font-size:16px;font-weight:600"><i class="layui-icon layui-icon-app"></i> {{ app.name }}</h3>
+</div>
+<div class="layui-card-body">
+<table class="layui-table" style="margin:0">
+<thead><tr><th>{% translate "Model name" %}</th><th>{% translate "Actions" %}</th></tr></thead>
+<tbody>
+{% for model in app.models %}
+<tr>
+<th><a href="{{ model.admin_url }}" style="color:var(--primary-color)">{{ model.name }}</a></th>
+<td>
+{% if model.add_url %}<a href="{{ model.add_url }}" class="layui-btn layui-btn-xs layui-btn-normal">Add</a>{% endif %}
+{% if model.admin_url %}<a href="{{ model.admin_url }}" class="layui-btn layui-btn-xs">Change</a>{% endif %}
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+{% endfor %}
+{% else %}
+<p>{% translate "No permission." %}</p>
+{% endif %}
