@@ -79,4 +79,6 @@ fabric.properties
 
 .idea
 .venv
-.workbuddy
+修复记录.txt
+dist
+django_layui.egg-info
