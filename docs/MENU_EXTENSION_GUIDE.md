@@ -15,72 +15,72 @@ from decimal import Decimal
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django_layui.rbac.views import api_login_required, get_request_body, success_response, error_response
+from django_layuix.rbac.views import api_login_required, get_request_body, success_response, error_response
 from .models import MyModel
 
 
 @csrf_exempt
 @api_login_required
 def mymodel_list(request):
-    """GET /admin/api/myapp/mymodel/ - 列表（含分页/搜索）"""
-    queryset = MyModel.objects.all().order_by('-id')
+   """GET /admin/api/myapp/mymodel/ - 列表（含分页/搜索）"""
+   queryset = MyModel.objects.all().order_by('-id')
 
-    keyword = request.GET.get('keyword', '').strip()
-    if keyword:
-        queryset = queryset.filter(name__icontains=keyword)
+   keyword = request.GET.get('keyword', '').strip()
+   if keyword:
+      queryset = queryset.filter(name__icontains=keyword)
 
-    total = queryset.count()
-    try:
-        page = int(request.GET.get('page', 1))
-    except (ValueError, TypeError):
-        page = 1
-    try:
-        page_size = int(request.GET.get('page_size', 10))
-    except (ValueError, TypeError):
-        page_size = 10
-    page_size = max(1, min(page_size, 100))
-    offset = (page - 1) * page_size
-    items = queryset[offset:offset + page_size]
+   total = queryset.count()
+   try:
+      page = int(request.GET.get('page', 1))
+   except (ValueError, TypeError):
+      page = 1
+   try:
+      page_size = int(request.GET.get('page_size', 10))
+   except (ValueError, TypeError):
+      page_size = 10
+   page_size = max(1, min(page_size, 100))
+   offset = (page - 1) * page_size
+   items = queryset[offset:offset + page_size]
 
-    data = [{'id': m.id, 'name': m.name} for m in items]
-    return success_response({'list': data, 'total': total})
+   data = [{'id': m.id, 'name': m.name} for m in items]
+   return success_response({'list': data, 'total': total})
 
 
 @csrf_exempt
 @api_login_required
 def mymodel_create(request):
-    """POST /admin/api/myapp/mymodel/create/ - 创建"""
-    if request.method != 'POST':
-        return error_response('Method not allowed', 405)
-    body = get_request_body(request)
-    name = body.get('name', '').strip()
-    if not name:
-        return error_response('名称不能为空', 400)
-    obj = MyModel.objects.create(name=name)
-    return success_response({'id': obj.id}, msg='创建成功')
+   """POST /admin/api/myapp/mymodel/create/ - 创建"""
+   if request.method != 'POST':
+      return error_response('Method not allowed', 405)
+   body = get_request_body(request)
+   name = body.get('name', '').strip()
+   if not name:
+      return error_response('名称不能为空', 400)
+   obj = MyModel.objects.create(name=name)
+   return success_response({'id': obj.id}, msg='创建成功')
 
 
 @csrf_exempt
 @api_login_required
 def mymodel_detail(request, pk):
-    """GET/PUT/DELETE /admin/api/myapp/mymodel/<pk>/ - 详情/更新/删除"""
-    try:
-        obj = MyModel.objects.get(pk=pk)
-    except MyModel.DoesNotExist:
-        return error_response('记录不存在', 404)
+   """GET/PUT/DELETE /admin/api/myapp/mymodel/<pk>/ - 详情/更新/删除"""
+   try:
+      obj = MyModel.objects.get(pk=pk)
+   except MyModel.DoesNotExist:
+      return error_response('记录不存在', 404)
 
-    if request.method == 'GET':
-        return success_response({'id': obj.id, 'name': obj.name})
-    elif request.method == 'PUT':
-        body = get_request_body(request)
-        if 'name' in body:
-            obj.name = body['name'].strip()
-        obj.save()
-        return success_response(msg='更新成功')
-    elif request.method == 'DELETE':
-        obj.delete()
-        return success_response(msg='删除成功')
-    return error_response('Method not allowed', 405)
+   if request.method == 'GET':
+      return success_response({'id': obj.id, 'name': obj.name})
+   elif request.method == 'PUT':
+      body = get_request_body(request)
+      if 'name' in body:
+         obj.name = body['name'].strip()
+      obj.save()
+      return success_response(msg='更新成功')
+   elif request.method == 'DELETE':
+      obj.delete()
+      return success_response(msg='删除成功')
+   return error_response('Method not allowed', 405)
 ```
 
 ### 第2步：注册 URL 路由（必须 patch 到 admin site 内部）
@@ -104,55 +104,56 @@ urlpatterns = [
 # myapp/apps.py
 from django.apps import AppConfig
 
+
 class MyappConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'myapp'
-    verbose_name = '我的应用'
+   default_auto_field = 'django.db.models.BigAutoField'
+   name = 'myapp'
+   verbose_name = '我的应用'
 
-    def ready(self):
-        try:
-            from django_layui.rbac.menu_registry import register_menus
-            # 必须先导入 admin.py 确保模型注册
-            import myapp.admin  # noqa: F401
+   def ready(self):
+      try:
+         from django_layuix.rbac.menu_registry import register_menus
+         # 必须先导入 admin.py 确保模型注册
+         import myapp.admin  # noqa: F401
 
-            # 注册菜单与按钮
-            register_menus(
-                menus_data=[
-                    # (名称, 图标, 路径, 类型, 排序, 父菜单)
-                    ('我的应用', 'layui-icon-app', '', 1, 10, None),
-                    ('数据管理', 'layui-icon-table',
-                     '/static/myapp/pages/mymodel.html', 2, 1, '我的应用'),
-                ],
-                buttons_data=[
-                    # (按钮名, 所属菜单, 权限标识, 排序)
-                    ('新增数据', '数据管理', 'mymodel:add', 1),
-                    ('编辑数据', '数据管理', 'mymodel:edit', 2),
-                    ('删除数据', '数据管理', 'mymodel:delete', 3),
-                ]
-            )
-
-            # 注册 API 路由到 admin site 内部
-            self._register_api_urls()
-
-        except Exception as e:
-            print(f"Warning: Could not initialize myapp: {e}")
-
-    def _register_api_urls(self):
-        """⚠ 必须通过 site.get_urls 补丁注入"""
-        from django.contrib.admin import site
-        from django.urls import path, include
-        from . import urls as myapp_urls
-
-        original_get_urls = site.get_urls
-
-        def patched_get_urls():
-            urls = original_get_urls()
-            custom_urls = [
-                path('api/myapp/', include((myapp_urls.urlpatterns, 'myapp'))),
+         # 注册菜单与按钮
+         register_menus(
+            menus_data=[
+               # (名称, 图标, 路径, 类型, 排序, 父菜单)
+               ('我的应用', 'layui-icon-app', '', 1, 10, None),
+               ('数据管理', 'layui-icon-table',
+                '/static/myapp/pages/mymodel.html', 2, 1, '我的应用'),
+            ],
+            buttons_data=[
+               # (按钮名, 所属菜单, 权限标识, 排序)
+               ('新增数据', '数据管理', 'mymodel:add', 1),
+               ('编辑数据', '数据管理', 'mymodel:edit', 2),
+               ('删除数据', '数据管理', 'mymodel:delete', 3),
             ]
-            return custom_urls + urls
+         )
 
-        site.get_urls = patched_get_urls
+         # 注册 API 路由到 admin site 内部
+         self._register_api_urls()
+
+      except Exception as e:
+         print(f"Warning: Could not initialize myapp: {e}")
+
+   def _register_api_urls(self):
+      """⚠ 必须通过 site.get_urls 补丁注入"""
+      from django.contrib.admin import site
+      from django.urls import path, include
+      from . import urls as myapp_urls
+
+      original_get_urls = site.get_urls
+
+      def patched_get_urls():
+         urls = original_get_urls()
+         custom_urls = [
+            path('api/myapp/', include((myapp_urls.urlpatterns, 'myapp'))),
+         ]
+         return custom_urls + urls
+
+      site.get_urls = patched_get_urls
 ```
 
 ### 第3步：创建前端页面
@@ -270,8 +271,9 @@ layui.use(['table', 'form', 'layer'], function(){
 
 ```python
 # 修复脚本
-from django_layui.rbac.models import Menu
-Menu.objects.filter(name__in=['新增数据','编辑数据','删除数据'], parent__isnull=True).delete()
+from django_layuix.rbac.models import Menu
+
+Menu.objects.filter(name__in=['新增数据', '编辑数据', '删除数据'], parent__isnull=True).delete()
 ```
 
 然后重启 Django 进程（`AppConfig.ready()` 会重新执行）。

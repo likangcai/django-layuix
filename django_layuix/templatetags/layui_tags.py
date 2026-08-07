@@ -14,7 +14,7 @@ def _get_db_config(key, default=''):
     config = getattr(settings, 'LAYUI_CONFIG', {})
     settings_value = config.get(key, default)
     try:
-        from django_layui.rbac.models import SystemConfig
+        from django_layuix.rbac.models import SystemConfig
         db_config = SystemConfig.objects.filter(key=key).first()
         if db_config:
             return db_config.value
@@ -126,7 +126,7 @@ def webssh_url():
     """Return webssh service URL"""
     # 优先从数据库读取（系统配置）
     try:
-        from django_layui.rbac.models import SystemConfig
+        from django_layuix.rbac.models import SystemConfig
         db_config = SystemConfig.objects.filter(key='webssh_url').first()
         if db_config and db_config.value:
             return db_config.value

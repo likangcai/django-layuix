@@ -9,7 +9,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import localtime
-from django_layui.rbac.views import api_login_required, get_request_body, success_response, error_response
+from django_layuix.rbac.views import api_login_required, get_request_body, success_response, error_response
 from .models import Category, Product, Order, OrderItem
 
 

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Django-Layui AJAX Admin Mixin
-参考 django-simpleui 的 AjaxAdmin 实现
+Django-Layuix AJAX Admin Mixin
 
 提供以下功能:
 1. AJAX批量操作
@@ -23,12 +22,12 @@ logger = logging.getLogger(__name__)
 
 class LayuiAjaxAdmin(admin.ModelAdmin):
     """
-    Django-Layui AJAX Admin Mixin
+    Django-Layuix AJAX Admin Mixin
     
-    为你的ModelAdmin添加AJAX功能,类似于django-simpleui的AjaxAdmin
+    为你的ModelAdmin添加AJAX功能
     
     使用示例:
-        from django_layui.rbac.ajax_admin import LayuiAjaxAdmin
+        from django_layuix.rbac.ajax_admin import LayuiAjaxAdmin
         
         @admin.register(Product)
         class ProductAdmin(LayuiAjaxAdmin):

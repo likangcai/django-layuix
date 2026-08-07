@@ -5,7 +5,7 @@ store/admin.py - 商品管理 Admin 注册
 前端使用 Layui 静态页面进行 CRUD，不再依赖 Django 原生 admin 页面
 """
 from django.contrib import admin
-from django_layui.rbac.ajax_admin import LayuiAjaxAdmin
+from django_layuix.rbac.ajax_admin import LayuiAjaxAdmin
 from .models import Category, Product, Order
 
 

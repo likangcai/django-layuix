@@ -13,8 +13,8 @@ class StoreConfig(AppConfig):
         取代原有的 Django admin 原生页面
         """
         try:
-            from django_layui.rbac.menu_registry import register_menus
-            from django_layui.rbac.models import Menu
+            from django_layuix.rbac.menu_registry import register_menus
+            from django_layuix.rbac.models import Menu
 
             # 检查是否已经存在完整的菜单结构
             if Menu.objects.filter(name='权限管理').exists():

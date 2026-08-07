@@ -5,7 +5,7 @@
 用法: python manage.py fix_store_menu_urls
 """
 from django.core.management.base import BaseCommand
-from django_layui.rbac.models import Menu
+from django_layuix.rbac.models import Menu
 
 
 class Command(BaseCommand):

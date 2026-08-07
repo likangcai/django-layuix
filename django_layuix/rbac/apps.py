@@ -6,7 +6,7 @@ _REGISTERED = False
 
 
 class RbacConfig(AppConfig):
-    name = 'django_layui.rbac'
+    name = 'django_layuix.rbac'
     label = 'django_layui_rbac'
     verbose_name = 'Layui RBAC'
     default_auto_field = 'django.db.models.BigAutoField'
@@ -23,11 +23,11 @@ class RbacConfig(AppConfig):
         self._ensure_default_configs()
 
     def _ensure_base_app_registered(self):
-        """Ensure 'django_layui' is in INSTALLED_APPS for templatetags and static files"""
+        """Ensure 'django_layuix' is in INSTALLED_APPS for templatetags and static files"""
         from django.conf import settings
 
-        if 'django_layui' not in settings.INSTALLED_APPS:
-            settings.INSTALLED_APPS.insert(0, 'django_layui')
+        if 'django_layuix' not in settings.INSTALLED_APPS:
+            settings.INSTALLED_APPS.insert(0, 'django_layuix')
 
         # Set default language to Chinese if not configured
         if not getattr(settings, 'LANGUAGE_CODE', '').startswith('zh'):
@@ -63,7 +63,7 @@ class RbacConfig(AppConfig):
             settings.MIDDLEWARE.insert(locale_idx + 1, csrf_middleware)
 
         # Manually register templatetags (too late for auto-discovery)
-        self._register_templatetag_library('django_layui.templatetags.layui_tags', 'layui_tags')
+        self._register_templatetag_library('django_layuix.templatetags.layui_tags', 'layui_tags')
 
         # Manually register static files finder (too late for auto-discovery)
         self._register_static_files()
@@ -84,10 +84,10 @@ class RbacConfig(AppConfig):
             pass
 
     def _register_static_files(self):
-        """Manually register django_layui's static files directory"""
+        """Manually register django_layuix's static files directory"""
         try:
-            import django_layui
-            base_dir = os.path.dirname(django_layui.__file__)
+            import django_layuix
+            base_dir = os.path.dirname(django_layuix.__file__)
             static_dir = os.path.join(base_dir, 'static')
             if not os.path.isdir(static_dir):
                 return
@@ -103,15 +103,15 @@ class RbacConfig(AppConfig):
             # Method 2: Patch AppDirectoriesFinder instances
             from django.contrib.staticfiles.finders import get_finder
             finder = get_finder('django.contrib.staticfiles.finders.AppDirectoriesFinder')
-            if hasattr(finder, 'storages') and 'django_layui' not in finder.storages:
+            if hasattr(finder, 'storages') and 'django_layuix' not in finder.storages:
                 from django.core.files.storage import FileSystemStorage
-                finder.storages['django_layui'] = FileSystemStorage(location=static_dir)
-                finder.apps.append('django_layui')
+                finder.storages['django_layuix'] = FileSystemStorage(location=static_dir)
+                finder.apps.append('django_layuix')
         except Exception:
             pass
 
     def _register_template_dirs(self):
-        """Ensure django_layui templates override Django admin templates"""
+        """Ensure django_layuix templates override Django admin templates"""
         from django.conf import settings
 
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -151,7 +151,7 @@ class RbacConfig(AppConfig):
                 path('api/rbac/', include((rbac_urls.urlpatterns, 'rbac'))),
             ]
             try:
-                from django_layui.ops import urls as ops_urls
+                from django_layuix.ops import urls as ops_urls
                 custom_urls.append(
                     path('api/ops/', include((ops_urls.urlpatterns, 'ops')))
                 )
@@ -165,7 +165,7 @@ class RbacConfig(AppConfig):
         """Register OperationLogMiddleware into Django MIDDLEWARE list"""
         from django.conf import settings
 
-        middleware_path = 'django_layui.rbac.middleware.OperationLogMiddleware'
+        middleware_path = 'django_layuix.rbac.middleware.OperationLogMiddleware'
         if middleware_path not in settings.MIDDLEWARE:
             # Insert after the last middleware (at the end of the list)
             settings.MIDDLEWARE.append(middleware_path)

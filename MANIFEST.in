@@ -1,6 +1,6 @@
 include README.md
 include LICENSE
 
-recursive-include django_layui/static *
-recursive-include django_layui/templates *
-recursive-include django_layui/locale *
+recursive-include django_layuix/static *
+recursive-include django_layuix/templates *
+recursive-include django_layuix/locale *

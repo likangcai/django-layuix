@@ -29,7 +29,7 @@ def render_sidebar_menu(context):
         return mark_safe("")
     user = request.user
     lang = getattr(user, "language", "zh-hans") if hasattr(user, "language") else "zh-hans"
-    from django_layui.rbac.models import Menu
+    from django_layuix.rbac.models import Menu
     if user.is_superuser:
         qs = Menu.objects.filter(status=True, visible=True, backend_visible=True)
     else:

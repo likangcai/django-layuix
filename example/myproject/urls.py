@@ -1,7 +1,7 @@
 """
 URL 配置 - django-layui example project
 
-django_layui.rbac 的 AppConfig.ready() 会自动将 RBAC API 路由注册到
+django_layuix.rbac 的 AppConfig.ready() 会自动将 RBAC API 路由注册到
 /admin/api/rbac/ 和 /admin/api/ops/ 下，无需在此手动配置。
 
 store 的 API 路由通过 store/urls.py 注册到 /admin/api/store/ 下。
@@ -16,14 +16,14 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
-from django_layui.admin import layui_admin_site
+from django_layuix.admin import layui_admin_site
 
 def webssh_proxy(request):
     """WebSSH 代理 - 重定向到独立的 WebSSH 服务"""
     # 优先从数据库读取系统配置
     webssh_url = None
     try:
-        from django_layui.rbac.models import SystemConfig
+        from django_layuix.rbac.models import SystemConfig
         db_config = SystemConfig.objects.filter(key='webssh_url').first()
         if db_config and db_config.value:
             webssh_url = db_config.value

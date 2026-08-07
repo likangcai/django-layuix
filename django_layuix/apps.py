@@ -3,7 +3,7 @@ from django.contrib import admin
 
 
 class DjangoLayuiConfig(AppConfig):
-    name = 'django_layui'
+    name = 'django_layuix'
     verbose_name = 'Django Layui Admin'
     default_auto_field = 'django.db.models.BigAutoField'
 
