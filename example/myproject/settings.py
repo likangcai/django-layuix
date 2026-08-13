@@ -1,6 +1,6 @@
 """
-Django settings for example project using django-layui
-展示 django-layui 完整功能的示例配置
+Django settings for example project using django-layuix
+展示 django-layuix 完整功能的示例配置
 """
 import os
 import sys
@@ -8,11 +8,11 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# 开发模式：将 django-layui 源码目录添加到 Python 路径
-# 这样 example 项目会优先使用本地的 django-layui 源码，而不是 pip 安装的包
-django_layui_src = str(BASE_DIR.parent)  # 指向 django_layui 项目根目录
-if django_layui_src not in sys.path:
-    sys.path.insert(0, django_layui_src)
+# 开发模式：将 django-layuix 源码目录添加到 Python 路径
+# 这样 example 项目会优先使用本地的 django-layuix 源码，而不是 pip 安装的包
+django_layuix_src = str(BASE_DIR.parent)  # 指向 django_layuix 项目根目录
+if django_layuix_src not in sys.path:
+    sys.path.insert(0, django_layuix_src)
 
 SECRET_KEY = 'django-insecure-example-key-for-development-only'
 
@@ -21,15 +21,15 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 # ============================================================
-# ① INSTALLED_APPS：django_layui 必须在 django.contrib.admin 之前
-#    django_layui.rbac：开启 RBAC 用户/角色/菜单/权限管理
-#    django_layui.ops：开启运维管理（服务器/AI日志分析），可选
+# ① INSTALLED_APPS：django_layuix 必须在 django.contrib.admin 之前
+#    django_layuix.rbac：开启 RBAC 用户/角色/菜单/权限管理
+#    django_layuix.ops：开启运维管理（服务器/AI日志分析），可选
 # ============================================================
 INSTALLED_APPS = [
-    'django_layui',            # 必须放在 django.contrib.admin 之前！
-    'django_layui.rbac',       # RBAC 扩展（用户/角色/菜单/操作日志/系统配置）
-    'django_layui.ops',        # 运维管理扩展（服务器管理/AI日志分析），可选
-    'store.apps.StoreConfig',  # 演示应用：商品管理（必须在 admin 之前，确保在 django_layui ready() 前导入 admin.py）
+    'django_layuix',           # 必须放在 django.contrib.admin 之前！
+    'django_layuix.rbac',      # RBAC 扩展（用户/角色/菜单/操作日志/系统配置）
+    'django_layuix.ops',       # 运维管理扩展（服务器管理/AI日志分析），可选
+    'store.apps.StoreConfig',  # 演示应用：商品管理（必须在 admin 之前，确保在 django_layuix ready() 前导入 admin.py）
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,7 +45,7 @@ AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'
 # ============================================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django_layui.rbac.middleware.ForceUtf8Middleware',  # 强制 UTF-8 编码，解决中文乱码
+    'django_layuix.rbac.middleware.ForceUtf8Middleware',  # 强制 UTF-8 编码，解决中文乱码
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',     # 国际化（rbac apps.py 会自动注入，手动加也没问题）
     'django.middleware.common.CommonMiddleware',
@@ -87,9 +87,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# 开发环境：让 example 使用主项目的静态文件（指向 django_layui/static）
+# 开发环境：让 example 使用主项目的静态文件（指向 django_layuix/static）
 STATICFILES_DIRS = [
-    BASE_DIR.parent / 'django_layui' / 'static',
+    BASE_DIR.parent / 'django_layuix' / 'static',
 ]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -103,12 +103,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'
 
 # ============================================================
-# ④ django-layui 界面配置（所有配置均有默认值，不填也能正常运行）
+# ④ django-layuix 界面配置（所有配置均有默认值，不填也能正常运行）
 # ============================================================
 LAYUI_CONFIG = {
     'system_name': 'Layui Admin 演示',
     'system_version': '1.0.7',
-    'system_description': 'django-layui 功能演示项目',
+    'system_description': 'django-layuix 功能演示项目',
     'logo_icon': 'layui-icon-code-circle',
     # 使用自定义图片
     # 'logo_url': '/static/your-logo.png',

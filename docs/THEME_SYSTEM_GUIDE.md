@@ -37,7 +37,7 @@ Django-Layui 采用现代化的**深色/浅色双模式（Dark/Light Mode）**�
 #### 方式二：代码设置
 
 ```python
-from django_layui.rbac.models import UserProfile
+from django_layuix.rbac.models import UserProfile
 
 user = UserProfile.objects.get(username='admin')
 user.theme = '默认深色'  # 或 '默认浅色'
@@ -314,24 +314,25 @@ def is_dark_mode(theme_value):
 
 ```python
 # 将所有用户的主题统一设置为深色模式
-from django_layui.rbac.models import UserProfile
+from django_layuix.rbac.models import UserProfile
+
 UserProfile.objects.all().update(theme='默认深色')
 
 # 或者根据规则批量转换
 old_to_new = {
-    '深邃黑': '默认深色',
-    '优雅灰': '默认深色',
-    'Element蓝': '默认深色',
-    'Ant Design黑': '默认深色',
-    # ... 其他深色主题
-    '默认浅色': '默认浅色',
-    'AdminLTE蓝': '默认浅色',
-    # ... 其他浅色主题
+  '深邃黑': '默认深色',
+  '优雅灰': '默认深色',
+  'Element蓝': '默认深色',
+  'Ant Design黑': '默认深色',
+  # ... 其他深色主题
+  '默认浅色': '默认浅色',
+  'AdminLTE蓝': '默认浅色',
+  # ... 其他浅色主题
 }
 for user in UserProfile.objects.all():
-    if user.theme in old_to_new:
-        user.theme = old_to_new[user.theme]
-        user.save()
+  if user.theme in old_to_new:
+    user.theme = old_to_new[user.theme]
+    user.save()
 ```
 
 ### 前端代码更新

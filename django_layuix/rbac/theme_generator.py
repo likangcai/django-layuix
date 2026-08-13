@@ -278,7 +278,7 @@ def generate_all_themes():
     """
     Generate CSS files for all available themes (dark/light only)
     """
-    from django_layui.rbac.themes import DJANGO_LAYUI_THEMES
+    from django_layuix.rbac.themes import DJANGO_LAYUI_THEMES
     
     # 获取输出目录
     static_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

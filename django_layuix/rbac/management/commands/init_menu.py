@@ -9,7 +9,7 @@
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from django_layui.rbac.models import Menu, Role, SystemConfig
+from django_layuix.rbac.models import Menu, Role, SystemConfig
 
 
 class Command(BaseCommand):

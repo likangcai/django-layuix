@@ -53,7 +53,7 @@ layer.msg(t('common.success'));
 ### 1. 翻译文件位置
 
 ```
-django_layui/static/layui/js/i18n.js
+django_layuix/static/layui/js/i18n.js
 ```
 
 该文件包含所有前端页面的中英文翻译。

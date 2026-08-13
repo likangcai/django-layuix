@@ -26,8 +26,8 @@
 - ✅ **修复按钮权限变为孤儿菜单** — 6 个旧按钮 `parent=None`，已删除并由 `register_menus` 正确重建
 - ✅ **修复全部 API 返回 UTC 时间而非本地时间** — `USE_TZ=True` 时 Django 以 UTC 存储时间，但代码直接用 `.strftime()` 未做时区转换
   - `example/store/views_api.py`：新增 `fmt_time()` 辅助函数，替换所有 `strftime()` 调用
-  - `django_layui/rbac/views.py`：菜单/角色/用户/日志/配置共 7 处修复
-  - `django_layui/ops/views.py`：服务器列表 1 处修复
+  - `django_layuix/rbac/views.py`：菜单/角色/用户/日志/配置共 7 处修复
+  - `django_layuix/ops/views.py`：服务器列表 1 处修复
 
 #### 📚 文档更新
 
@@ -122,7 +122,7 @@
 
 ---
 
-### 📝 本次修改文件清单（源代码 django_layui/）
+### 📝 本次修改文件清单（源代码 django_layuix/）
 
 | 文件路径 | 修改内容 |
 |----------|----------|
@@ -384,7 +384,7 @@
 
 ### 📦 打包信息
 - 版本号: `1.0.3`
-- 包名: `django_layui-1.0.3-py3-none-any.whl`
+- 包名: `django_layuix-1.0.3-py3-none-any.whl`
 - 安装命令: `pip install django-layui --upgrade`
 
 ---

@@ -1,4 +1,4 @@
-# django-layui
+# django-layuix
 
 基于 Layui 的 Django Admin 主题，它使用现代化的 Layui 界面替换 Django 默认的后台管理界面，并结合ai功能实现日志分析。
 
@@ -27,36 +27,36 @@
 
 ```bash
 # 基础安装（包含 RBAC + 系统配置 + 操作日志 + Dashboard）
-pip install django-layui
+pip install django-layuix
 
 # 安装所有功能（含运维管理 + AI 日志分析）
-pip install django-layui[all]
+pip install django-layuix[all]
 
 # 或按需安装
-pip install django-layui[ops]   # 运维管理（服务器管理、SSH 终端）
-pip install django-layui[ai]    # AI 日志分析
+pip install django-layuix[ops]   # 运维管理（服务器管理、SSH 终端）
+pip install django-layuix[ai]    # AI 日志分析
 ```
 
 ### 2. 标准配置（必需步骤）
 
-> ⚠️ **重要说明**：django-layui 由两个**必需组件**组成：
+> ⚠️ **重要说明**：django-layuix 由两个**必需组件**组成：
 >
 > | 组件 | 包名 | 功能 |
 > |------|------|------|
-> | **基础框架** | `django_layui` | 模板替换、AdminSite、静态文件、国际化 |
-> | **RBAC 引擎** | `django_layui.rbac` | API 路由、用户模型、权限系统、菜单管理 |
+> | **基础框架** | `django_layuix` | 模板替换、AdminSite、静态文件、国际化 |
+> | **RBAC 引擎** | `django_layuix.rbac` | API 路由、用户模型、权限系统、菜单管理 |
 >
-> `django_layui.rbac` **不是可选扩展**！前端页面必须通过 RBAC API 获取用户信息、菜单数据、系统配置等。缺少此组件会导致 404 错误和功能异常。
+> `django_layuix.rbac` **不是可选扩展**！前端页面必须通过 RBAC API 获取用户信息、菜单数据、系统配置等。缺少此组件会导致 404 错误和功能异常。
 
 #### Step 1: 配置 settings.py
 
-在 `INSTALLED_APPS` 中将 `django_layui` 和 `django_layui.rbac` 添加到 `django.contrib.admin` **之前**：
+在 `INSTALLED_APPS` 中将 `django_layuix` 和 `django_layuix.rbac` 添加到 `django.contrib.admin` **之前**：
 
 ```python
 # settings.py
 INSTALLED_APPS = [
-    'django_layui',                    # 必须放在 django.contrib.admin 之前
-    'django_layui.rbac',               # ⭐ 必需！提供 API 路由和数据模型
+    'django_layuix',                    # 必须放在 django.contrib.admin 之前
+    'django_layuix.rbac',               # ⭐ 必需！提供 API 路由和数据模型
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -76,7 +76,7 @@ AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'
 
 #### Step 2: 配置 urls.py
 
-django-layui 使用自定义的 `LayuiAdminSite`（即 `layui_admin_site`）替代 Django 默认的 `admin.site`。当 `'django_layui'` 在 `INSTALLED_APPS` 中时，Django 启动时会自动将 `admin.site` 替换为 `layui_admin_site`。
+django-layuix 使用自定义的 `LayuiAdminSite`（即 `layui_admin_site`）替代 Django 默认的 `admin.site`。当 `'django_layuix'` 在 `INSTALLED_APPS` 中时，Django 启动时会自动将 `admin.site` 替换为 `layui_admin_site`。
 
 ```python
 # urls.py
@@ -90,14 +90,14 @@ urlpatterns = [
 ]
 
 # ✅ 方式二：显式使用 layui_admin_site（更明确）
-# from django_layui.admin import layui_admin_site
+# from django_layuix.admin import layui_admin_site
 # urlpatterns = [
 #     path('admin/', layui_admin_site.urls),
 # ]
 ```
 
 > **⚠️ 重要提示**：如果遇到 `/admin/api/rbac/userinfo/` 404 错误，请检查：
-> - [ ] `INSTALLED_APPS` 中包含 `'django_layui'` 和 `'django_layui.rbac'`
+> - [ ] `INSTALLED_APPS` 中包含 `'django_layuix'` 和 `'django_layuix.rbac'`
 > - [ ] 已运行 `python manage.py migrate`
 > - [ ] 已运行 `python manage.py init_menu`
 > - [ ] 重启服务器并清除浏览器缓存 (Ctrl+F5)
@@ -194,7 +194,7 @@ LAYUI_CONFIG = {
         # 外部链接示例
         # {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
         # {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
-        # {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layui'},
+        # {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
         # {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django_layui'}
         # {'name': '自定义页面', 'icon': 'layui-icon-app', 'url': '/custom-page/'},
     ],
@@ -280,7 +280,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 
 #### 4.4 首页自定义快速链接
 
-django-layui 支持在首页仪表盘显示自定义快速链接，方便用户快速访问常用页面或外部网站。
+django-layuix 支持在首页仪表盘显示自定义快速链接，方便用户快速访问常用页面或外部网站。
 
 **配置示例：**
 
@@ -299,7 +299,7 @@ LAYUI_CONFIG = {
         # 外部链接
         {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
         {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
-        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layui'},
+        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
         {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django_layui'},
         
         # 自定义应用页面
@@ -348,7 +348,7 @@ LAYUI_CONFIG = {
 
 #### 4.5 国际化 (i18n) 支持
 
-django-layui 提供完整的中英文双语切换功能，包括前端界面和后端菜单。
+django-layuix 提供完整的中英文双语切换功能，包括前端界面和后端菜单。
 
 **语言切换：**
 
@@ -394,15 +394,15 @@ layer.msg(t('common.addSuccess'));
 如果需要服务器管理、日志查看、AI 日志分析功能：
 
 ```bash
-pip install django-layui[ops]
+pip install django-layuix[ops]
 ```
 
 ```python
 # settings.py
 INSTALLED_APPS = [
-    'django_layui',                    # 必须放在 django.contrib.admin 之前
-    'django_layui.rbac',               # RBAC 扩展（用户/角色/菜单管理）
-    'django_layui.ops',                # 运维管理扩展（服务器管理/AI分析）
+    'django_layuix',                    # 必须放在 django.contrib.admin 之前
+    'django_layuix.rbac',               # RBAC 扩展（用户/角色/菜单管理）
+    'django_layuix.ops',                # 运维管理扩展（服务器管理/AI分析）
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -425,7 +425,7 @@ INSTALLED_APPS = [
 
 ### 5.1 自定义应用菜单注册（无需修改库源码）
 
-django-layui 提供了手动注册菜单的 API，允许外部项目动态添加菜单，无需修改库源码。
+django-layuix 提供了手动注册菜单的 API，允许外部项目动态添加菜单，无需修改库源码。
 
 > ⚠️ **推荐使用 `register_menus` 手动注册**，不要使用已废弃的 `auto_register_admin_apps`。
 > 手动注册可以完全控制菜单结构、路径、图标和按钮权限，且避免孤儿菜单问题。
@@ -439,7 +439,7 @@ django-layui 提供了手动注册菜单的 API，允许外部项目动态添加
 ```python
 # myapp/views_api.py
 from django.views.decorators.csrf import csrf_exempt
-from django_layui.rbac.views import api_login_required, get_request_body, success_response, error_response
+from django_layuix.rbac.views import api_login_required, get_request_body, success_response, error_response
 from .models import MyModel
 
 
@@ -472,6 +472,7 @@ urlpatterns = [
 # myapp/apps.py
 from django.apps import AppConfig
 
+
 class MyappConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'myapp'
@@ -479,7 +480,7 @@ class MyappConfig(AppConfig):
 
     def ready(self):
         try:
-            from django_layui.rbac.menu_registry import register_menus
+            from django_layuix.rbac.menu_registry import register_menus
 
             import myapp.admin  # noqa: F401
 
@@ -647,7 +648,7 @@ LAYUI_CONFIG = {
 支持所有 **OpenAI 兼容协议**的服务（OpenAI、智谱AI、DeepSeek、通义千问、Moonshot 等）：
 
 ```bash
-pip install django-layui[ai]
+pip install django-layuix[ai]
 ```
 
 **方式一：Web 界面配置（推荐）**
@@ -695,13 +696,13 @@ LAYUI_AI_BASE_URL = ''                # API 地址（OpenAI 可留空）
 
 ## 工作原理
 
-django-layui 利用 Django 的模板覆盖机制。通过将包放在 `INSTALLED_APPS` 中 `django.contrib.admin` 之前，Django 的模板加载器会优先查找 `django_layui/templates/admin/` 中的模板，从而有效替换默认的 Admin 模板。
+django-layuix 利用 Django 的模板覆盖机制。通过将包放在 `INSTALLED_APPS` 中 `django.contrib.admin` 之前，Django 的模板加载器会优先查找 `django_layuix/templates/admin/` 中的模板，从而有效替换默认的 Admin 模板。
 
 ### 自动注册机制
 
-`django_layui.rbac` 的 `AppConfig.ready()` 会自动完成以下操作，用户无需手动配置：
+`django_layuix.rbac` 的 `AppConfig.ready()` 会自动完成以下操作，用户无需手动配置：
 
-1. **INSTALLED_APPS**：自动注入 `django_layui`
+1. **INSTALLED_APPS**：自动注入 `django_layuix`
 2. **LocaleMiddleware**：自动注入国际化中间件
 3. **模板目录**：自动注册模板覆盖目录
 4. **静态文件**：自动注册静态文件查找器
@@ -712,12 +713,12 @@ django-layui 利用 Django 的模板覆盖机制。通过将包放在 `INSTALLED
 ### 模板覆盖链
 
 ```
-django_layui/templates/admin/base.html      → 主布局（Layui）
-django_layui/templates/admin/base_site.html  → 站点布局
-django_layui/templates/admin/login.html      → 登录页面
-django_layui/templates/admin/index.html      → 仪表盘（Tab 布局 + iframe）
-django_layui/templates/admin/change_list.html → 模型列表页
-django_layui/templates/admin/change_form.html → 模型编辑页
+django_layuix/templates/admin/base.html      → 主布局（Layui）
+django_layuix/templates/admin/base_site.html  → 站点布局
+django_layuix/templates/admin/login.html      → 登录页面
+django_layuix/templates/admin/index.html      → 仪表盘（Tab 布局 + iframe）
+django_layuix/templates/admin/change_list.html → 模型列表页
+django_layuix/templates/admin/change_form.html → 模型编辑页
 ```
 
 ---
@@ -754,7 +755,7 @@ django_layui/templates/admin/change_form.html → 模型编辑页
 
 ## RBAC 模型
 
-使用 RBAC 扩展（`django_layui.rbac`）时，提供以下模型：
+使用 RBAC 扩展（`django_layuix.rbac`）时，提供以下模型：
 
 | 模型 | 表名 | 说明 |
 |------|------|------|
@@ -867,9 +868,9 @@ RBAC 模块提供以下 REST API（自动注册到 `/admin/api/rbac/`）：
 
 ## 国际化
 
-django-layui 支持中英文双语，分两层实现：
+django-layuix 支持中英文双语，分两层实现：
 
-1. **后端（Django i18n）**：模板中使用 `{% trans %}` 标签，翻译文件位于 `django_layui/locale/zh_Hans/LC_MESSAGES/django.po`
+1. **后端（Django i18n）**：模板中使用 `{% trans %}` 标签，翻译文件位于 `django_layuix/locale/zh_Hans/LC_MESSAGES/django.po`
 2. **前端（JS i18n）**：子页面通过 `t('key')` 函数和 `data-i18n` 属性实现动态翻译，翻译字典位于 `static/layui/js/i18n.js`
 
 `LocaleMiddleware` 会自动注入，用户无需手动配置。
@@ -882,7 +883,7 @@ django-layui 支持中英文双语，分两层实现：
 
 > **版本**: 1.0.3+ | **更新**: 2026-05-07
 
-Django-Layui 内置深色/浅色双模式切换功能：
+django-layuix 内置深色/浅色双模式切换功能：
 
 - **一键切换**：Header 右侧月亮/太阳图标按钮
 - **全局同步**：Header、Sidebar、Tab栏、内容区域全部统一切换
@@ -915,11 +916,11 @@ Django-Layui 内置深色/浅色双模式切换功能：
 
 | 安装方式 | 命令 | 包含功能 |
 |---------|------|---------|
-| 基础 | `pip install django-layui` | RBAC + 系统配置 + 操作日志 + Dashboard |
-| 运维 | `pip install django-layui[ops]` | + 服务器管理 + SSH 终端 |
-| AI | `pip install django-layui[ai]` | + AI 日志分析 |
-| 全部 | `pip install django-layui[all]` | 所有功能 |
-| 开发 | `pip install django-layui[dev]` | + build + twine |
+| 基础 | `pip install django-layuix` | RBAC + 系统配置 + 操作日志 + Dashboard |
+| 运维 | `pip install django-layuix[ops]` | + 服务器管理 + SSH 终端 |
+| AI | `pip install django-layuix[ai]` | + AI 日志分析 |
+| 全部 | `pip install django-layuix[all]` | 所有功能 |
+| 开发 | `pip install django-layuix[dev]` | + build + twine |
 
 ---
 
@@ -927,16 +928,16 @@ Django-Layui 内置深色/浅色双模式切换功能：
 
 | 功能 | 需要的包 | 需要的配置 | 必需性 |
 |------|---------|-----------|--------|
-| **Layui 基础框架** | django-layui | INSTALLED_APPS 加 `django_layui` | ✅ **必需** |
-| **RBAC 引擎（API/用户/菜单）** | django-layui（内置） | 加 `django_layui.rbac` + `AUTH_USER_MODEL` | ✅ **必需** |
-| 服务器管理 + 日志查看 | paramiko | 加 `django_layui.ops`（API 路由自动注册） | 🔵 可选 |
+| **Layui 基础框架** | django-layuix | INSTALLED_APPS 加 `django_layuix` | ✅ **必需** |
+| **RBAC 引擎（API/用户/菜单）** | django-layuix（内置） | 加 `django_layuix.rbac` + `AUTH_USER_MODEL` | ✅ **必需** |
+| 服务器管理 + 日志查看 | paramiko | 加 `django_layuix.ops`（API 路由自动注册） | 🔵 可选 |
 | Web SSH 终端 | webssh | 运行 wssh 命令 + 配置 webssh_url | 🔵 可选 |
 | AI 日志分析 | openai | 配置 AI Key（后台界面或 settings.py） | 🔵 可选 |
 
 > **说明**：
-> - ✅ **必需组件**：`django_layui` 和 `django_layui.rbac` 是使用 django-layui 的**最低要求**
+> - ✅ **必需组件**：`django_layuix` 和 `django_layuix.rbac` 是使用 django-layuix 的**最低要求**
 > - 🔵 **可选功能**：运维管理和 AI 分析需要额外安装依赖包
-> - 完整安装命令：`pip install django-layui[all]`（包含所有可选功能）
+> - 完整安装命令：`pip install django-layuix[all]`（包含所有可选功能）
 
 ---
 
@@ -962,7 +963,7 @@ Django-Layui 内置深色/浅色双模式切换功能：
 
 ## 🆘 常见问题与故障排查
 
-本章节汇总了用户在使用 django-layui 时遇到的**高频问题**及解决方案。如果您遇到的问题未在此列出，请 [提交 Issue](https://github.com/likangcai/django-layui/issues)。
+本章节汇总了用户在使用 django-layuix 时遇到的**高频问题**及解决方案。如果您遇到的问题未在此列出，请 [提交 Issue](https://github.com/likangcai/django-layuix/issues)。
 
 ---
 
@@ -978,7 +979,7 @@ GET /admin/api/rbac/userinfo/ HTTP/1.1" 404 4356
 页面在 `/admin/login/` 和 `/admin/` 之间循环重定向。
 
 #### 原因
-API 路由未正确注册。django-layui 的 API 路由通过 `AppConfig.ready()` 自动注册，如果配置不正确会导致路由缺失。
+API 路由未正确注册。django-layuix 的 API 路由通过 `AppConfig.ready()` 自动注册，如果配置不正确会导致路由缺失。
 
 #### 解决方案（按优先级排序）
 
@@ -986,8 +987,8 @@ API 路由未正确注册。django-layui 的 API 路由通过 `AppConfig.ready()
 ```python
 # settings.py
 INSTALLED_APPS = [
-    'django_layui',           # ✅ 必须第一个（基础框架）
-    'django_layui.rbac',      # ✅ 必需！RBAC 引擎（提供 API 路由）
+    'django_layuix',           # ✅ 必须第一个（基础框架）
+    'django_layuix.rbac',      # ✅ 必需！RBAC 引擎（提供 API 路由）
     'django.contrib.admin',
     'django.contrib.auth',
     # ... 其他应用
@@ -995,9 +996,9 @@ INSTALLED_APPS = [
 ```
 
 > **⚠️ 关键点**：
-> - `'django_layui'` 必须在 `django.contrib.admin` **之前**
-> - `'django_layui.rbac'` 是 **必需组件**（不是可选的），缺少它会导致所有 API 返回 404
-> - 如果缺少 `'django_layui.rbac'`，前端页面将无法获取用户信息、菜单数据、系统配置
+> - `'django_layuix'` 必须在 `django.contrib.admin` **之前**
+> - `'django_layuix.rbac'` 是 **必需组件**（不是可选的），缺少它会导致所有 API 返回 404
+> - 如果缺少 `'django_layuix.rbac'`，前端页面将无法获取用户信息、菜单数据、系统配置
 
 **Step 2: 执行数据库迁移**
 ```bash
@@ -1042,7 +1043,7 @@ urlpatterns = [
 ]
 
 # 或者显式使用（更明确）
-# from django_layui.admin import layui_admin_site
+# from django_layuix.admin import layui_admin_site
 # urlpatterns = [
 #     path('admin/', layui_admin_site.urls),
 # ]
@@ -1056,12 +1057,12 @@ from django.conf import settings
 from django.urls import reverse
 
 print("=" * 60)
-print("django-layui 配置诊断报告")
+print("django-layuix 配置诊断报告")
 print("=" * 60)
 
 # 1. 检查 INSTALLED_APPS
 print("\n[1] INSTALLED_APPS 检查:")
-apps_to_check = ['django_layui', 'django_layui.rbac']
+apps_to_check = ['django_layuix', 'django_layuix.rbac']
 for app in apps_to_check:
     status = "✅" if app in settings.INSTALLED_APPS else "❌"
     print(f"  {status} {app}")
@@ -1220,14 +1221,14 @@ python manage.py init_menu
 
 **如果 init_menu 命令不存在**:
 ```bash
-# 检查是否正确安装了 django_layui.rbac
+# 检查是否正确安装了 django_layuix.rbac
 python manage.py shell
 
->>> import django_layui.rbac
->>> print(django_layui.rbac.__version__)  # 如果报错，说明安装有问题
+>>> import django_layuix.rbac
+>>> print(django_layuix.rbac.__version__)  # 如果报错，说明安装有问题
 
 # 重新安装
-pip install --force-reinstall django-layui
+pip install --force-reinstall django-layuix
 ```
 
 ---
@@ -1246,14 +1247,14 @@ pip install --force-reinstall django-layui
 #### 一键安装所有依赖
 ```bash
 # 方式一：安装全部可选依赖
-pip install django-layui[all]
+pip install django-layuix[all]
 
 # 方式二：仅安装需要的
-pip install django-layui[ops]   # 运维管理
-pip install django-layui[ai]    # AI日志分析
+pip install django-layuix[ops]   # 运维管理
+pip install django-layuix[ai]    # AI日志分析
 ```
 
-> **注意**: 核心依赖 (`Django`, `psutil`) 会随 `pip install django-layui` 自动安装，无需单独安装。
+> **注意**: 核心依赖 (`Django`, `psutil`) 会随 `pip install django-layuix` 自动安装，无需单独安装。
 
 ---
 
@@ -1290,17 +1291,17 @@ urlpatterns = [
 
 ### 📋 完整安装检查清单
 
-首次安装 django-layui 后，请按顺序执行：
+首次安装 django-layuix 后，请按顺序执行：
 
 ```bash
 # ===== Step 1: 安装包 =====
-pip install django-layui
-# 或完整版: pip install django-layui[all]
+pip install django-layuix
+# 或完整版: pip install django-layuix[all]
 
 # ===== Step 2: 配置 settings.py =====
 # 编辑 your_project/settings.py:
-#   INSTALLED_APPS = ['django_layui', 'django_layui.rbac', 'django.contrib.admin', ...]
-#   ⚠️ 注意: 'django_layui.rbac' 是必需的，不是可选的！
+#   INSTALLED_APPS = ['django_layuix', 'django_layuix.rbac', 'django.contrib.admin', ...]
+#   ⚠️ 注意: 'django_layuix.rbac' 是必需的，不是可选的！
 #   AUTH_USER_MODEL = 'django_layui_rbac.UserProfile' (推荐，启用自定义用户模型)
 
 # ===== Step 3: 配置 urls.py =====
@@ -1339,7 +1340,7 @@ python manage.py runserver
 2. **搜索已知 Issues**: [GitHub Issues](https://github.com/likangcai/django-layui/issues)
 3. **提交新 Issue**: 请包含以下信息：
    - Django 版本 (`python -c "import django; print(django.VERSION)"`)
-   - django-layui 版本 (`pip show django-layui`)
+   - django-layuix 版本 (`pip show django-layuix`)
    - 完整的错误堆栈信息
    - `settings.py` 中相关的配置（隐藏敏感信息）
    - 操作系统和 Python 版本

@@ -214,10 +214,10 @@ LAYUI_CONFIG = {
 
 | 文件 | 作用 |
 |------|------|
-| `django_layui/admin.py` | 自定义 AdminSite，传递配置到模板 |
-| `django_layui/apps.py` | 应用配置，替换默认 admin.site |
-| `django_layui/templates/admin/index.html` (第181行) | 主框架模板，传递配置到前端 |
-| `django_layui/static/layui/pages/dashboard.html` (第364-430行) | 首页仪表盘，渲染快速链接 |
+| `django_layuix/admin.py` | 自定义 AdminSite，传递配置到模板 |
+| `django_layuix/apps.py` | 应用配置，替换默认 admin.site |
+| `django_layuix/templates/admin/index.html` (第181行) | 主框架模板，传递配置到前端 |
+| `django_layuix/static/layui/pages/dashboard.html` (第364-430行) | 首页仪表盘，渲染快速链接 |
 | `example/myproject/settings.py` (第103行) | 配置示例 |
 | `README.md` (第183-249行) | 快速入门和详细说明 |
 

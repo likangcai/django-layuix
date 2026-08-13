@@ -28,46 +28,50 @@
 
 ```python
 from django.contrib import admin
-from django_layui.rbac import LayuiAjaxAdmin
+from django_layuix.rbac import LayuiAjaxAdmin
 from .models import Product
+
 
 @admin.register(Product)
 class ProductAdmin(LayuiAjaxAdmin):
     """商品管理 - 启用AJAX功能"""
-    
+
     list_display = ['name', 'price', 'status']
     search_fields = ['name', 'sku']
     list_filter = ['status', 'category']
-    
+
     # 定义批量操作action
     actions = ['batch_publish', 'batch_archive']
-    
+
     def batch_publish(self, request, queryset):
         """批量发布商品"""
         count = queryset.update(status='published')
         return {
             'msg': f'成功发布 {count} 个商品'
         }
+
     batch_publish.short_description = '发布选中商品'
-    
+
     def batch_archive(self, request, queryset):
         """批量归档商品"""
         count = queryset.update(status='archived')
         return {
             'msg': f'成功归档 {count} 个商品'
         }
+
     batch_archive.short_description = '归档选中商品'
 ```
 
 ### 高级用法:Layer弹窗
 
 ```python
-from django_layui.rbac import LayuiAjaxAdmin, layer
+from django_layuix.rbac import LayuiAjaxAdmin, layer
+
 
 @admin.register(Order)
 class OrderAdmin(LayuiAjaxAdmin):
     """订单管理"""
-    
+
     @layer
     def batch_ship(self, request):
         """
@@ -83,8 +87,9 @@ class OrderAdmin(LayuiAjaxAdmin):
             'btn': ['确认发货', '取消'],
             'yes': 'doShip()'  # 点击确定执行的JS函数
         }
+
     batch_ship.short_description = '批量发货'
-    
+
     @layer
     def export_orders(self, request):
         """导出订单 - 带选项的弹窗"""
@@ -110,6 +115,7 @@ class OrderAdmin(LayuiAjaxAdmin):
             ''',
             'area': ['500px', '400px']
         }
+
     export_orders.short_description = '导出订单'
 ```
 

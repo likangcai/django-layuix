@@ -73,7 +73,7 @@ visible: ❌ False
 ## 📁 文件结构
 
 ```
-django_layui/
+django_layuix/
 ├── rbac/
 │   ├── views.py              # 包含 _get_frontend_menus() 和 frontend_menu_tree()
 │   └── urls.py               # 添加了 /menus/frontend/ 路由

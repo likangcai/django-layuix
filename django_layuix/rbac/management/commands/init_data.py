@@ -7,7 +7,7 @@
 """
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
-from django_layui.rbac.models import Role, UserProfile
+from django_layuix.rbac.models import Role, UserProfile
 
 
 class Command(BaseCommand):

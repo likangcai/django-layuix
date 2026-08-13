@@ -19,13 +19,13 @@ def auto_register_admin_apps(exclude_apps=None, menu_sort_order=None):
     Args:
         exclude_apps: 要排除的 app 标签列表（如 ['auth', 'contenttypes']）
                      默认会排除: auth, contenttypes, sessions,
-                                django_layui.rbac, django_layui.ops
+                                django_layuix.rbac, django_layuix.ops
                                 (因为这些已有专门的菜单管理)
         menu_sort_order: 自定义菜单排序（app_label: sort_number 字典）
     
     Example:
         # 在 myapp/apps.py 的 ready() 方法中调用
-        from django_layui.rbac import auto_register_admin_apps
+        from django_layuix.rbac import auto_register_admin_apps
         
         # 使用默认排除列表(推荐)
         auto_register_admin_apps()
@@ -41,12 +41,12 @@ def auto_register_admin_apps(exclude_apps=None, menu_sort_order=None):
     """
     from django.apps import apps
     from django.contrib import admin
-    from django_layui.rbac.models import Menu, Role
+    from django_layuix.rbac.models import Menu, Role
     
     # 默认排除的 app 标签
-    # 注意: django_layui.rbac 和 django_layui.ops 已有专门的菜单管理
+    # 注意: django_layuix.rbac 和 django_layuix.ops 已有专门的菜单管理
     # (权限管理、系统管理、运维管理)，不应重复生成
-    # 重要: app_label 使用下划线而非点! (django_layui_rbac 而非 django_layui.rbac)
+    # 重要: app_label 使用下划线而非点! (django_layui_rbac 而非 django_layuix.rbac)
     if exclude_apps is None:
         exclude_apps = [
             'auth',               # Django 认证系统
@@ -184,7 +184,7 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False):
     
     Example:
         # 在 myapp/apps.py 的 ready() 方法中调用
-        from django_layui.rbac.menu_registry import register_menus
+        from django_layuix.rbac.menu_registry import register_menus
         
         register_menus(
             menus_data=[
@@ -199,7 +199,7 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False):
             skip_existing=True  # 跳过已存在的菜单
         )
     """
-    from django_layui.rbac.models import Menu, Role
+    from django_layuix.rbac.models import Menu, Role
     
     created = {}
     
@@ -286,7 +286,7 @@ def unregister_menus(menu_names):
     Args:
         menu_names: 要删除的菜单名称列表
     """
-    from django_layui.rbac.models import Menu
+    from django_layuix.rbac.models import Menu
     
     for name in menu_names:
         try:

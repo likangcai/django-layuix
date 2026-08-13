@@ -306,7 +306,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 
 **实现原理：**
 
-在 [`admin.py`](file:///D:/chengxu/django_layui/django_layui/admin.py) 的 `LayuiAdminSite.each_context()` 方法中：
+在 [`admin.py`](file:///D:/chengxu/django_layuix/django_layuix/admin.py) 的 `LayuiAdminSite.each_context()` 方法中：
 
 ```python
 # 1. 从 settings.py 读取默认配置
@@ -562,47 +562,48 @@ Authorization: Bearer <session_id 或 token>
 # myapp/apps.py
 from django.apps import AppConfig
 
+
 class MyappConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'myapp'
-    verbose_name = '商品管理'
-    
-    def ready(self):
-        try:
-            from django_layui.rbac import register_menus
-            
-            register_menus(
-                menus_data=[
-                    # 一级目录
-                    ('电商管理', 'layui-icon-cart', '', 1, 5, None),
-                    
-                    # 二级菜单
-                    ('商品管理', 'layui-icon-cart-simple', '/store/product', 2, 1, '电商管理'),
-                    ('订单管理', 'layui-icon-form', '/store/order', 2, 2, '电商管理'),
-                    ('分类管理', 'layui-icon-folder', '/store/category', 2, 3, '电商管理'),
-                ],
-                
-                buttons_data=[
-                    # 商品管理按钮权限
-                    ('新增商品', '商品管理', 'product:add', 1),
-                    ('编辑商品', '商品管理', 'product:edit', 2),
-                    ('删除商品', '商品管理', 'product:delete', 3),
-                    ('导出商品', '商品管理', 'product:export', 4),
-                    ('上架商品', '商品管理', 'product:publish', 5),
-                    
-                    # 订单管理按钮权限
-                    ('查看订单', '订单管理', 'order:view', 1),
-                    ('发货', '订单管理', 'order:ship', 2),
-                    ('取消订单', '订单管理', 'order:cancel', 3),
-                    
-                    # 分类管理按钮权限
-                    ('新增分类', '分类管理', 'category:add', 1),
-                    ('编辑分类', '分类管理', 'category:edit', 2),
-                    ('删除分类', '分类管理', 'category:delete', 3),
-                ]
-            )
-        except Exception as e:
-            print(f"Warning: Could not register menus: {e}")
+  default_auto_field = 'django.db.models.BigAutoField'
+  name = 'myapp'
+  verbose_name = '商品管理'
+
+  def ready(self):
+    try:
+      from django_layuix.rbac import register_menus
+
+      register_menus(
+        menus_data=[
+          # 一级目录
+          ('电商管理', 'layui-icon-cart', '', 1, 5, None),
+
+          # 二级菜单
+          ('商品管理', 'layui-icon-cart-simple', '/store/product', 2, 1, '电商管理'),
+          ('订单管理', 'layui-icon-form', '/store/order', 2, 2, '电商管理'),
+          ('分类管理', 'layui-icon-folder', '/store/category', 2, 3, '电商管理'),
+        ],
+
+        buttons_data=[
+          # 商品管理按钮权限
+          ('新增商品', '商品管理', 'product:add', 1),
+          ('编辑商品', '商品管理', 'product:edit', 2),
+          ('删除商品', '商品管理', 'product:delete', 3),
+          ('导出商品', '商品管理', 'product:export', 4),
+          ('上架商品', '商品管理', 'product:publish', 5),
+
+          # 订单管理按钮权限
+          ('查看订单', '订单管理', 'order:view', 1),
+          ('发货', '订单管理', 'order:ship', 2),
+          ('取消订单', '订单管理', 'order:cancel', 3),
+
+          # 分类管理按钮权限
+          ('新增分类', '分类管理', 'category:add', 1),
+          ('编辑分类', '分类管理', 'category:edit', 2),
+          ('删除分类', '分类管理', 'category:delete', 3),
+        ]
+      )
+    except Exception as e:
+      print(f"Warning: Could not register menus: {e}")
 ```
 
 #### 步骤2：创建前端页面
@@ -740,7 +741,7 @@ python manage.py init_menu --fix-icons
 # 方法1: Django Shell
 python manage.py shell
 
->>> from django_layui.rbac.models import Role, Menu
+>>> from django_layuix.rbac.models import Role, Menu
 >>> 
 >>> # 获取角色
 >>> operator_role = Role.objects.get(name='运营人员')
@@ -766,13 +767,14 @@ python manage.py shell
 
 ```python
 register_menus(
-    menus_data=[
-        ('商品管理', 'layui-icon-cart-simple', '/store/product', 2, 1, '电商管理'),
-    ],
+  menus_data=[
+    ('商品管理', 'layui-icon-cart-simple', '/store/product', 2, 1, '电商管理'),
+  ],
 )
 
 # 创建后，在后台或代码中更新多语言字段
-from django_layui.rbac.models import Menu
+from django_layuix.rbac.models import Menu
+
 menu = Menu.objects.get(name='商品管理')
 menu.name_en = 'Product Management'
 menu.name_zh_hans = '商品管理'
@@ -803,30 +805,30 @@ menu.save()
 ### Q3: 如何批量添加权限？
 
 ```python
-from django_layui.rbac.models import Menu, Role
+from django_layuix.rbac.models import Menu, Role
 
 # 批量创建按钮权限
 buttons = [
-    ('批量导入', '商品管理', 'product:import', 10),
-    ('批量下架', '商品管理', 'product:unpublish', 11),
+  ('批量导入', '商品管理', 'product:import', 10),
+  ('批量下架', '商品管理', 'product:unpublish', 11),
 ]
 
 for btn_name, parent_name, perm, sort in buttons:
-    parent_menu = Menu.objects.get(name=parent_name)
-    Menu.objects.get_or_create(
-        name=btn_name,
-        defaults={
-            'icon': '',
-            'path': '',
-            'component': '',
-            'menu_type': 3,  # 按钮
-            'permission': perm,
-            'sort': sort,
-            'parent': parent_menu,
-            'visible': False,  # 按钮通常不在侧边栏显示
-            'status': True,
-        }
-    )
+  parent_menu = Menu.objects.get(name=parent_name)
+  Menu.objects.get_or_create(
+    name=btn_name,
+    defaults={
+      'icon': '',
+      'path': '',
+      'component': '',
+      'menu_type': 3,  # 按钮
+      'permission': perm,
+      'sort': sort,
+      'parent': parent_menu,
+      'visible': False,  # 按钮通常不在侧边栏显示
+      'status': True,
+    }
+  )
 ```
 
 ### Q4: 权限标识可以重复吗？
