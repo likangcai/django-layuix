@@ -81,5 +81,5 @@ fabric.properties
 .venv
 修复记录.txt
 dist
-django_layui.egg-info
+django_layuix.egg-info
 db.sqlite3
