@@ -21,6 +21,7 @@
 - ✅ **通用认证/权限桥接** — 新增认证器注册表、统一 `has_permission()` 入口与可选 DRF/SimpleJWT 适配器，核心不引入 DRF
 - ✅ **版本兼容性说明** — 明确 Python 3.8–3.13 / Django 3.2–6.0 支持矩阵、CI 覆盖范围与升级建议
 - ✅ **国际化验证与修复** — 补齐前端缺失翻译键，个人中心增加语言切换，修正繁体中文文档残留并新增 i18n 回归测试
+- ✅ **Django Ninja 可选适配器** — 提供 `LayuiNinjaAuth` 与 `ninja_permission_required`，核心不引入 Ninja 依赖
 
 ### 🔧 示例 App 全面重构 (2026-06-09)
 

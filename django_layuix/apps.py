@@ -43,6 +43,10 @@ class DjangoLayuiConfig(AppConfig):
             from .integrations import drf  # noqa: F401
         except ImportError:
             pass
+        try:
+            from .integrations import ninja  # noqa: F401
+        except ImportError:
+            pass
 
         # 发现通过 entry_points 安装的第三方插件
         from .rbac.plugins import discover_entry_point_plugins

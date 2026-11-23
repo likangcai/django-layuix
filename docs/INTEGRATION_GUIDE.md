@@ -4,7 +4,8 @@
 
 ## 1. 结论
 
-【判断】认证/权限桥接应当是**通用能力**，不是 TestHub 专用。核心层不引入 DRF，而是提供两个标准入口：
+【事实】核心桥接层只依赖 Django，不依赖 DRF 或 Django Ninja；DRF/Ninja 均为可选适配器。
+【判断】认证/权限桥接应当是**通用能力**，不是 TestHub 专用。核心层不引入第三方 Web 框架，而是提供两个标准入口：
 
 1. `django_layuix.integrations.auth`：通用认证桥接。
 2. `django_layuix.rbac.permissions.has_permission()`：统一权限判定。
@@ -104,7 +105,33 @@ TestHub 已有 SimpleJWT + DRF，无需改造成项目自带 Token：
 
 这样两边共享同一套用户、角色和权限数据，但认证方式各自保留。
 
-## 6. 是否需要引入 DRF
+## 6. Django Ninja 适配器（可选）
+
+Django Ninja 直接使用 Django `HttpRequest`，因此通用认证桥接天然可用。额外提供两个可选工具，且不在核心依赖中引入 Ninja：
+
+```python
+# ninja_project/api.py
+from ninja import NinjaAPI
+from django_layuix.integrations.ninja import LayuiNinjaAuth, ninja_permission_required
+
+api = NinjaAPI(auth=LayuiNinjaAuth())
+
+@api.get('/projects/')
+@ninja_permission_required('project:view')
+def list_projects(request):
+    return {'user': request.user.username}
+```
+
+- `LayuiNinjaAuth`：复用认证器注册表（Session、项目 Token、SimpleJWT 等）。
+- `ninja_permission_required(code)`：校验失败时抛 Ninja `HttpError`（401/403），同时支持同步与异步视图。
+- Ninja 未安装时，导入该模块会给出明确 `ImportError`，核心启动不受影响。
+
+【判断】不需要为 Ninja 单独维护第二套权限数据；它与 DRF、原生视图共用 `has_permission()` 与 RBAC3/RBAC4 引擎。
+- 【待确认】是否提供独立的 Ninja 示例项目，便于第三方直接复用。
+- 【待确认】是否为 Ninja 增加对象级权限钩子，当前仅提供操作级权限装饰器。
+- 【待确认】是否把 SimpleJWT 认证适配抽成独立可安装模块，进一步减少核心可选依赖。
+
+## 7. 是否需要引入 DRF
 
 【判断】不需要为了桥接而把 DRF 引入核心依赖：
 

@@ -415,3 +415,29 @@ class Rbac4ExtensionTests(TestCase):
         self.assertTrue(LayuiRBACPermission().has_permission(request, DummyView()))
         request.user = self.user
         self.assertFalse(LayuiRBACPermission().has_permission(request, DummyView()))
+
+    @skipUnless(importlib.util.find_spec('ninja'), 'django-ninja not installed')
+    def test_ninja_adapter(self):
+        from ninja.errors import HttpError
+
+        from django_layuix.integrations.ninja import (
+            LayuiNinjaAuth, ninja_permission_required,
+        )
+        from .token_auth import generate_token
+
+        token = generate_token(self.user)
+        request = RequestFactory().get('/', HTTP_AUTHORIZATION='Bearer ' + token)
+        self.assertEqual(LayuiNinjaAuth().authenticate(request, token), self.user)
+
+        @ninja_permission_required('any:code')
+        def protected(request):
+            return 'ok'
+
+        admin_request = RequestFactory().get('/')
+        admin_request.user = self.admin
+        self.assertEqual(protected(admin_request), 'ok')
+
+        user_request = RequestFactory().get('/')
+        user_request.user = self.user
+        with self.assertRaises(HttpError):
+            protected(user_request)
