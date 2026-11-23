@@ -36,6 +36,14 @@ class DjangoLayuiConfig(AppConfig):
         # 替换为自定义站点
         admin.site = layui_admin_site
         
+        # 加载通用认证桥接与第三方框架适配器
+        from .integrations.auth import load_configured_authenticators
+        load_configured_authenticators()
+        try:
+            from .integrations import drf  # noqa: F401
+        except ImportError:
+            pass
+
         # 发现通过 entry_points 安装的第三方插件
         from .rbac.plugins import discover_entry_point_plugins
         try:

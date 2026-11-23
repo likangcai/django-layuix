@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 """RBAC3 regression tests: inheritance, constraints and server-side enforcement."""
-from unittest import mock
+import importlib.util
+from unittest import mock, skipUnless
 
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase
 
+from django_layuix.integrations.auth import (
+    authenticate_request, register_authenticator,
+    registered_authenticators, unregister_authenticator,
+)
 from django_layuix.plugins import PluginConfig
 
 from .engine import (
@@ -15,7 +20,7 @@ from .engine import (
     validate_role_parents,
 )
 from .models import Menu, PluginRegistry, Role, RoleMutex, RolePrerequisite, SystemConfig
-from .permissions import api_permission_required
+from .permissions import api_permission_required, has_permission
 from .plugins import (
     discover_entry_point_plugins, list_plugins, register_plugin,
     register_plugin_class, set_plugin_active, unregister_plugin,
@@ -347,3 +352,38 @@ class Rbac4ExtensionTests(TestCase):
         ops = next(item for item in response.json()['data'] if item['key'] == 'ops')
         self.assertIn('mycrm:view', ops['permissions'])
         self.assertTrue(ops['menus'])
+
+    def test_custom_authenticator_bridge(self):
+        def custom_authenticator(request):
+            if request.META.get('HTTP_X_CUSTOM_AUTH') == 'yes':
+                return self.user
+            return None
+
+        register_authenticator(custom_authenticator, name='test_custom', priority=1)
+        self.addCleanup(unregister_authenticator, 'test_custom')
+
+        request = RequestFactory().get('/', HTTP_X_CUSTOM_AUTH='yes')
+        self.assertEqual(authenticate_request(request), self.user)
+        self.assertIn('test_custom', registered_authenticators())
+
+        anonymous = self.client_class()
+        response = anonymous.get(
+            '/admin/api/rbac/userinfo/', HTTP_X_CUSTOM_AUTH='yes'
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_has_permission_entry_point(self):
+        self.assertTrue(has_permission(self.admin, 'any:code'))
+        self.assertFalse(has_permission(None, 'any:code'))
+
+    @skipUnless(importlib.util.find_spec('rest_framework'), 'DRF not installed')
+    def test_drf_permission_adapter(self):
+        from django_layuix.integrations.drf import LayuiRBACPermission
+
+        class DummyView:
+            layui_permission = 'test:drf'
+
+        request = mock.Mock(user=self.admin)
+        self.assertTrue(LayuiRBACPermission().has_permission(request, DummyView()))
+        request.user = self.user
+        self.assertFalse(LayuiRBACPermission().has_permission(request, DummyView()))

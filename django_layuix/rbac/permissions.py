@@ -3,27 +3,34 @@ from django.http import JsonResponse
 
 
 def resolve_api_user(request):
-    """统一解析 API 调用者：Session 优先，未登录时尝试 Bearer Token。"""
+    """统一解析 API 调用者，委托给通用认证桥接层。"""
+    from django_layuix.integrations.auth import authenticate_request
+
     user = getattr(request, 'user', None)
     if user is not None and getattr(user, 'is_authenticated', False):
         return user
+    return authenticate_request(request)
 
-    from .token_auth import token_authenticate
-    token_user = token_authenticate(request)
-    if token_user is not None:
-        request.user = token_user
-    return getattr(request, 'user', None)
+
+def has_permission(user, permission_code, request=None):
+    """统一权限判定入口，供 Django 视图与第三方框架适配器复用。"""
+    if user is None or not getattr(user, 'is_authenticated', False):
+        return False
+    checker = getattr(user, 'has_perm', None)
+    if not callable(checker):
+        return False
+    return bool(checker(permission_code))
 
 
 def api_permission_required(permission_code):
-    """服务端强制权限校验：统一走 UserProfile.has_perm（含继承与约束）。"""
+    """服务端强制权限校验：统一走 has_permission（含继承与约束）。"""
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
             user = resolve_api_user(request)
             if user is None or not getattr(user, 'is_authenticated', False):
                 return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
-            if not user.has_perm(permission_code):
+            if not has_permission(user, permission_code, request):
                 return JsonResponse({'code': 403, 'msg': '无权限'}, status=403)
             return view_func(request, *args, **kwargs)
         return wrapper
@@ -31,7 +38,7 @@ def api_permission_required(permission_code):
 
 
 def api_login_required(view_func):
-    """登录校验装饰器：同时支持 Session 与 Bearer Token。"""
+    """登录校验装饰器：委托给通用认证桥接层。"""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         user = resolve_api_user(request)

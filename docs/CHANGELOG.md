@@ -18,6 +18,7 @@
 - ✅ **Tag 自动发布** — 推送 `v*` Tag 后自动测试、构建并发布到 PyPI，详见 `docs/RELEASE_GUIDE.md`
 - ✅ **第三方插件体系** — `PluginConfig` 基类、entry_points 自动发现、版本/依赖校验、启停钩子、Admin 开关、前端插件清单接口
 - ✅ **决策确认** — RBAC4 称谓、TestHub 用户模型迁移、Redis 共享缓存、Gitee 仓库链接均已按用户确认更新
+- ✅ **通用认证/权限桥接** — 新增认证器注册表、统一 `has_permission()` 入口与可选 DRF/SimpleJWT 适配器，核心不引入 DRF
 
 ### 🔧 示例 App 全面重构 (2026-06-09)
 

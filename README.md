@@ -964,6 +964,7 @@ django-layuix 内置深色/浅色双模式切换功能：
 - [权限系统使用指南](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例
 - [RBAC3 权限体系使用指南](docs/RBAC3_GUIDE.md) - 角色继承、SSD/DSD 约束、前置角色与后端强制鉴权
 - [纯跨域 Token 认证指南](docs/TOKEN_AUTH_GUIDE.md) - Bearer Token 接入与分离前端对接
+- [认证与权限桥接指南](docs/INTEGRATION_GUIDE.md) - 通用认证桥接、DRF 适配器与 TestHub 对接
 - [插件化扩展契约](docs/PLUGIN_GUIDE.md) - 插件注册、菜单与 API 扩展
 - [TestHub 平台集成评估](docs/TESTHUB_INTEGRATION.md) - 与前后端分离项目的集成方案
 - [发布流程说明](docs/RELEASE_GUIDE.md) - Tag 触发测试、构建与 PyPI 自动发布
