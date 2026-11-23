@@ -143,6 +143,16 @@ def register_plugin(key, name, version='1.0.0', description='',
         errors.append(validation_error)
     error_text = '\n'.join(errors)
 
+    existing = None
+    try:
+        existing = _db().filter(key=key).first()
+    except Exception:
+        pass
+    previous_active = bool(getattr(existing, 'is_active', False))
+
+    # A persisted deactivation must survive restarts; validation failures always disable.
+    desired_active = (previous_active if existing else bool(is_active)) and not errors
+
     data = {
         'key': key,
         'name': name,
@@ -154,11 +164,10 @@ def register_plugin(key, name, version='1.0.0', description='',
         'dependencies': _as_lines(dependencies),
         'source': source,
         'validation_error': error_text,
-        'is_active': bool(is_active) and not errors,
+        'is_active': desired_active,
     }
     _PLUGINS[key] = data
 
-    previous_active = _was_active(key)
     try:
         obj, _ = _db().update_or_create(
             key=key,
@@ -166,10 +175,12 @@ def register_plugin(key, name, version='1.0.0', description='',
         )
         data['id'] = obj.id
     except Exception:
-        pass
+        logger.exception('Failed to persist plugin metadata for %s', key)
 
-    if data['is_active'] and not previous_active:
+    if desired_active and not previous_active:
         _call_hook(key, 'on_enable')
+    elif previous_active and not desired_active:
+        _call_hook(key, 'on_disable')
     return data
 
 
@@ -189,13 +200,29 @@ def set_plugin_active(key, active):
     if previous == bool(active):
         return False
     try:
+        record = _db().filter(key=key).first()
+        if active and record and record.validation_error:
+            return False
         _db().filter(key=key).update(is_active=bool(active))
     except Exception:
-        pass
+        logger.exception('Failed to update active state for plugin %s', key)
     if key in _PLUGINS:
         _PLUGINS[key]['is_active'] = bool(active)
     _call_hook(key, 'on_enable' if active else 'on_disable')
     return True
+
+
+def register_plugin_menus(key, plugin_instance):
+    """Register menus and buttons declared by a PluginConfig."""
+    menus = list(getattr(plugin_instance, 'plugin_menus', ()) or ())
+    buttons = list(getattr(plugin_instance, 'plugin_buttons', ()) or ())
+    if not menus and not buttons:
+        return
+    from .menu_registry import register_menus
+    register_menus(
+        menus_data=menus, buttons_data=buttons,
+        skip_existing=True, plugin_key=key,
+    )
 
 
 def discover_entry_point_plugins():
@@ -226,7 +253,10 @@ def discover_entry_point_plugins():
             metadata['key'] = key
             metadata.pop('min_layuix_version', None)
             metadata['validation_errors'] = instance.validate_plugin()
-            discovered.append(register_plugin(source='entry_point', **metadata))
+            registered = register_plugin(source='entry_point', **metadata)
+            if registered.get('is_active'):
+                register_plugin_menus(key, instance)
+            discovered.append(registered)
         except Exception:
             logger.exception('Failed to load plugin entry point %s', entry.name)
     return discovered
@@ -235,14 +265,17 @@ def discover_entry_point_plugins():
 def list_plugins():
     """Merge persisted records with the in-process registry."""
     merged = {}
+    persisted_keys = set()
     try:
-        for row in _db().filter(is_active=True).order_by('key').values(*_FIELDS):
-            merged[row['key']] = dict(row)
+        for row in _db().order_by('key').values(*_FIELDS):
+            persisted_keys.add(row['key'])
+            if row['is_active']:
+                merged[row['key']] = dict(row)
     except Exception:
         pass
 
     for key, value in _PLUGINS.items():
-        if key not in merged and value.get('is_active', True):
+        if key not in persisted_keys and value.get('is_active', True):
             merged[key] = dict(value)
 
     return [merged[key] for key in sorted(merged)]

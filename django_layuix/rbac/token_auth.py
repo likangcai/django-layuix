@@ -158,7 +158,7 @@ def token_authenticate(request):
             import json
             body = json.loads(request.body)
             token = body.get('token')
-        except:
+        except (json.JSONDecodeError, TypeError, AttributeError, ValueError):
             pass
     
     if not token:

@@ -51,7 +51,7 @@ def get_request_body(request):
             # parse_qs returns lists, convert single-item lists to values
             return {k: v[0] if len(v) == 1 else v for k, v in data.items()}
         return {}
-    except (json.JSONDecodeError, ValueError, Exception):
+    except (json.JSONDecodeError, ValueError, TypeError, UnicodeDecodeError):
         return {}
 
 
@@ -583,7 +583,7 @@ def public_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.0.0'),
+        'system_version': get_config('system_version', '1.4.0'),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),
         'favicon_url': get_config('favicon_url', ''),
@@ -619,7 +619,7 @@ def system_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.0.0'),
+        'system_version': get_config('system_version', '1.4.0'),
         'system_description': get_config('system_description', ''),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),

@@ -56,7 +56,7 @@ def static_version():
 @register.simple_tag
 def system_version():
     """Return system version"""
-    return _get_db_config('system_version', '1.0.0')
+    return _get_db_config('system_version', '1.4.0')
 
 
 @register.simple_tag

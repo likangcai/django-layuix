@@ -225,4 +225,4 @@ LAYUI_CONFIG = {
 
 - [Layui 图标文档](https://layui.dev/docs/2/icon/)
 - [Django 官方文档](https://docs.djangoproject.com/)
-- [README 配置说明](../README.md#44-首页自定义快速链接类似-django-simpleui)
+- [README 配置说明](../README.md)

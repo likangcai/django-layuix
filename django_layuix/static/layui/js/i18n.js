@@ -9,7 +9,7 @@ var I18N = {
         'zh-hans': {
             // 通用
             'app.name': 'Django Layuix Admin',
-            'app.version': 'V1.0.0',
+            'app.version': 'V1.4.0',
             'common.save': '保存',
             'common.cancel': '取消',
             'common.confirm': '确认',
@@ -451,7 +451,7 @@ var I18N = {
         'en': {
             // 通用
             'app.name': 'Django Layuix Admin',
-            'app.version': 'V1.0.0',
+            'app.version': 'V1.4.0',
             'common.save': 'Save',
             'common.cancel': 'Cancel',
             'common.confirm': 'Confirm',

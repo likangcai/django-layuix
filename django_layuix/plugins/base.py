@@ -46,14 +46,9 @@ class PluginConfig(AppConfig):
         metadata['validation_errors'] = self.validate_plugin()
         registered = register_plugin(key=key, source=self.source, **metadata)
 
-        if registered.get('is_active') and (self.plugin_menus or self.plugin_buttons):
-            from django_layuix.rbac.menu_registry import register_menus
-            register_menus(
-                menus_data=list(self.plugin_menus),
-                buttons_data=list(self.plugin_buttons),
-                skip_existing=True,
-                plugin_key=key,
-            )
+        if registered.get('is_active'):
+            from django_layuix.rbac.plugins import register_plugin_menus
+            register_plugin_menus(key, self)
 
     def on_enable(self):
         """Called when the plugin becomes active. Override in subclasses."""

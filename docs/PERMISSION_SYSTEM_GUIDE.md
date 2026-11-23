@@ -304,7 +304,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 
 **实现原理：**
 
-在 [`admin.py`](file:///D:/chengxu/django_layuix/django_layuix/admin.py) 的 `LayuiAdminSite.each_context()` 方法中：
+在 [`admin.py`](../django_layuix/admin.py) 的 `LayuiAdminSite.each_context()` 方法中：
 
 ```python
 # 1. 从 settings.py 读取默认配置

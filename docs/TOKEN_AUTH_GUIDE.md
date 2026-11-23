@@ -1,6 +1,6 @@
 # 纯跨域 Token 认证接入指南
 
-版本：v1.0　适用版本：django-layuix 1.3.0+
+版本：v1.0　适用版本：django-layuix 1.4.0+
 
 ## 1. 结论
 

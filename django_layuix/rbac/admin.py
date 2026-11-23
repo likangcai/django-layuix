@@ -82,9 +82,9 @@ class PluginRegistryAdmin(admin.ModelAdmin):
             was_active = bool(
                 PluginRegistry.objects.filter(pk=obj.pk).values_list('is_active', flat=True).first()
             )
+        if was_active != obj.is_active and not set_plugin_active(obj.key, obj.is_active):
+            obj.is_active = was_active
         super().save_model(request, obj, form, change)
-        if was_active != obj.is_active:
-            set_plugin_active(obj.key, obj.is_active)
 
 
 admin.site.register(RoleMutex, RoleMutexAdmin)

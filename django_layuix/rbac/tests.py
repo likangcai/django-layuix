@@ -309,6 +309,15 @@ class Rbac4ExtensionTests(TestCase):
             plugin_module._PLUGINS.update(backup)
         self.assertIn('demo_plugin', names)
 
+    def test_plugin_deactivation_survives_reregistration(self):
+        self.addCleanup(unregister_plugin, 'persist_test')
+        register_plugin(key='persist_test', name='持久测试插件')
+        set_plugin_active('persist_test', False)
+        register_plugin(key='persist_test', name='持久测试插件')
+
+        self.assertFalse(PluginRegistry.objects.get(key='persist_test').is_active)
+        self.assertNotIn('persist_test', [item['key'] for item in list_plugins()])
+
     def test_plugin_config_validation_and_hooks(self):
         class DemoPlugin(PluginConfig):
             name = 'demo_plugin_app'
@@ -340,7 +349,9 @@ class Rbac4ExtensionTests(TestCase):
             validation_errors=errors,
         )
         self.assertFalse(PluginRegistry.objects.get(key='demo_hooks').is_active)
-        set_plugin_active('demo_hooks', True)
+        self.assertFalse(set_plugin_active('demo_hooks', True))
+        PluginRegistry.objects.filter(key='demo_hooks').update(validation_error='')
+        self.assertTrue(set_plugin_active('demo_hooks', True))
         self.assertEqual(DemoPlugin.enabled, [True])
         set_plugin_active('demo_hooks', False)
         self.assertEqual(DemoPlugin.disabled, [True])
@@ -351,6 +362,9 @@ class Rbac4ExtensionTests(TestCase):
             label = 'entry_plugin_app'
             plugin_key = 'entry_demo'
             plugin_name = 'Entry 插件'
+            plugin_menus = [
+                ('Entry 插件', 'layui-icon-app', '/entry/home', 2, 1, None),
+            ]
 
         class FakeEntry:
             name = 'entry_demo'
@@ -368,6 +382,7 @@ class Rbac4ExtensionTests(TestCase):
 
         self.assertIn('entry_demo', [item['key'] for item in discovered])
         self.assertTrue(PluginRegistry.objects.get(key='entry_demo').is_active)
+        self.assertTrue(Menu.objects.filter(plugin_key='entry_demo').exists())
 
     def test_plugin_manifest_api(self):
         Menu.objects.create(

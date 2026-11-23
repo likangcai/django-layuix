@@ -191,7 +191,7 @@ class RbacConfig(AppConfig):
             
             default_configs = [
                 {'key': 'system_name', 'value': 'Django Layuix Admin', 'description': '系统名称', 'config_type': 'string', 'sort': 1},
-                {'key': 'system_version', 'value': '1.0.0', 'description': '系统版本号', 'config_type': 'string', 'sort': 2},
+                {'key': 'system_version', 'value': '1.4.0', 'description': '系统版本号', 'config_type': 'string', 'sort': 2},
                 {'key': 'system_description', 'value': '', 'description': '系统描述（显示在管理后台底部）', 'config_type': 'text', 'sort': 3},
                 {'key': 'logo_icon', 'value': 'layui-icon-code-circle', 'description': 'Logo图标（layui-icon类名）', 'config_type': 'string', 'sort': 4},
                 {'key': 'logo_url', 'value': '', 'description': 'Logo图片URL（优先于图标）', 'config_type': 'image', 'sort': 5},

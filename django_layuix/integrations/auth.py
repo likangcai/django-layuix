@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Generic authentication bridge for Django-native and third-party APIs."""
 import importlib
+import logging
 
 from django.conf import settings
 
+logger = logging.getLogger(__name__)
 _AUTHENTICATORS = []
 
 
@@ -50,6 +52,7 @@ def load_configured_authenticators():
                 priority=50 + index,
             )
         except Exception:
+            logger.exception('Failed to load authenticator %s', path)
             continue
 
 
@@ -75,6 +78,7 @@ def authenticate_request(request):
         try:
             user = item['func'](request)
         except Exception:
+            logger.exception('Authenticator %s failed', item['name'])
             continue
         if user is not None and getattr(user, 'is_authenticated', False):
             request.user = user

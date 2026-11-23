@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 django-layuix RBAC Models
-Optional extension - add 'django_layuix.rbac' to INSTALLED_APPS to enable
+Required RBAC engine - add 'django_layuix.rbac' to INSTALLED_APPS to enable
 """
 from django.contrib.auth.models import AbstractUser
 from django.db import models

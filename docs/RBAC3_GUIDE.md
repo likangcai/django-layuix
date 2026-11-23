@@ -1,6 +1,6 @@
 # RBAC3 权限体系使用指南
 
-版本：v1.0　适用版本：django-layuix 1.2.2+
+版本：v1.0　适用版本：django-layuix 1.4.0+
 
 ## 1. 能力总览
 
