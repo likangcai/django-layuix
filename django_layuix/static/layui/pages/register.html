@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户注册 - Django Layui Admin</title>
+    <title>用户注册 - Django Layuix Admin</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
     <link rel="stylesheet" href="/static/layui/css/admin.css">
     <script>
         (function() {
-            var theme = localStorage.getItem('theme') || '默认深色';
-            var themeMode = theme === '默认深色' ? 'dark' : 'light';
+            var themeMode = localStorage.getItem('theme') || 'dark';
+            if (themeMode !== 'dark' && themeMode !== 'light') themeMode = 'dark';
             document.documentElement.setAttribute('data-theme-mode', themeMode);
         })();
     </script>
@@ -194,7 +194,7 @@
                 <div class="success-msg" id="successMsg">注册成功！正在跳转登录页面...</div>
 
                 <div class="login-link">
-                    已有账户？<a href="/admin/login/" onclick="window.location.href='/admin/'; return false;">返回登录</a>
+                    已有账户？<a href="/admin/login/">返回登录</a>
                 </div>
             </form>
         </div>

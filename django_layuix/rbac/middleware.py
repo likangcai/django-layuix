@@ -234,3 +234,19 @@ class OperationLogMiddleware:
             )
         except Exception as e:
             logger.warning(f'Failed to record operation log: {e}')
+
+
+class RbacSessionMiddleware:
+    """把会话中的激活角色挂到 user 上，供权限引擎读取（RBAC2 DSD）。"""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, 'user', None)
+        if user is not None and getattr(user, 'is_authenticated', False):
+            from .engine import ACTIVE_ROLES_SESSION_KEY
+            active_ids = request.session.get(ACTIVE_ROLES_SESSION_KEY)
+            if active_ids is not None:
+                user._layui_active_role_ids = active_ids
+        return self.get_response(request)

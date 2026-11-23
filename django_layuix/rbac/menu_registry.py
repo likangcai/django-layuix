@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-django-layui 菜单注册工具
+django-layuix 菜单注册工具
 允许外部应用动态注册菜单，无需修改库源码
 
 支持两种方式：
@@ -46,14 +46,14 @@ def auto_register_admin_apps(exclude_apps=None, menu_sort_order=None):
     # 默认排除的 app 标签
     # 注意: django_layuix.rbac 和 django_layuix.ops 已有专门的菜单管理
     # (权限管理、系统管理、运维管理)，不应重复生成
-    # 重要: app_label 使用下划线而非点! (django_layui_rbac 而非 django_layuix.rbac)
+    # 重要: app_label 使用下划线而非点! (django_layuix_rbac 而非 django_layuix.rbac)
     if exclude_apps is None:
         exclude_apps = [
             'auth',               # Django 认证系统
             'contenttypes',       # Django 内容类型
             'sessions',           # Django 会话
-            'django_layui_rbac',  # RBAC权限管理(已有权限管理菜单) - 注意使用下划线!
-            'django_layui_ops',   # 运维管理(已有运维管理菜单) - 注意使用下划线!
+            'django_layuix_rbac',  # RBAC权限管理(已有权限管理菜单) - 注意使用下划线!
+            'django_layuix_ops',   # 运维管理(已有运维管理菜单) - 注意使用下划线!
         ]
     
     if menu_sort_order is None:
@@ -157,7 +157,7 @@ def auto_register_admin_apps(exclude_apps=None, menu_sort_order=None):
                     admin_role.menus.add(btn)
 
 
-def register_menus(menus_data, buttons_data=None, skip_existing=False):
+def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_key=''):
     """
     注册菜单和按钮权限（在项目的 AppConfig.ready() 中调用）
     
@@ -229,8 +229,12 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False):
                 'parent': parent,
                 'status': True,
                 'visible': True,
+                'plugin_key': plugin_key,
             }
         )
+        if plugin_key and menu.plugin_key != plugin_key:
+            menu.plugin_key = plugin_key
+            menu.save(update_fields=['plugin_key'])
         created[name] = menu
         
         # 如果是新创建的菜单，给管理员角色分配权限
@@ -269,9 +273,13 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False):
                     'sort': sort,
                     'status': True,
                     'visible': True,
+                    'plugin_key': plugin_key,
                 }
             )
-            
+            if plugin_key and btn.plugin_key != plugin_key:
+                btn.plugin_key = plugin_key
+                btn.save(update_fields=['plugin_key'])
+
             # 如果是新创建的按钮，给管理员角色分配权限
             if is_new:
                 admin_role = Role.objects.filter(code='admin').first()

@@ -253,10 +253,10 @@
         function renderAvatar(avatarUrl, nickname) {
             var avatarContent = $('#avatarContent');
             if (avatarUrl) {
-                avatarContent.html('<img src="' + avatarUrl + '" alt="' + t('profile.avatar') + '">');
+                avatarContent.html('<img src="' + escapeHtml(avatarUrl) + '" alt="' + t('profile.avatar') + '">');
             } else {
                 var initial = (nickname || 'U').charAt(0).toUpperCase();
-                avatarContent.html('<div class="default-avatar">' + initial + '</div>');
+                avatarContent.html('<div class="default-avatar">' + escapeHtml(initial) + '</div>');
             }
         }
 
@@ -275,7 +275,7 @@
             var rolesHtml = '';
             if (user.roles && user.roles.length > 0) {
                 user.roles.forEach(function(role) {
-                    rolesHtml += '<span class="profile-role-tag">' + role.name + '</span> ';
+                    rolesHtml += '<span class="profile-role-tag">' + escapeHtml(role.name) + '</span> ';
                 });
             }
             $('#sidebarRoles').html(rolesHtml);
@@ -300,9 +300,9 @@
             var html = '';
             roles.forEach(function(role) {
                 html += '<div class="role-card">';
-                html += '  <div class="role-name">' + (role.name || '--') + '</div>';
-                html += '  <div class="role-code">' + (role.code || '--') + '</div>';
-                html += '  <div class="role-desc">' + (role.description || t('common.noDescription')) + '</div>';
+                html += '  <div class="role-name">' + escapeHtml(role.name || '--') + '</div>';
+                html += '  <div class="role-code">' + escapeHtml(role.code || '--') + '</div>';
+                html += '  <div class="role-desc">' + escapeHtml(role.description || t('common.noDescription')) + '</div>';
                 html += '</div>';
             });
             container.html(html);

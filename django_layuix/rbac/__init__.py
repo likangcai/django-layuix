@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-django-layui RBAC module
+django-layuix RBAC module
 """
 
 from django_layuix.rbac.menu_registry import (

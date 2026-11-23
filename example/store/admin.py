@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 store/admin.py - 商品管理 Admin 注册
-改为使用 django-layui 的 LayuiAjaxAdmin，支持 AJAX 批量操作
+改为使用 django-layuix 的 LayuiAjaxAdmin，支持 AJAX 批量操作
 前端使用 Layui 静态页面进行 CRUD，不再依赖 Django 原生 admin 页面
 """
 from django.contrib import admin

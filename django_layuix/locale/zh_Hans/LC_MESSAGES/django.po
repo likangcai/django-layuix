@@ -1,10 +1,10 @@
-# Django Layui Admin - Chinese (Simplified) Translation
+# Django Layuix Admin - Chinese (Simplified) Translation
 # Copyright (C) 2024
-# This file is distributed under the same license as the django-layui package.
+# This file is distributed under the same license as the django-layuix package.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: django-layui 1.0.0\n"
+"Project-Id-Version: django-layuix 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-01-01 00:00+0000\n"
 "PO-Revision-Date: 2024-01-01 00:00+0000\n"

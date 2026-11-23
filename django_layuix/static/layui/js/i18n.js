@@ -8,11 +8,12 @@ var I18N = {
     messages: {
         'zh-hans': {
             // 通用
-            'app.name': 'Django Layui Admin',
+            'app.name': 'Django Layuix Admin',
             'app.version': 'V1.0.0',
             'common.save': '保存',
             'common.cancel': '取消',
             'common.confirm': '确认',
+            'common.tips': '提示',
             'common.delete': '删除',
             'common.edit': '编辑',
             'common.view': '查看',
@@ -54,7 +55,7 @@ var I18N = {
             'login.register.confirmPassword': '确认密码',
             'login.register.submit': '立即注册',
             'login.register.back': '已有账号？返回登录',
-            'login.copyright': 'Yingzi \u00a9 2026 Django Layui Admin',
+            'login.copyright': 'Yingzi \u00a9 2026 Django Layuix Admin',
             'login.loading': '登录中...',
             'login.expired': '登录已过期，请重新登录',
             'login.error': '用户名或密码错误',
@@ -445,11 +446,12 @@ var I18N = {
         },
         'en': {
             // 通用
-            'app.name': 'Django Layui Admin',
+            'app.name': 'Django Layuix Admin',
             'app.version': 'V1.0.0',
             'common.save': 'Save',
             'common.cancel': 'Cancel',
             'common.confirm': 'Confirm',
+            'common.tips': 'Tips',
             'common.delete': 'Delete',
             'common.edit': 'Edit',
             'common.view': 'View',
@@ -492,7 +494,7 @@ var I18N = {
             'login.register.confirmPassword': 'Confirm Password',
             'login.register.submit': 'Register',
             'login.register.back': 'Already have an account? Login',
-            'login.copyright': 'Yingzi \u00a9 2026 Django Layui Admin',
+            'login.copyright': 'Yingzi \u00a9 2026 Django Layuix Admin',
             'login.expired': 'Session expired, please login again',
             'login.error': 'Invalid username or password',
             'login.disabled': 'User account is disabled',

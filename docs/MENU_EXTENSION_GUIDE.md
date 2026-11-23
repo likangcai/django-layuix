@@ -1,8 +1,8 @@
-# django-layui 菜单扩展指南
+# django-layuix 菜单扩展指南
 
 ## 问题背景
 
-每新增一个 app 就去修改 django-layui 库的源码是不现实的。django-layui 作为 pip 安装的第三方库，提供了**菜单注册 API**，允许外部项目动态添加菜单，无需修改库源码。
+每新增一个 app 就去修改 django-layuix 库的源码是不现实的。django-layuix 作为 pip 安装的第三方库，提供了**菜单注册 API**，允许外部项目动态添加菜单，无需修改库源码。
 
 ## 快速开始（三步完成）
 

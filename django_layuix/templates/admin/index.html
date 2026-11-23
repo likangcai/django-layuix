@@ -47,7 +47,7 @@
                 <div class="header-action-btn" id="langBtn" title="中文">
                     <i class="layui-icon layui-icon-flag"></i>
                 </div>
-                <div class="header-action-btn" id="themeToggle" title="深色/浅色鍒囨崲">
+                <div class="header-action-btn" id="themeToggle" title="深色/浅色切换">
                     <i class="layui-icon layui-icon-light" id="themeIcon"></i>
                 </div>
                 <div class="header-action-btn" id="frontendBtn" title="访问前台">
@@ -251,6 +251,12 @@
                 if (res.code === 200) {
                     I18N.setLang(next);
                     updateLangUI(next);
+                    window.LANG = next;
+                    $('iframe[id^="iframe_"]').each(function() {
+                        try {
+                            this.contentWindow.postMessage({ type: 'languageChange', lang: next }, '*');
+                        } catch(e) {}
+                    });
                     layer.msg(t('common.languageChanged'), {icon: 1});
                     setTimeout(function() { location.reload(); }, 800);
                 }
@@ -343,7 +349,7 @@
             var icon = menu.icon || 'layui-icon-app';
             if (window.LANG === 'en' && menu.name_en) {
                 name = menu.name_en;
-            } else if (window.LANG === 'zh-CN' && menu.name_zh_hans) {
+            } else if (window.LANG === 'zh-hans' && menu.name_zh_hans) {
                 name = menu.name_zh_hans;
             }
             var html = '<div class="menu-group has-children" data-menu-id="' + menu.id + '">';
@@ -368,6 +374,7 @@
             '/permission/menu': '/static/layui/pages/menu.html',
             '/permission/role': '/static/layui/pages/role.html',
             '/permission/user': '/static/layui/pages/user.html',
+            '/system/rbac-constraints': '/static/layui/pages/constraints.html',
             '/profile': '/static/layui/pages/profile.html',
             '/system/log': '/static/layui/pages/log.html',
             '/system/info': '/static/layui/pages/dashboard.html',
@@ -387,7 +394,7 @@
             var title = menu.name;
             if (window.LANG === 'en' && menu.name_en) {
                 title = menu.name_en;
-            } else if (window.LANG === 'zh-CN' && menu.name_zh_hans) {
+            } else if (window.LANG === 'zh-hans' && menu.name_zh_hans) {
                 title = menu.name_zh_hans;
             }
             title = escapeHtml(title);
@@ -438,7 +445,9 @@
                           (isHome ? '' : '<i class="layui-icon layui-icon-close tab-close"></i>') +
                           '</div>';
             $('#tabHeader').append(tabHtml);
-            var iframeHtml = '<iframe class="tab-iframe" id="iframe_' + tabId + '" src="' + escapeAttr(url) + '?_v={% now "YmdHi" %}"></iframe>';
+            var cacheSep = url.indexOf('?') > -1 ? '&' : '?';
+            var iframeUrl = url + cacheSep + '_v={% now "YmdHi" %}';
+            var iframeHtml = '<iframe class="tab-iframe" id="iframe_' + tabId + '" src="' + escapeAttr(iframeUrl) + '"></iframe>';
             $('#tabContent').append(iframeHtml);
             switchTab(url);
         }
@@ -543,7 +552,7 @@
             $('iframe[id^="iframe_"]').each(function() {
                 var iframe = this;
                 try {
-                    iframe.contentWindow.postMessage({ type: 'themeChange', themeMode: themeMode }, '*');
+                    iframe.contentWindow.postMessage({ type: 'themeChange', themeMode: themeMode, theme: currentTheme }, '*');
                 } catch(e) {}
             });
         }

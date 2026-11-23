@@ -1,4 +1,4 @@
-# django-layui 权限系统使用指南
+# django-layuix 权限系统使用指南
 
 ## 目录
 
@@ -15,7 +15,7 @@
 
 ## 1. 概述
 
-django-layui 的 RBAC（基于角色的访问控制）系统提供三级权限控制：
+django-layuix 的 RBAC（基于角色的访问控制）系统提供三级权限控制：
 
 | 级别 | 说明 | 示例 |
 |------|------|------|
@@ -457,7 +457,7 @@ $(document).ready(function() {
 
 ### 6.1 当前权限实现方式
 
-django-layui 当前的权限控制是**前端展示层**的权限控制：
+django-layuix 当前的权限控制是**前端展示层**的权限控制：
 
 ```python
 # views.py - 返回用户权限列表
@@ -929,4 +929,4 @@ def product_list(request):
 
 **文档版本**: v1.0  
 **最后更新**: 2026-05-05  
-**适用版本**: django-layui >= 1.0.0
+**适用版本**: django-layuix >= 1.0.0

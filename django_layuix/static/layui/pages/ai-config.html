@@ -381,8 +381,9 @@ layui.use(['form', 'table', 'layer'], function(){
 
         fields.is_default = layero.find('[name="is_default"]').is(':checked');
 
-        // 获取提交按钮并添加动画
-        var $btn = layero.find('#submitAiConfigBtn');
+        // 获取提交按钮并添加动画；layer 的 yes 回调传入的是整个弹窗节点
+        var $btn = layero.find('.layui-layer-btn0').first();
+        if ($btn.hasClass('layui-btn-disabled')) return;
         $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> ' + (t('common.submitting') || '提交中...'));
 
         postApi('/admin/api/ops/ai/config/save/', fields, function(res){

@@ -15,6 +15,7 @@ from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from django.contrib.auth import update_session_auth_hash
 from django.utils.timezone import localtime
+from .permissions import api_permission_required, resolve_api_user
 
 
 def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
@@ -25,10 +26,11 @@ def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
 
 
 def api_login_required(view_func):
-    """Login required decorator for API views"""
+    """API 登录校验：Session 与 Bearer Token 双通道。"""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated:
+        user = resolve_api_user(request)
+        if user is None or not getattr(user, 'is_authenticated', False):
             return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
         return view_func(request, *args, **kwargs)
     return wrapper
@@ -132,19 +134,12 @@ def user_info(request):
 
 def _get_user_menus(user):
     """Get menus available to the user (后台侧边栏使用,只返回 backend_visible=True 的菜单)"""
-    from .models import Menu
-    
+    from .engine import visible_menu_queryset
+
     # Get user's language preference
     user_lang = getattr(user, 'language', 'zh-hans') if hasattr(user, 'language') else 'zh-hans'
 
-    if user.is_superuser:
-        menus = Menu.objects.filter(status=True, visible=True, backend_visible=True).order_by('sort', 'id')
-    else:
-        # Get menus through roles
-        menus = Menu.objects.filter(
-            status=True, visible=True, backend_visible=True,
-            roles__users=user
-        ).distinct().order_by('sort', 'id')
+    menus = visible_menu_queryset(user, 'backend').order_by('sort', 'id')
 
     menu_list = []
     for m in menus:
@@ -173,19 +168,12 @@ def _get_user_menus(user):
 
 def _get_frontend_menus(user):
     """Get menus available to the user (前台使用,只返回 frontend_visible=True 的菜单)"""
-    from .models import Menu
-    
+    from .engine import visible_menu_queryset
+
     # Get user's language preference
     user_lang = getattr(user, 'language', 'zh-hans') if hasattr(user, 'language') else 'zh-hans'
 
-    if user.is_superuser:
-        menus = Menu.objects.filter(status=True, visible=True, frontend_visible=True).order_by('sort', 'id')
-    else:
-        # Get menus through roles
-        menus = Menu.objects.filter(
-            status=True, visible=True, frontend_visible=True,
-            roles__users=user
-        ).distinct().order_by('sort', 'id')
+    menus = visible_menu_queryset(user, 'frontend').order_by('sort', 'id')
 
     menu_list = []
     for m in menus:
@@ -213,16 +201,9 @@ def _get_frontend_menus(user):
 
 
 def _get_user_permissions(user):
-    """Get user permission strings"""
-    from .models import Menu
-    if user.is_superuser:
-        perms = list(Menu.objects.filter(status=True, permission__gt='').values_list('permission', flat=True))
-    else:
-        perms = list(Menu.objects.filter(
-            status=True, permission__gt='',
-            roles__users=user
-        ).distinct().values_list('permission', flat=True))
-    return perms
+    """Get user permission strings (inheritance and active roles included)."""
+    from .engine import get_effective_permissions
+    return list(get_effective_permissions(user))
 
 
 @csrf_exempt
@@ -601,7 +582,7 @@ def public_config(request):
         return settings_config.get(key, default)
 
     return success_response({
-        'system_name': get_config('system_name', 'Django Layui Admin'),
+        'system_name': get_config('system_name', 'Django Layuix Admin'),
         'system_version': get_config('system_version', '1.0.0'),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),
@@ -637,7 +618,7 @@ def system_config(request):
         return settings_config.get(key, default)
 
     return success_response({
-        'system_name': get_config('system_name', 'Django Layui Admin'),
+        'system_name': get_config('system_name', 'Django Layuix Admin'),
         'system_version': get_config('system_version', '1.0.0'),
         'system_description': get_config('system_description', ''),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
@@ -750,10 +731,20 @@ def set_language(request):
         user.language = language
         user.save(update_fields=['language'])
 
-    # Also set Django session language
-    request.session['django_language'] = language
-
-    return success_response(msg='语言已切换')
+    # Django <=5 使用 session 键；Django 6 起 LocaleMiddleware 只读取语言 Cookie
+    request.session['_language'] = language
+    response = success_response(msg='语言已切换')
+    response.set_cookie(
+        settings.LANGUAGE_COOKIE_NAME,
+        language,
+        max_age=settings.LANGUAGE_COOKIE_AGE,
+        path=settings.LANGUAGE_COOKIE_PATH,
+        domain=getattr(settings, 'LANGUAGE_COOKIE_DOMAIN', None),
+        samesite=getattr(settings, 'LANGUAGE_COOKIE_SAMESITE', None),
+        secure=getattr(settings, 'LANGUAGE_COOKIE_SECURE', False),
+        httponly=getattr(settings, 'LANGUAGE_COOKIE_HTTPONLY', False),
+    )
+    return response
 
 
 @csrf_exempt
@@ -945,6 +936,8 @@ def menu_detail(request, pk):
         return success_response(data)
 
     elif request.method == 'PUT':
+        if not request.user.has_perm('menu:edit'):
+            return error_response('无权限', 403)
         body = get_request_body(request)
         if 'name' in body:
             menu.name = body['name']
@@ -978,6 +971,8 @@ def menu_detail(request, pk):
         return success_response(msg='更新成功')
 
     elif request.method == 'DELETE':
+        if not request.user.has_perm('menu:delete'):
+            return error_response('无权限', 403)
         # 检查是否有子菜单
         if Menu.objects.filter(parent_id=pk).exists():
             return error_response('该菜单下有子菜单，无法删除', 400)
@@ -989,6 +984,7 @@ def menu_detail(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('menu:add')
 def menu_create(request):
     """POST /api/rbac/menus/ - 创建菜单"""
     if request.method != 'POST':
@@ -1041,6 +1037,8 @@ def role_list(request):
             'is_system': r.is_system,
             'status': r.status,
             'menu_ids': list(r.menus.values_list('id', flat=True)),
+            'parent_ids': list(r.parent_roles.values_list('id', flat=True)),
+            'max_users': r.max_users,
             'create_time': fmt_time(r.create_time),
             'update_time': fmt_time(r.update_time),
         })
@@ -1067,12 +1065,17 @@ def role_detail(request, pk):
             'is_system': role.is_system,
             'status': role.status,
             'menu_ids': list(role.menus.values_list('id', flat=True)),
+            'parent_ids': list(role.parent_roles.values_list('id', flat=True)),
+            'max_users': role.max_users,
             'create_time': fmt_time(role.create_time),
             'update_time': fmt_time(role.update_time),
         }
         return success_response(data)
 
     elif request.method == 'PUT':
+        if not request.user.has_perm('role:edit'):
+            return error_response('无权限', 403)
+        from .engine import RbacConstraintError, validate_role_parents
         body = get_request_body(request)
         if 'name' in body:
             role.name = body['name']
@@ -1082,12 +1085,25 @@ def role_detail(request, pk):
             role.description = body['description']
         if 'status' in body:
             role.status = bool(body['status'])
+        if 'max_users' in body:
+            try:
+                role.max_users = int(body['max_users']) or None
+            except (TypeError, ValueError):
+                return error_response('人数上限必须是整数', 400)
+        role.save()
         if 'menu_ids' in body:
             role.menus.set(body['menu_ids'])
-        role.save()
+        if 'parent_ids' in body:
+            try:
+                parents = validate_role_parents(role.id, body['parent_ids'])
+            except RbacConstraintError as e:
+                return error_response(e.message, 400)
+            role.parent_roles.set(parents)
         return success_response(msg='更新成功')
 
     elif request.method == 'DELETE':
+        if not request.user.has_perm('role:delete'):
+            return error_response('无权限', 403)
         if role.is_system:
             return error_response('系统内置角色无法删除', 400)
         role.delete()
@@ -1098,6 +1114,7 @@ def role_detail(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('role:add')
 def role_create(request):
     """POST /api/rbac/roles/create/ - 创建角色"""
     if request.method != 'POST':
@@ -1115,13 +1132,27 @@ def role_create(request):
     if Role.objects.filter(code=code).exists():
         return error_response('角色编码已存在', 400)
 
+    from .engine import RbacConstraintError, validate_role_parents
+    try:
+        max_users = int(body.get('max_users') or 0) or None
+    except (TypeError, ValueError):
+        return error_response('人数上限必须是整数', 400)
+
     role = Role(
         name=name,
         code=code,
         description=body.get('description', ''),
         status=bool(body.get('status', True)),
+        max_users=max_users,
     )
     role.save()
+
+    if 'parent_ids' in body:
+        try:
+            role.parent_roles.set(validate_role_parents(role.id, body['parent_ids']))
+        except RbacConstraintError as e:
+            role.delete()
+            return error_response(e.message, 400)
 
     if 'menu_ids' in body and body['menu_ids']:
         role.menus.set(body['menu_ids'])
@@ -1147,6 +1178,7 @@ def role_create(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('role:copy')
 def role_copy(request, pk):
     """POST /api/rbac/roles/<id>/copy/ - 复制角色"""
     if request.method != 'POST':
@@ -1171,9 +1203,11 @@ def role_copy(request, pk):
         code=new_code,
         description=role.description,
         status=role.status,
+        max_users=role.max_users,
     )
     new_role.save()
     new_role.menus.set(role.menus.all())
+    new_role.parent_roles.set(role.parent_roles.all())
     return success_response({'id': new_role.id}, msg='复制成功')
 
 
@@ -1246,6 +1280,7 @@ def user_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:add')
 def user_create(request):
     """POST /api/rbac/users/create/ - 创建用户"""
     if request.method != 'POST':
@@ -1265,6 +1300,10 @@ def user_create(request):
     if User.objects.filter(username=username).exists():
         return error_response('用户名已存在', 400)
 
+    from .engine import RbacConstraintError, is_full_access, validate_assignment
+    if body.get('is_superuser') and not is_full_access(request.user):
+        return error_response('无权限设置超级管理员', 403)
+
     user = User(
         username=username,
         email=body.get('email', ''),
@@ -1278,18 +1317,27 @@ def user_create(request):
         user.phone = body.get('phone', '')
     if hasattr(user, 'is_tester'):
         user.is_tester = bool(body.get('is_tester', False))
+
+    final_role_ids = None
+    if 'role_ids' in body and hasattr(User, 'roles'):
+        try:
+            final_role_ids = validate_assignment(user, body['role_ids'])
+        except RbacConstraintError as e:
+            return error_response(e.message, 400)
+
     user.set_password(password)
     user.save()
 
-    if 'role_ids' in body and hasattr(user, 'roles'):
+    if final_role_ids is not None:
         from .models import Role
-        user.roles.set(Role.objects.filter(id__in=body['role_ids']))
+        user.roles.set(Role.objects.filter(id__in=final_role_ids))
 
     return success_response({'id': user.id}, msg='创建成功')
 
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:edit')
 def user_update(request, pk):
     """PUT /api/rbac/users/<id>/update/ - 更新用户"""
     if request.method != 'PUT':
@@ -1303,6 +1351,9 @@ def user_update(request, pk):
         return error_response('用户不存在', 404)
 
     body = get_request_body(request)
+    from .engine import RbacConstraintError, is_full_access, validate_assignment
+    if 'is_superuser' in body and body['is_superuser'] and not is_full_access(request.user):
+        return error_response('无权限设置超级管理员', 403)
     if 'email' in body:
         user.email = body['email']
     if 'is_active' in body:
@@ -1317,11 +1368,21 @@ def user_update(request, pk):
         user.phone = body['phone']
     if hasattr(user, 'is_tester') and 'is_tester' in body:
         user.is_tester = bool(body['is_tester'])
+
+    final_role_ids = None
+    if 'role_ids' in body and hasattr(user, 'roles'):
+        try:
+            final_role_ids = validate_assignment(user, body['role_ids'], exclude_user_pk=user.pk)
+        except RbacConstraintError as e:
+            return error_response(e.message, 400)
+
     user.save()
 
-    if 'role_ids' in body and hasattr(user, 'roles'):
+    if final_role_ids is not None:
         from .models import Role
-        user.roles.set(Role.objects.filter(id__in=body['role_ids']))
+        user.roles.set(Role.objects.filter(id__in=final_role_ids))
+        from .engine import clear_active_roles
+        clear_active_roles(request)
 
     return success_response(msg='更新成功')
 
@@ -1658,3 +1719,231 @@ def upload_image(request):
 
     url = default_storage.url(saved_path)
     return success_response({'url': url, 'filename': filename}, msg='上传成功')
+
+
+# ==================== Plugin Registry ====================
+
+@csrf_exempt
+@api_login_required
+def plugin_list(request):
+    """GET /api/rbac/plugins/ - 已安装插件列表"""
+    from .plugins import list_plugins
+    return success_response(list_plugins())
+
+
+@csrf_exempt
+@api_login_required
+def plugin_manifest(request):
+    """GET /api/rbac/plugins/manifest/ - 分离前端插件清单"""
+    from .models import Menu
+    from .plugins import list_plugins
+
+    result = []
+    for plugin in list_plugins():
+        key = plugin['key']
+        rows = Menu.objects.filter(
+            plugin_key=key, status=True, visible=True
+        ).order_by('sort', 'id')
+        items = [{
+            'id': menu.id,
+            'parent_id': menu.parent_id,
+            'name': menu.name,
+            'icon': menu.icon,
+            'path': menu.path,
+            'component': menu.component,
+            'menu_type': menu.menu_type,
+            'permission': menu.permission,
+            'sort': menu.sort,
+        } for menu in rows]
+        result.append({
+            **plugin,
+            'menus': _build_menu_tree(items),
+            'permissions': sorted({
+                item['permission'] for item in items if item['permission']
+            }),
+        })
+    return success_response(result)
+
+
+# ==================== RBAC3 Constraints & Active Roles ====================
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def constraint_list(request):
+    """GET /api/rbac/constraints/ - 互斥组、前置角色与全局上限"""
+    from .engine import _get_config, DSD_STRATEGY_KEY, PREREQ_STRATEGY_KEY, get_max_roles_per_user
+    from .models import RoleMutex, RolePrerequisite
+
+    mutex = []
+    for group in RoleMutex.objects.all().prefetch_related('roles', 'permissions'):
+        mutex.append({
+            'id': group.id,
+            'name': group.name,
+            'kind': group.kind,
+            'role_ids': list(group.roles.values_list('id', flat=True)),
+            'permission_ids': list(group.permissions.values_list('id', flat=True)),
+            'permission_names': list(group.permissions.values_list('permission', flat=True)),
+            'description': group.description,
+            'is_active': group.is_active,
+        })
+
+    prerequisites = []
+    for item in RolePrerequisite.objects.select_related('role', 'prerequisite'):
+        prerequisites.append({
+            'id': item.id,
+            'role_id': item.role_id,
+            'role_name': item.role.name,
+            'prerequisite_id': item.prerequisite_id,
+            'prerequisite_name': item.prerequisite.name,
+        })
+
+    return success_response({
+        'mutex': mutex,
+        'prerequisites': prerequisites,
+        'limits': {
+            'max_roles_per_user': get_max_roles_per_user(),
+            'prerequisite_strategy': _get_config(PREREQ_STRATEGY_KEY, 'auto_grant'),
+            'dsd_strategy': _get_config(DSD_STRATEGY_KEY, 'greedy'),
+        },
+    })
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def mutex_create(request):
+    """POST /api/rbac/constraints/mutex/ - 创建互斥组"""
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    from .engine import RbacConstraintError, require_roles
+    from .models import Menu, RoleMutex
+
+    body = get_request_body(request)
+    name = str(body.get('name', '')).strip()
+    kind = body.get('kind', 'ssd')
+    if not name:
+        return error_response('互斥组名称不能为空', 400)
+    if kind not in ('ssd', 'dsd'):
+        return error_response('互斥类型必须是 ssd 或 dsd', 400)
+    if RoleMutex.objects.filter(name=name).exists():
+        return error_response('互斥组名称已存在', 400)
+    try:
+        role_ids = require_roles(body.get('role_ids', []))
+    except RbacConstraintError as e:
+        return error_response(e.message, 400)
+
+    permission_ids = []
+    for value in body.get('permission_ids', []) or []:
+        try:
+            permission_ids.append(int(value))
+        except (TypeError, ValueError):
+            continue
+    found_permission_ids = set(Menu.objects.filter(
+        id__in=permission_ids, permission__gt=''
+    ).values_list('id', flat=True))
+    if found_permission_ids != set(permission_ids):
+        return error_response('互斥权限不存在或未配置权限标识', 400)
+
+    if len(role_ids) + len(found_permission_ids) < 2:
+        return error_response('互斥组至少需要两个角色或权限', 400)
+
+    group = RoleMutex.objects.create(
+        name=name,
+        kind=kind,
+        description=body.get('description', ''),
+        is_active=bool(body.get('is_active', True)),
+    )
+    group.roles.set(role_ids)
+    group.permissions.set(found_permission_ids)
+    return success_response({'id': group.id}, msg='创建成功')
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def mutex_delete(request, pk):
+    """DELETE /api/rbac/constraints/mutex/<id>/ - 删除互斥组"""
+    if request.method != 'DELETE':
+        return error_response('Method not allowed', 405)
+    from .models import RoleMutex
+    deleted, _ = RoleMutex.objects.filter(pk=pk).delete()
+    if not deleted:
+        return error_response('互斥组不存在', 404)
+    return success_response(msg='删除成功')
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def prerequisite_create(request):
+    """POST /api/rbac/constraints/prerequisite/ - 创建前置角色"""
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    from .engine import RbacConstraintError, validate_prerequisite
+    from .models import RolePrerequisite
+
+    body = get_request_body(request)
+    try:
+        role_id, prerequisite_id = validate_prerequisite(
+            body.get('role_id'), body.get('prerequisite_id')
+        )
+    except (RbacConstraintError, TypeError, ValueError) as e:
+        return error_response(getattr(e, 'message', str(e)), 400)
+
+    item, created = RolePrerequisite.objects.get_or_create(
+        role_id=role_id, prerequisite_id=prerequisite_id
+    )
+    return success_response({'id': item.id}, msg='创建成功' if created else '已存在')
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def prerequisite_delete(request, pk):
+    """DELETE /api/rbac/constraints/prerequisite/<id>/ - 删除前置角色"""
+    if request.method != 'DELETE':
+        return error_response('Method not allowed', 405)
+    from .models import RolePrerequisite
+    deleted, _ = RolePrerequisite.objects.filter(pk=pk).delete()
+    if not deleted:
+        return error_response('前置角色不存在', 404)
+    return success_response(msg='删除成功')
+
+
+@csrf_exempt
+@api_login_required
+def active_roles(request):
+    """GET/POST /api/rbac/active-roles/ - 查询或切换当前会话激活角色"""
+    from .engine import (
+        RbacConstraintError, clear_active_roles, get_active_role_ids,
+        get_assigned_role_ids, store_active_roles, validate_active_roles,
+    )
+    from .models import Role
+
+    assigned_ids = get_assigned_role_ids(request.user)
+    assigned = list(Role.objects.filter(id__in=assigned_ids).values('id', 'name', 'code'))
+
+    if request.method == 'GET':
+        active_ids = get_active_role_ids(request.user)
+        return success_response({
+            'assigned': assigned,
+            'active_ids': sorted(active_ids),
+        })
+
+    if request.method == 'POST':
+        body = get_request_body(request)
+        if 'role_ids' in body and body['role_ids'] is not None:
+            try:
+                selected = validate_active_roles(request.user, body['role_ids'])
+            except RbacConstraintError as e:
+                return error_response(e.message, 400)
+            store_active_roles(request, selected)
+        else:
+            clear_active_roles(request)
+        return success_response({
+            'assigned': assigned,
+            'active_ids': sorted(get_active_role_ids(request.user)),
+        }, msg='切换成功')
+
+    return error_response('Method not allowed', 405)

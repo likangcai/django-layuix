@@ -127,6 +127,18 @@
                 <textarea name="description" placeholder="{{ t('common.inputRequired', [t('role.description')]) }}" class="layui-textarea" style="height:80px;"></textarea>
             </div>
         </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">继承角色</label>
+            <div class="layui-input-block">
+                <div id="parentRoleBox" style="max-height:110px;overflow:auto;border:1px solid var(--border-color);border-radius:4px;padding:6px 10px;"></div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">人数上限</label>
+            <div class="layui-input-block">
+                <input type="number" name="max_users" min="0" placeholder="0 或留空表示不限" class="layui-input">
+            </div>
+        </div>
         <div class="layui-form-item">
             <label class="layui-form-label">{{ t('role.menuPermission') }}</label>
             <div class="layui-input-block">
@@ -207,6 +219,32 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
 
     var currentUser = window.parent.currentUser || {};
     var permissions = currentUser.permissions || [];
+    var allRoles = [];
+
+    function loadAllRoles(callback) {
+        if (allRoles.length) {
+            if (callback) callback();
+            return;
+        }
+        getApi('/admin/api/rbac/roles/', function(res) {
+            if (res.code === 200) allRoles = res.data || [];
+            if (callback) callback();
+        });
+    }
+
+    function renderParentRoles(layero, excludeId, parentIds) {
+        var checked = {};
+        (parentIds || []).forEach(function(id) { checked[String(id)] = true; });
+        var html = '';
+        allRoles.forEach(function(role) {
+            if (excludeId && role.id === excludeId) return;
+            html += '<label style="display:inline-block;margin:0 14px 6px 0;">'
+                + '<input type="checkbox" name="parent_role" value="' + role.id + '"' + (checked[String(role.id)] ? ' checked' : '') + '> '
+                + escapeHtml(role.name) + '</label>';
+        });
+        layero.find('#parentRoleBox').html(html || '<span style="color:var(--text-muted);">暂无可选角色</span>');
+        form.render('checkbox', 'roleForm');
+    }
 
     // 加载角色列表
     function loadTable() {
@@ -307,11 +345,15 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                             name: roleData.name,
                             code: roleData.code,
                             description: roleData.description || '',
-                            status: roleData.status
+                            status: roleData.status,
+                            max_users: roleData.max_users || ''
                         });
                     }
 
                     form.render(null, 'roleForm');
+                    loadAllRoles(function() {
+                        renderParentRoles(layero, isEdit ? roleData.id : null, isEdit ? (roleData.parent_ids || []) : []);
+                    });
                     
                     // 在 tree 渲染后，设置选中状态
                     setTimeout(function() {
@@ -387,7 +429,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         });
 
         // 角色表单提交（绑定一次，避免重复绑定）
-        form.on('submit(roleSubmit)', function(data) {
+        form.off('submit(roleSubmit)').on('submit(roleSubmit)', function(data) {
             var field = data.field;
             var id = field.id;
 
@@ -404,11 +446,18 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 }
             });
 
+            var parentIds = [];
+            $('#parentRoleBox input[name="parent_role"]:checked').each(function() {
+                parentIds.push(parseInt($(this).val(), 10));
+            });
+
             var submitData = {
                 name: field.name,
                 code: field.code,
                 description: field.description || '',
                 status: field.status === 'on',
+                max_users: field.max_users || 0,
+                parent_ids: parentIds,
                 menu_ids: menuIds
             };
 
@@ -523,7 +572,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 '</div>';
             layer.open({
                 type: 1,
-                title: t('common.view') + ' ' + t('role.title') + ' - ' + data.name,
+                title: t('common.view') + ' ' + t('role.title') + ' - ' + escapeHtml(data.name),
                 area: ['550px', 'auto'],
                 content: content,
                 btn: [t('common.cancel')]
@@ -537,7 +586,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                 layer.msg(t('role.systemCannotDelete'), {icon: 2});
                 return;
             }
-            layer.confirm(t('common.confirmDelete') + '<br><b>' + data.name + '</b>', {
+            layer.confirm(t('common.confirmDelete') + '<br><b>' + escapeHtml(data.name) + '</b>', {
                 icon: 3,
                 title: t('common.deleteConfirm.title'),
                 btn: [t('common.confirm'), t('common.cancel')]
@@ -556,6 +605,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
     });
 
     // 初始化
+    loadAllRoles();
     loadTable();
 });
 </script>

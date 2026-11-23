@@ -1,6 +1,6 @@
 # 更新日志 (Changelog)
 
-所有对 django-layui 项目的更改都将记录在此文件中。
+所有对 django-layuix 项目的更改都将记录在此文件中。
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
@@ -8,6 +8,16 @@
 ---
 
 ## [Unreleased]
+
+### ✅ 名称统一与 RBAC4 扩展 (2026-11-23)
+
+- ✅ **统一分发名为 `django-layuix`** — 文档、仓库/ Issue 链接、默认快捷链接、代码注释、Locale 头部全部更正
+- ✅ **应用标签更正** — `django_layui_rbac/ops` → `django_layuix_rbac/ops`，提供 `rename_app_labels` 命令升级旧库
+- ✅ **Token 认证接入 API** — `api_login_required` 支持 Bearer Token，满足纯跨域前端调用
+- ✅ **RBAC4 扩展** — 前置/DSD 策略可配、权限级互斥、插件注册契约与 ops 标准插件
+- ✅ **Tag 自动发布** — 推送 `v*` Tag 后自动测试、构建并发布到 PyPI，详见 `docs/RELEASE_GUIDE.md`
+- ✅ **第三方插件体系** — `PluginConfig` 基类、entry_points 自动发现、版本/依赖校验、启停钩子、Admin 开关、前端插件清单接口
+- ✅ **决策确认** — RBAC4 称谓、TestHub 用户模型迁移、Redis 共享缓存、Gitee 仓库链接均已按用户确认更新
 
 ### 🔧 示例 App 全面重构 (2026-06-09)
 
@@ -385,7 +395,7 @@
 ### 📦 打包信息
 - 版本号: `1.0.3`
 - 包名: `django_layuix-1.0.3-py3-none-any.whl`
-- 安装命令: `pip install django-layui --upgrade`
+- 安装命令: `pip install django-layuix --upgrade`
 
 ---
 
@@ -449,11 +459,11 @@
 
 ## 贡献者
 
-感谢所有为 django-layui 做出贡献的开发者！
+感谢所有为 django-layuix 做出贡献的开发者！
 
 如需贡献代码或报告问题，请访问项目仓库提交 Issue 或 Pull Request。
 
 ---
 
 **最后更新**: 2026年
-**维护者**: django-layui 团队
+**维护者**: django-layuix 团队

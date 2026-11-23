@@ -1,5 +1,5 @@
 /**
- * 公共JS工具 - django-layui
+ * 公共JS工具 - django-layuix
  */
 
 // ==================== Token管理 ====================
@@ -166,32 +166,64 @@ function openParentTab(title, url) {
     } catch(e) {}
 }
 
-// 子页面继承父页面主题
+// 子页面继承父页面主题：唯一协议是 data-theme-mode + themeChange{themeMode,theme}
 function inheritTheme() {
+    var root = document.documentElement;
     try {
-        // 先尝试从父页面读取当前 data-theme 属性
-        if (window.parent && window.parent.document) {
-            var parentTheme = window.parent.document.documentElement.getAttribute('data-theme');
-            if (parentTheme) {
-                document.documentElement.setAttribute('data-theme', parentTheme);
-            }
-            var parentThemeMode = window.parent.document.documentElement.getAttribute('data-theme-mode');
-            if (parentThemeMode) {
-                document.documentElement.setAttribute('data-theme-mode', parentThemeMode);
-            }
+        var parentRoot = null;
+        try {
+            parentRoot = window.parent && window.parent.document && window.parent.document.documentElement;
+        } catch(e) {}
+        var themeMode = parentRoot ? parentRoot.getAttribute('data-theme-mode') : null;
+        var legacyTheme = parentRoot ? parentRoot.getAttribute('data-theme') : null;
+        if (!themeMode) {
+            themeMode = localStorage.getItem('theme') || 'dark';
         }
+        if (themeMode !== 'dark' && themeMode !== 'light') {
+            themeMode = 'dark';
+        }
+        root.setAttribute('data-theme-mode', themeMode);
+        root.setAttribute('data-theme', legacyTheme || themeMode);
     } catch(e) {
-        document.documentElement.setAttribute('data-theme', 'theme-default-dark');
-        document.documentElement.setAttribute('data-theme-mode', 'dark');
+        root.setAttribute('data-theme-mode', 'dark');
+        root.setAttribute('data-theme', 'dark');
     }
-    // 监听父页面的主题切换消息
+    if (!window.__layuiThemeListenerBound) {
+        window.__layuiThemeListenerBound = true;
+        window.addEventListener('message', function(e) {
+            if (!e.data || e.data.type !== 'themeChange') return;
+            var mode = e.data.themeMode || e.data.theme;
+            if (mode !== 'dark' && mode !== 'light') mode = 'dark';
+            document.documentElement.setAttribute('data-theme-mode', mode);
+            document.documentElement.setAttribute('data-theme', e.data.theme || mode);
+        });
+    }
+}
+// 兼容历史页面中直接调用 syncParentTheme() 的写法
+window.syncParentTheme = inheritTheme;
+
+// 接收父窗口的语言切换广播，保持 iframe 内文案同步
+if (!window.__layuiLangListenerBound) {
+    window.__layuiLangListenerBound = true;
     window.addEventListener('message', function(e) {
-        if (e.data && e.data.type === 'themeChange' && e.data.theme) {
-            document.documentElement.setAttribute('data-theme', e.data.theme);
-            if (e.data.themeMode) {
-                document.documentElement.setAttribute('data-theme-mode', e.data.themeMode);
+        if (!e.data || e.data.type !== 'languageChange') return;
+        var lang = e.data.lang;
+        if (lang !== 'zh-hans' && lang !== 'en') return;
+        try {
+            if (window.I18N && typeof window.I18N.setLang === 'function') {
+                window.I18N.setLang(lang);
+            } else if (typeof I18N !== 'undefined' && I18N.setLang) {
+                I18N.setLang(lang);
             }
-        }
+            if (typeof renderI18n === 'function') renderI18n();
+            document.querySelectorAll('[data-i18n]').forEach(function(el) {
+                var key = el.getAttribute('data-i18n');
+                if (key && typeof t === 'function') {
+                    var value = t(key);
+                    if (value && value !== key) el.textContent = value;
+                }
+            });
+        } catch(err) {}
     });
 }
 
@@ -306,22 +338,54 @@ function renderI18n() {
     // 匹配 {{ t('key') }}, {{ t("key") }}, {{ t('key', [...]) }}, {{ t('key') || 'default' }}
     var regex = /\{\{\s*t\(\s*(['"])([^'"]+)\1\s*(?:,\s*\[([^\]]*)\]\s*)?\)\s*(?:\|\|\s*(['"])([^'"]*)\4)?\s*\}\}/g;
 
-    document.body.innerHTML = document.body.innerHTML.replace(regex, function(match, q1, key, args, q2, fallback) {
+    function translate(match, q1, key, args, q2, fallback) {
         var result;
         if (args) {
+            var argsArr = [];
             try {
-                var argsArr = eval('[' + args + ']');
-                result = t(key, argsArr);
+                var parsed = JSON.parse('[' + args + ']');
+                if (Array.isArray(parsed)) argsArr = parsed;
             } catch(e) {
-                result = t(key);
+                argsArr = args.split(',').map(function(v) {
+                    return String(v).trim().replace(/^['"]|['"]$/g, '');
+                });
             }
+            result = t(key, argsArr);
         } else {
             result = t(key);
         }
         // 如果翻译结果等于key（未找到翻译），使用fallback
         if (result === key && fallback) return fallback;
         return result;
-    });
+    }
+
+    function translateText(value) {
+        return typeof value === 'string' ? value.replace(regex, translate) : value;
+    }
+
+    // 只替换文本节点和常用属性，不重写 body.innerHTML，避免销毁已绑定的事件与组件状态
+    function walk(node) {
+        if (!node) return;
+        if (node.nodeType === 3) {
+            var text = translateText(node.nodeValue);
+            if (text !== node.nodeValue) node.nodeValue = text;
+            return;
+        }
+        if (node.nodeType !== 1) return;
+        var attrs = node.attributes;
+        for (var i = 0; i < attrs.length; i++) {
+            var attr = attrs[i];
+            if (attr.name === 'placeholder' || attr.name === 'title' ||
+                attr.name === 'alt' || attr.name.indexOf('data-i18n') === 0) {
+                var translated = translateText(attr.value);
+                if (translated !== attr.value) attr.value = translated;
+            }
+        }
+        for (var child = node.firstChild; child; child = child.nextSibling) {
+            walk(child);
+        }
+    }
+    walk(document.body);
 }
 
 /**
@@ -426,6 +490,12 @@ var SSEManager = {
             headers['Authorization'] = 'Bearer ' + token;
         }
         
+        var _layui = _getLayui();
+        var $ = _layui ? _layui.$ : (window.jQuery || window.$);
+        if (!$ || !$.ajax) {
+            console.error('轮询失败：未找到 ajax 实现');
+            return;
+        }
         $.ajax({
             url: url,
             method: 'GET',

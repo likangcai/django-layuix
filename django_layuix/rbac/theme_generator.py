@@ -37,7 +37,7 @@ def generate_theme_css(theme_config, output_dir):
     
     # CSS模板
     css_template = f"""/* 
- * Django-Layui Theme: {name}
+ * Django-Layuix Theme: {name}
  * Auto-generated theme CSS
  */
 
@@ -278,7 +278,7 @@ def generate_all_themes():
     """
     Generate CSS files for all available themes (dark/light only)
     """
-    from django_layuix.rbac.themes import DJANGO_LAYUI_THEMES
+    from django_layuix.rbac.themes import DJANGO_LAYUIX_THEMES
     
     # 获取输出目录
     static_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -288,7 +288,7 @@ def generate_all_themes():
     print(f"📁 输出目录: {output_dir}")
     
     generated = []
-    for theme in DJANGO_LAYUI_THEMES:
+    for theme in DJANGO_LAYUIX_THEMES:
         try:
             css_path = generate_theme_css(theme, output_dir)
             generated.append(css_path)

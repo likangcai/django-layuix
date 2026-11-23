@@ -83,3 +83,6 @@ fabric.properties
 dist
 django_layuix.egg-info
 db.sqlite3
+deliverables
+__pycache__/
+*.py[cod]

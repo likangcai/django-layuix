@@ -19,6 +19,7 @@ class Menu(models.Model):
     component = models.CharField(max_length=200, blank=True, default='', verbose_name='组件路径')
     menu_type = models.IntegerField(choices=((1, '目录'), (2, '菜单'), (3, '按钮')), default=2, verbose_name='类型')
     permission = models.CharField(max_length=100, blank=True, default='', verbose_name='权限标识')
+    plugin_key = models.CharField(max_length=100, blank=True, default='', verbose_name='所属插件')
     sort = models.IntegerField(default=0, verbose_name='排序')
     visible = models.BooleanField(default=True, verbose_name='是否显示')
     status = models.BooleanField(default=True, verbose_name='状态')
@@ -52,6 +53,13 @@ class Role(models.Model):
     code = models.CharField(max_length=50, unique=True, verbose_name='角色编码')
     description = models.TextField(blank=True, default='', verbose_name='描述')
     menus = models.ManyToManyField(Menu, blank=True, related_name='roles', verbose_name='关联菜单')
+    # RBAC1: 角色继承（多父节点 DAG，symmetrical=False 表示 A 继承 B 不代表 B 继承 A）
+    parent_roles = models.ManyToManyField(
+        'self', symmetrical=False, blank=True,
+        related_name='child_roles', verbose_name='继承角色'
+    )
+    # RBAC2: 角色级人数上限，0/None 表示不限
+    max_users = models.PositiveIntegerField(null=True, blank=True, verbose_name='人数上限')
     is_system = models.BooleanField(default=False, verbose_name='系统内置')
     status = models.BooleanField(default=True, verbose_name='状态')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
@@ -62,6 +70,75 @@ class Role(models.Model):
         verbose_name = '角色管理'
         verbose_name_plural = verbose_name
         ordering = ['id']
+
+    def __str__(self):
+        return self.name
+
+
+class RoleMutex(models.Model):
+    """RBAC2 角色互斥组：SSD 在分配时校验，DSD 在激活时校验"""
+    KIND_CHOICES = (
+        ('ssd', '静态职责分离(SSD)'),
+        ('dsd', '动态职责分离(DSD)'),
+    )
+    name = models.CharField(max_length=50, unique=True, verbose_name='互斥组名称')
+    kind = models.CharField(max_length=3, choices=KIND_CHOICES, default='ssd', verbose_name='互斥类型')
+    roles = models.ManyToManyField(Role, blank=True, related_name='mutex_groups', verbose_name='互斥角色')
+    permissions = models.ManyToManyField(Menu, blank=True, related_name='permission_mutex_groups', verbose_name='互斥权限')
+    description = models.TextField(blank=True, default='', verbose_name='说明')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_role_mutex'
+        verbose_name = '角色互斥组'
+        verbose_name_plural = verbose_name
+        indexes = [models.Index(fields=['kind', 'is_active'], name='idx_role_mutex_kind_active')]
+        ordering = ['id']
+
+    def __str__(self):
+        return self.name
+
+
+class RolePrerequisite(models.Model):
+    """RBAC2 前置角色：拥有 role 必须先拥有 prerequisite"""
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='required_by', verbose_name='角色')
+    prerequisite = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='prerequisite_for', verbose_name='前置角色')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+
+    class Meta:
+        db_table = 'sys_role_prerequisite'
+        verbose_name = '前置角色'
+        verbose_name_plural = verbose_name
+        unique_together = [('role', 'prerequisite')]
+        ordering = ['id']
+
+    def __str__(self):
+        return f'{self.role} <- {self.prerequisite}'
+
+
+class PluginRegistry(models.Model):
+    """Registered django-layuix plugin metadata (persisted across restarts)."""
+    key = models.CharField(max_length=100, unique=True, verbose_name='插件标识')
+    name = models.CharField(max_length=100, verbose_name='插件名称')
+    version = models.CharField(max_length=30, default='1.0.0', verbose_name='版本')
+    description = models.TextField(blank=True, default='', verbose_name='说明')
+    api_prefix = models.CharField(max_length=200, blank=True, default='', verbose_name='API 前缀')
+    menu_path = models.CharField(max_length=200, blank=True, default='', verbose_name='菜单路径')
+    app_label = models.CharField(max_length=100, blank=True, default='', verbose_name='Django App Label')
+    dependencies = models.TextField(blank=True, default='', verbose_name='依赖声明')
+    source = models.CharField(max_length=20, default='app', verbose_name='来源')
+    validation_error = models.TextField(blank=True, default='', verbose_name='校验错误')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_plugin_registry'
+        verbose_name = '插件注册'
+        verbose_name_plural = verbose_name
+        ordering = ['key']
 
     def __str__(self):
         return self.name
@@ -101,34 +178,18 @@ class UserProfile(AbstractUser):
         return ''
 
     def has_perm(self, perm, obj=None):
-        if self.username == 'admin' or self.is_superuser:
+        from .engine import get_effective_permissions, is_full_access
+        if is_full_access(self):
             return True
-        # BUG-23 FIX: 直接使用 Menu，不需要 from .models import Menu（同文件内）
-        has_custom = Menu.objects.filter(
-            roles__users=self,
-            permission=perm,
-            status=True
-        ).exists()
-        if has_custom:
-            return True
-        is_admin_role = self.roles.filter(code='admin', status=True).exists()
-        if is_admin_role:
+        if perm in get_effective_permissions(self):
             return True
         return super().has_perm(perm, obj)
 
     def has_module_perms(self, app_label):
-        if self.username == 'admin' or self.is_superuser:
+        from .engine import get_effective_permissions, is_full_access
+        if is_full_access(self):
             return True
-        is_admin_role = self.roles.filter(code='admin', status=True).exists()
-        if is_admin_role:
-            return True
-        # BUG-24 FIX: 直接使用 Menu，不需要 from .models import Menu（同文件内）
-        has_any = Menu.objects.filter(
-            roles__users=self,
-            permission__startswith=app_label,
-            status=True
-        ).exists()
-        if has_any:
+        if any(p.startswith(app_label) for p in get_effective_permissions(self)):
             return True
         return super().has_module_perms(app_label)
 

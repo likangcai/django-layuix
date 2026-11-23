@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
                 ('frontend_visible', models.BooleanField(default=True, verbose_name='前台可见')),
                 ('create_time', models.DateTimeField(auto_now_add=True, verbose_name='创建时间')),
                 ('update_time', models.DateTimeField(auto_now=True, verbose_name='更新时间')),
-                ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='django_layui_rbac.menu', verbose_name='父级菜单')),
+                ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='django_layuix_rbac.menu', verbose_name='父级菜单')),
             ],
             options={
                 'verbose_name': '菜单管理',
@@ -130,7 +130,7 @@ class Migration(migrations.Migration):
                 ('status', models.BooleanField(default=True, verbose_name='状态')),
                 ('create_time', models.DateTimeField(auto_now_add=True, verbose_name='创建时间')),
                 ('update_time', models.DateTimeField(auto_now=True, verbose_name='更新时间')),
-                ('menus', models.ManyToManyField(blank=True, related_name='roles', to='django_layui_rbac.menu', verbose_name='关联菜单')),
+                ('menus', models.ManyToManyField(blank=True, related_name='roles', to='django_layuix_rbac.menu', verbose_name='关联菜单')),
             ],
             options={
                 'verbose_name': '角色管理',
@@ -142,6 +142,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='userprofile',
             name='roles',
-            field=models.ManyToManyField(blank=True, related_name='users', to='django_layui_rbac.role', verbose_name='角色'),
+            field=models.ManyToManyField(blank=True, related_name='users', to='django_layuix_rbac.role', verbose_name='角色'),
         ),
     ]
