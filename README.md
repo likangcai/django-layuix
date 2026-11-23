@@ -920,8 +920,11 @@ django-layuix 内置深色/浅色双模式切换功能：
 
 ## 环境要求
 
-- Python >= 3.8
-- Django >= 3.2
+- **Python**：3.8–3.13（CI 实际验证 3.10–3.13；3.8/3.9 已通过语法与 API 审计）
+- **Django**：3.2–6.0，需按 Python 版本选择兼容组合
+- 推荐组合：Python 3.12 + Django 5.2/6.0；旧环境建议 Python 3.8/3.9 + Django 4.2 LTS
+
+完整矩阵与兼容处理见 [COMPATIBILITY.md](docs/COMPATIBILITY.md)。
 
 ---
 
@@ -976,6 +979,7 @@ django-layuix 内置深色/浅色双模式切换功能：
 - [前台菜单可见性控制指南](docs/FRONTEND_MENU_GUIDE.md) - frontend_visible 前后台菜单独立控制
 
 ### 版本信息
+- [版本兼容性说明](docs/COMPATIBILITY.md) - Python/Django 支持矩阵与升级建议
 - [**更新日志 (CHANGELOG)**](docs/CHANGELOG.md) - 版本历史和更新记录
 
 ---
