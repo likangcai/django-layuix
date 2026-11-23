@@ -577,6 +577,6 @@ python manage.py test django_layuix.rbac
 
 ---
 
-**最后更新**: 2026-11-23  
-**版本**: v1.4.0+  
+**最后更新**: 2026-11-23
+**版本**: v1.4.0+
 **维护者**: django-layuix 团队
