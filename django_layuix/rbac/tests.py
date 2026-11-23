@@ -177,6 +177,17 @@ class Rbac3ApiTests(TestCase):
         self.assertIn('互斥', response.json()['msg'])
         self.assertFalse(get_user_model().objects.filter(username='cashier_user').exists())
 
+    def test_language_switch_writes_cookie_and_session(self):
+        response = self.client.post(
+            '/admin/api/rbac/set-language/',
+            {'language': 'en'}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.cookies.get('django_language').value, 'en')
+        self.assertEqual(self.client.session.get('_language'), 'en')
+        self.admin.refresh_from_db()
+        self.assertEqual(self.admin.language, 'en')
+
     def test_constraint_and_active_role_apis(self):
         response = self.client.get('/admin/api/rbac/constraints/')
         self.assertEqual(response.status_code, 200)
@@ -204,6 +215,23 @@ class Rbac4ExtensionTests(TestCase):
         self.manager = Role.objects.create(name='经理4', code='rbac4_manager')
         self.cashier = Role.objects.create(name='出纳4', code='rbac4_cashier')
         self.accountant = Role.objects.create(name='会计4', code='rbac4_accountant')
+
+    def test_menu_name_localization(self):
+        menu = Menu.objects.create(
+            name='菜单管理', name_en='Menu Management',
+            name_zh_hans='菜单管理', menu_type=2,
+        )
+        self.assertEqual(menu.get_name_by_lang('en'), 'Menu Management')
+        self.assertEqual(menu.get_name_by_lang('zh-hans'), '菜单管理')
+        self.assertEqual(menu.get_name_by_lang('fr'), '菜单管理')
+
+        self.admin.language = 'en'
+        self.admin.save(update_fields=['language'])
+        self.client.force_login(self.admin)
+        response = self.client.get('/admin/api/rbac/userinfo/')
+        self.assertEqual(response.status_code, 200)
+        names = [item['name'] for item in response.json()['data']['menus']]
+        self.assertIn('Menu Management', names)
 
     def test_bearer_token_works_without_session(self):
         from .token_auth import generate_token

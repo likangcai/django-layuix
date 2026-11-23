@@ -1,5 +1,12 @@
 # 国际化 (i18n) 使用指南
 
+## 结论（TL;DR）
+【事实】当前支持 `zh-hans` 与 `en` 两种语言，覆盖 Django 模板、前端 JS、数据库菜单和用户偏好。
+【判断】新增文案必须同时补齐两种语言的翻译键，否则前端会回退显示 key。
+【待确认】是否后续扩展繁体中文；当前 Menu 模型没有 `name_zh_hant` 字段，不支持 `zh-hant`。
+
+---
+
 ## 📋 概述
 
 django-layuix 支持完整的中英文双语切换，包括：
@@ -127,7 +134,7 @@ var text = t('common.inputRequired', ['用户名']);
 
 | 翻译键 | 说明 | 示例 |
 |--------|------|------|
-| `common.inputRequired` | 请输入{0} | `t('common.inputRequired', ['用户名'])` → "请输入用户名" |
+| `common.inputRequired` | 请输入指定字段 | `t('common.inputRequired', ['用户名'])` → "请输入用户名" |
 
 ### 4. 各模块翻译键
 
@@ -281,7 +288,6 @@ class Menu(models.Model):
     name = models.CharField(max_length=50, verbose_name='菜单名称（中文）')
     name_en = models.CharField(max_length=50, blank=True, default='', verbose_name='菜单名称（英文）')
     name_zh_hans = models.CharField(max_length=50, blank=True, default='', verbose_name='菜单名称（简体中文）')
-    name_zh_hant = models.CharField(max_length=50, blank=True, default='', verbose_name='菜单名称（繁体中文）')
     # ... 其他字段
 ```
 
@@ -306,7 +312,6 @@ def _get_user_menus(user):
             'id': m.id,
             'name': menu_name,  # 根据用户语言返回对应名称
             'name_zh_hans': m.name_zh_hans,
-            'name_zh_hant': m.name_zh_hant,
             'name_en': m.name_en,
             # ... 其他字段
         })
@@ -321,7 +326,6 @@ def _get_user_menus(user):
 - **菜单名称（中文）**：必填，默认显示
 - **英文名称**：选填，英文用户显示
 - **简体中文**：选填，简体中文用户显示
-- **繁体中文**：选填，繁体中文用户显示
 
 > **注意**：如果某个语言的翻译缺失，系统会自动回退到中文名称。
 
@@ -524,6 +528,55 @@ t('user.greeting', [username]);
 
 ---
 
-**最后更新**: 2026-05-07  
-**版本**: v1.0.4+  
+## ✅ 验证清单（2026-11-23）
+
+### 支持范围
+
+| 层级 | 支持语言 | 说明 |
+|---|---|---|
+| Django 模板 | `zh-hans` / `en` | `{% trans %}` + `django.mo` 编译文件 |
+| 前端 JS | `zh-hans` / `en` | `i18n.js` 双语文案字典 |
+| 数据库菜单 | `zh-hans` / `en` | `name_zh_hans` / `name_en`，缺失回退 `name` |
+| 用户偏好 | `zh-hans` / `en` | 个人中心 → 基本信息 → 语言设置 |
+
+> 【事实】当前版本**不支持繁体中文 `zh-hant`**，Menu 模型没有 `name_zh_hant` 字段。旧文档中的相关描述已移除。
+- 【待确认】是否扩展繁体中文或日语，需要同时设计数据库菜单字段与前端字典。
+- 【待确认】是否为第三方插件提供独立 i18n 字典注册接口，避免插件文案侵入核心 `i18n.js`。
+
+### 已验证链路
+
+1. **Django 模板翻译**
+   - `login.html`、`base.html` 使用 `{% load i18n %}` 与 `{% trans %}`。
+   - `django_layuix/locale/zh_Hans/LC_MESSAGES/django.mo` 已编译，覆盖登录、用户名、密码、主题切换、退出等文案。
+
+2. **前端 i18n key 覆盖**
+   - 扫描所有 HTML/JS 中的 `t('key')` 与 `data-i18n="key"`。
+   - 两种语言字典均覆盖实际使用的 key；文档示例中的 `...`、`key` 属于占位符，不计入缺漏。
+   - 本次修复补充 `common.loadFailed` 与个人中心语言设置相关 key。
+
+3. **菜单多语言**
+   - `Menu.get_name_by_lang()` 按 `zh-hans` / `en` 返回本地化名称，缺失回退 `name`。
+   - `/admin/api/rbac/userinfo/` 与 `/admin/api/rbac/menus/frontend/` 返回本地化名称。
+
+4. **语言切换**
+   - `POST /admin/api/rbac/set-language/` 同时更新用户 `language` 字段、Session `_language` 与 `django_language` Cookie。
+   - Django 6 使用 Cookie，Django ≤5 兼容 Session。
+   - 个人中心保存语言后通过 `postMessage` 通知父窗口及所有 iframe 同步。
+
+### 自动化验证
+
+```bash
+python manage.py test django_layuix.rbac
+```
+
+相关测试：
+
+- `test_language_switch_writes_cookie_and_session`
+- `test_menu_name_localization`
+- `test_api_permission_decorator`
+
+---
+
+**最后更新**: 2026-11-23  
+**版本**: v1.4.0+  
 **维护者**: django-layuix 团队
