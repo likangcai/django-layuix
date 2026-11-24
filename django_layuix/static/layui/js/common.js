@@ -393,6 +393,9 @@ function renderTpl(tplId, data) {
  * 不使用 eval：仅解析字符串字面量、t() 调用、参数数组、+ 拼接与 || 默认值。
  */
 function renderI18n() {
+    if (typeof I18N !== 'undefined' && typeof I18N.getLang === 'function') {
+        I18N.getLang();
+    }
     if (typeof t !== 'function') return;
 
     function splitTopLevel(input, delimiter) {
@@ -518,6 +521,14 @@ function renderI18n() {
                 if (translated !== attr.value) attr.value = translated;
             }
         }
+        var i18nKey = node.getAttribute('data-i18n');
+        if (i18nKey && typeof t === 'function') {
+            var translated = t(i18nKey);
+            if (translated && translated !== i18nKey && node.textContent !== translated) {
+                node.textContent = translated;
+            }
+        }
+
         for (var child = node.firstChild; child; child = child.nextSibling) {
             walk(child);
         }

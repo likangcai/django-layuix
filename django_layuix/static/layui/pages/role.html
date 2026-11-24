@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>角色管理 - 软件测试管理后台</title>
+    <title data-i18n="role.title">角色管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
     <link rel="stylesheet" href="/static/layui/css/admin.css">
     <script>
@@ -92,7 +92,7 @@
 <script type="text/html" id="operateTpl">
     {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
     <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
-    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="permissions">权限</a>
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="permissions">{{ t('role.permissions') }}</a>
     {{# if(layui.$.inArray('role:edit', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
     {{# } }}
@@ -129,34 +129,34 @@
             </div>
         </div>
         <div class="layui-form-item layui-form-text">
-            <label class="layui-form-label">继承角色</label>
+            <label class="layui-form-label">{{ t('role.inheritedRoles') }}</label>
             <div class="layui-input-block">
                 <div id="parentRoleBox" style="max-height:110px;overflow:auto;border:1px solid var(--border-color);border-radius:4px;padding:6px 10px;"></div>
-                <div id="parentInheritPreview" class="layui-form-mid layui-word-aux" style="padding-left:0;">未选择上级角色</div>
+                <div id="parentInheritPreview" class="layui-form-mid layui-word-aux" style="padding-left:0;">{{ t('role.parentPreviewNone') }}</div>
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">人数上限</label>
+            <label class="layui-form-label">{{ t('role.maxUsers') }}</label>
             <div class="layui-input-block">
-                <input type="number" name="max_users" min="0" placeholder="0 或留空表示不限" class="layui-input">
+                <input type="number" name="max_users" min="0" placeholder="{{ t('role.maxUsersPlaceholder') }}" class="layui-input">
             </div>
         </div>
         <details class="layui-form-item advanced-scope-panel" style="width:100%;border-top:1px solid var(--border-color);padding-top:10px;">
-            <summary style="cursor:pointer;color:var(--text-secondary);font-weight:500;">数据作用域（高级）</summary>
+            <summary style="cursor:pointer;color:var(--text-secondary);font-weight:500;">{{ t('role.scopeAdvanced') }}</summary>
             <div style="padding:10px 0 0 120px;">
                 <div class="layui-form-item">
-                    <label class="layui-form-label">作用域节点</label>
+                    <label class="layui-form-label">{{ t('role.scopeNode') }}</label>
                     <div class="layui-input-block">
-                        <input type="text" name="scope_node" placeholder="例如 east_region，留空表示不限制" class="layui-input">
+                        <input type="text" name="scope_node" placeholder="{{ t('role.scopeNodePlaceholder') }}" class="layui-input">
                     </div>
                 </div>
                 <div class="layui-form-item">
-                    <label class="layui-form-label">向下层数</label>
+                    <label class="layui-form-label">{{ t('role.scopeDepth') }}</label>
                     <div class="layui-input-block">
                         <input type="number" name="scope_depth" min="0" value="0" class="layui-input">
                     </div>
                 </div>
-                <div id="scopePreview" class="layui-form-mid layui-word-aux" style="padding-left:0;">未配置数据作用域，保持原有查询结果</div>
+                <div id="scopePreview" class="layui-form-mid layui-word-aux" style="padding-left:0;">{{ t('role.scopePreviewNone') }}</div>
             </div>
         </details>
         <div class="layui-form-item">
@@ -213,8 +213,8 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js"></script>
-    <script src="/static/layui/js/i18n.js"></script>
+    <script src="/static/layui/js/common.js?v=1.4.2b"></script>
+    <script src="/static/layui/js/i18n.js?v=1.4.2"></script>
     <script>
 inheritTheme();
 
@@ -237,6 +237,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
     // 初始化 data-i18n 和 {{ t() }} 占位符
     $('[data-i18n]').each(function(){ var key = $(this).attr('data-i18n'); $(this).text(t(key)); });
     renderI18n();
+    document.title = t('role.title');
 
     var currentUser = window.parent.currentUser || {};
     var permissions = currentUser.permissions || [];
@@ -300,7 +301,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
         var count = 0;
         selected.forEach(function(id) { count += collectInheritedPermissionCount(id); });
         layero.find('#parentInheritPreview').text(
-            selected.length ? '将继承约 ' + count + ' 项权限（后端最终校验）' : '未选择上级角色'
+            selected.length ? t('role.parentPreview', [count]) : t('role.parentPreviewNone')
         );
     }
 
@@ -309,7 +310,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
         var depth = parseInt(layero.find('[name="scope_depth"]').val() || '0', 10);
         if (isNaN(depth) || depth < 0) depth = 0;
         layero.find('#scopePreview').text(
-            node ? '该角色在 ' + node + ' 授予，向下覆盖 ' + depth + ' 层' : '未配置数据作用域，保持原有查询结果'
+            node ? t('role.scopePreview', [node, depth]) : t('role.scopePreviewNone')
         );
     }
 
@@ -323,11 +324,11 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
                 + '<input type="checkbox" name="parent_role" value="' + role.id + '"' + (checked[String(role.id)] ? ' checked' : '') + '> '
                 + escapeHtml(role.name) + '</label>';
         });
-        layero.find('#parentRoleBox').html(html || '<span style="color:var(--text-muted);">暂无可选角色</span>');
+        layero.find('#parentRoleBox').html(html || '<span style="color:var(--text-muted);">' + t('role.noParentRoles') + '</span>');
         layero.find('#parentRoleBox').off('change.parentRole').on('change.parentRole', 'input[name="parent_role"]', function() {
             if ($(this).prop('checked') && isDescendantRole(parseInt($(this).val(), 10), excludeId)) {
                 $(this).prop('checked', false);
-                layer.msg('不能选择当前角色的后代作为上级角色', {icon: 2});
+                layer.msg(t('role.cycleWarning'), {icon: 2});
             }
             form.render('checkbox', 'roleForm');
             updateInheritPreview(layero);
@@ -405,10 +406,10 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
                 {title: t('common.operation'), width: 420, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
             ]];
             if (hasAdvanced) {
-                cols[0].splice(4, 0, {title: '权限数', width: 150, align: 'center', templet: function(d) {
+                cols[0].splice(4, 0, {title: t('role.permissionCount'), width: 150, align: 'center', templet: function(d) {
                     var own = (d.menu_ids || []).length;
                     var inherited = inheritedPermissionCount(d, byId);
-                    return '共 ' + (own + inherited) + '（自有 ' + own + ' / 继承 ' + inherited + '）';
+                    return t('role.permissionSummary', [own + inherited, own, inherited]);
                 }});
             }
             table.render({
@@ -722,15 +723,15 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
                 var payload = res.data || {};
                 var ownHtml = (payload.own || []).map(function(item) {
                     return '<div class="permission-line"><span>' + escapeHtml(item.name) + '</span><code>' + escapeHtml(item.permission) + '</code></div>';
-                }).join('') || '<div class="muted">暂无自有权限</div>';
+                }).join('') || '<div class="muted">' + t('role.noOwnPermissions') + '</div>';
                 var inheritedHtml = (payload.inherited || []).map(function(item) {
-                    return '<div class="permission-line"><span>' + escapeHtml(item.name) + '</span><code>' + escapeHtml(item.permission) + '</code><small>来自：' + escapeHtml(item.source_role_name) + '</small></div>';
-                }).join('') || '<div class="muted">暂无继承权限</div>';
+                    return '<div class="permission-line"><span>' + escapeHtml(item.name) + '</span><code>' + escapeHtml(item.permission) + '</code><small>' + t('role.sourceRole') + escapeHtml(item.source_role_name) + '</small></div>';
+                }).join('') || '<div class="muted">' + t('role.noInheritedPermissions') + '</div>';
                 var content = '<div class="layui-tab" lay-filter="rolePermissionTab" style="padding:12px 20px 0;">'
-                    + '<ul class="layui-tab-title"><li class="layui-this">自有权限（' + (payload.own || []).length + '）</li><li>继承权限（' + (payload.inherited || []).length + '）</li></ul>'
-                    + '<div class="layui-tab-content"><div class="layui-tab-item layui-show">' + ownHtml + '<p class="muted">自有权限可在编辑角色时修改。</p></div>'
-                    + '<div class="layui-tab-item">' + inheritedHtml + '<p class="muted">继承权限来自上级角色链，只读且不可取消。</p></div></div></div>';
-                layer.open({type: 1, title: '查看权限 - ' + escapeHtml(data.name), area: ['620px', '520px'], content: content});
+                    + '<ul class="layui-tab-title"><li class="layui-this">' + t('role.ownPermissions', [(payload.own || []).length]) + '</li><li>' + t('role.inheritedPermissions', [(payload.inherited || []).length]) + '</li></ul>'
+                    + '<div class="layui-tab-content"><div class="layui-tab-item layui-show">' + ownHtml + '<p class="muted">' + t('role.ownPermissionHint') + '</p></div>'
+                    + '<div class="layui-tab-item">' + inheritedHtml + '<p class="muted">' + t('role.inheritedPermissionHint') + '</p></div></div></div>';
+                layer.open({type: 1, title: t('role.viewPermissions', [escapeHtml(data.name)]), area: ['620px', '520px'], content: content});
                 element.render('tab', 'rolePermissionTab');
             });
         } else if (obj.event === 'view') {
