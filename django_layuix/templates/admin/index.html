@@ -191,6 +191,7 @@
         admin_login_url: '{% url "admin:login" %}',
         home_quick_links: {{ layui_config.home_quick_links|default:"[]"|safe }},
         home_stats_cards: {{ layui_config.home_stats_cards|default:"[]"|safe }},
+        form_filter_disabled: '{{ layui_config.form_filter_disabled|default:"false"|escapejs }}',
     };
 
     // ==================== Global Variables ====================
@@ -380,6 +381,8 @@
             '/permission/role': '/static/layui/pages/role.html',
             '/permission/user': '/static/layui/pages/user.html',
             '/system/rbac-constraints': '/static/layui/pages/constraints.html',
+            '/permission/abac': '/static/layui/pages/abac.html',
+            '/system/scope-nodes': '/static/layui/pages/scope.html',
             '/profile': '/static/layui/pages/profile.html',
             '/system/log': '/static/layui/pages/log.html',
             '/system/info': '/static/layui/pages/dashboard.html',

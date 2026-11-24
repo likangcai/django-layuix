@@ -135,6 +135,53 @@ class RolePrerequisite(models.Model):
         return f'{self.role} <- {self.prerequisite}'
 
 
+class ScopeNode(models.Model):
+    """1.4.2 organization node used by the data-scope layer."""
+    code = models.CharField(max_length=100, unique=True, verbose_name='节点编码')
+    name = models.CharField(max_length=100, verbose_name='节点名称')
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='child_nodes', verbose_name='上级节点'
+    )
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_scope_node'
+        verbose_name = '组织节点'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class AbacPolicy(models.Model):
+    """1.4.2 row/field-level expression policy. Inactive when no policy exists."""
+    EFFECT_CHOICES = (('allow', '允许'), ('deny', '拒绝'))
+    name = models.CharField(max_length=100, verbose_name='策略名称')
+    resource = models.CharField(max_length=150, verbose_name='资源标识')
+    action = models.CharField(max_length=50, default='view', verbose_name='动作')
+    field = models.CharField(max_length=100, blank=True, default='', verbose_name='字段（空表示行级）')
+    effect = models.CharField(max_length=10, choices=EFFECT_CHOICES, default='allow', verbose_name='效果')
+    expression = models.TextField(verbose_name='表达式')
+    priority = models.IntegerField(default=100, verbose_name='优先级（越小越高）')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_abac_policy'
+        verbose_name = 'ABAC 策略'
+        verbose_name_plural = verbose_name
+        ordering = ['priority', 'id']
+
+    def __str__(self):
+        return self.name
+
+
 class PluginRegistry(models.Model):
     """Registered django-layuix plugin metadata (persisted across restarts)."""
     key = models.CharField(max_length=100, unique=True, verbose_name='插件标识')

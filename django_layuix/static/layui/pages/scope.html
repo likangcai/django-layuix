@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+<head>
+    <meta charset="UTF-8">
+    <title>组织节点管理</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+</head>
+<body>
+<div class="page-container">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <span style="font-size:15px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                <i class="layui-icon layui-icon-tree" style="color:var(--primary-color);"></i> 组织节点
+            </span>
+        </div>
+        <div class="layui-card-body">
+            <div class="layui-row layui-col-space12">
+                <div class="layui-col-md6">
+                    <div class="table-card">
+                        <div class="card-title">节点树</div>
+                        <div id="scopeTree" style="min-height:320px;"></div>
+                    </div>
+                </div>
+                <div class="layui-col-md6">
+                    <div class="table-card">
+                        <div class="card-title">节点配置</div>
+                        <form class="layui-form" lay-filter="scopeForm" style="padding:16px;">
+                            <input type="hidden" name="id">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">节点编码</label>
+                                <div class="layui-input-block"><input name="code" required class="layui-input" placeholder="如 east_region"></div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">节点名称</label>
+                                <div class="layui-input-block"><input name="name" required class="layui-input" placeholder="如 华东区域"></div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">上级节点</label>
+                                <div class="layui-input-block"><select name="parent_id"><option value="">顶级节点</option></select></div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">排序</label>
+                                <div class="layui-input-block"><input name="sort" type="number" value="0" class="layui-input"></div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">状态</label>
+                                <div class="layui-input-block"><input name="is_active" type="checkbox" checked lay-skin="switch" lay-text="启用|停用" value="1"></div>
+                            </div>
+                            <button class="layui-btn layui-btn-sm" lay-submit lay-filter="scopeSubmit">保存</button>
+                            <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="resetScope">重置</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/static/layui/lib/layui.js"></script>
+<script src="/static/layui/js/common.js"></script>
+<script src="/static/layui/js/i18n.js"></script>
+<script>
+renderI18n();
+layui.use(['tree', 'form', 'layer'], function() {
+    var tree = layui.tree;
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.$;
+    var flatNodes = [];
+
+    function flatten(nodes, result) {
+        (nodes || []).forEach(function(node) {
+            result.push({id: node.id, code: node.code, name: node.name, parent_id: node.parent_id, sort: node.sort, is_active: node.is_active});
+            flatten(node.children, result);
+        });
+        return result;
+    }
+
+    function renderParentSelect(selectedId) {
+        var html = '<option value="">顶级节点</option>';
+        flatNodes.forEach(function(node) {
+            if (node.id === selectedId) return;
+            html += '<option value="' + node.id + '">' + escapeHtml(node.name) + ' (' + escapeHtml(node.code) + ')</option>';
+        });
+        $('[name="parent_id"]').html(html);
+        form.render('select');
+    }
+
+    function loadTree() {
+        getApi('/admin/api/rbac/scope-nodes/', function(res) {
+            if (res.code !== 200) return;
+            flatNodes = flatten(res.data || [], []);
+            var treeData = (res.data || []).map(function(node) {
+                return {
+                    id: node.id, title: node.name + ' (' + node.code + ')',
+                    children: (node.children || []).map(function(child) { return {id: child.id, title: child.name + ' (' + child.code + ')', children: child.children || []}; })
+                };
+            });
+            tree.render({elem: '#scopeTree', data: treeData, click: function(obj) { fillForm(obj.data.id); }});
+            renderParentSelect(null);
+        });
+    }
+
+    function fillForm(id) {
+        var node = flatNodes.find(function(item) { return item.id === id; });
+        if (!node) return;
+        form.val('scopeForm', {
+            id: node.id, code: node.code, name: node.name,
+            parent_id: node.parent_id || '', sort: node.sort || 0,
+            is_active: !!node.is_active
+        });
+        renderParentSelect(node.id);
+    }
+
+    form.on('submit(scopeSubmit)', function(data) {
+        var field = data.field;
+        var payload = {
+            code: field.code, name: field.name,
+            parent_id: field.parent_id || null,
+            sort: parseInt(field.sort) || 0,
+            is_active: !!field.is_active
+        };
+        var url = '/admin/api/rbac/scope-nodes/';
+        var method = 'POST';
+        if (field.id) {
+            url = '/admin/api/rbac/scope-nodes/' + field.id + '/';
+            method = 'PUT';
+        }
+        if (method === 'POST') postApi(url, payload, done); else putApi(url, payload, done);
+        function done(res) {
+            layer.msg(res.msg || (res.code === 200 ? '已保存' : '失败'), {icon: res.code === 200 ? 1 : 2});
+            if (res.code === 200) { $('#resetScope').click(); loadTree(); }
+        }
+        return false;
+    });
+
+    $('#resetScope').on('click', function() {
+        form.val('scopeForm', {id: '', code: '', name: '', parent_id: '', sort: 0, is_active: true});
+        renderParentSelect(null);
+    });
+
+    loadTree();
+});
+</script>
+</body>
+</html>

@@ -27,6 +27,15 @@ def visible_scope_nodes(node, depth=0):
         children = []
         for current in frontier:
             current_children = list(tree.get(current, []) or [])
+            try:
+                from .models import ScopeNode
+                current_children.extend(
+                    ScopeNode.objects.filter(
+                        parent__code=current, is_active=True
+                    ).values_list('code', flat=True)
+                )
+            except Exception:
+                pass
             if not current_children and current in hierarchy:
                 index = hierarchy.index(current)
                 if index + 1 < len(hierarchy):

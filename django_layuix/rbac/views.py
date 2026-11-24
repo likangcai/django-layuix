@@ -32,6 +32,7 @@ def api_login_required(view_func):
         user = resolve_api_user(request)
         if user is None or not getattr(user, 'is_authenticated', False):
             return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
+        request.user = user
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -583,7 +584,7 @@ def public_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.4.1'),
+        'system_version': get_config('system_version', '1.4.2'),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),
         'favicon_url': get_config('favicon_url', ''),
@@ -619,7 +620,7 @@ def system_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.4.1'),
+        'system_version': get_config('system_version', '1.4.2'),
         'system_description': get_config('system_description', ''),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),
@@ -1884,7 +1885,7 @@ def _sod_payload(group):
 @api_login_required
 @api_permission_required('role:edit')
 def sod_constraint_list(request):
-    """GET/POST /api/rbac/sod-constraints/ - 1.4.1 SSD 兼容端点"""
+    """GET/POST /api/rbac/sod-constraints/ - 1.4.2 SSD 兼容端点"""
     from .engine import RbacConstraintError, require_roles
     from .models import SoDConstraint
 
@@ -1920,7 +1921,7 @@ def sod_constraint_list(request):
 @api_login_required
 @api_permission_required('role:edit')
 def sod_constraint_detail(request, pk):
-    """GET/PUT/DELETE /api/rbac/sod-constraints/<id>/ - 1.4.1 SSD 兼容端点"""
+    """GET/PUT/DELETE /api/rbac/sod-constraints/<id>/ - 1.4.2 SSD 兼容端点"""
     from .engine import RbacConstraintError, require_roles
     from .models import SoDConstraint
 
@@ -2121,3 +2122,276 @@ def active_roles(request):
         }, msg='切换成功')
 
     return error_response('Method not allowed', 405)
+
+
+# ==================== 1.4.2 Scope Nodes ====================
+
+def _scope_node_payload(node):
+    return {
+        'id': node.id,
+        'code': node.code,
+        'name': node.name,
+        'parent_id': node.parent_id,
+        'sort': node.sort,
+        'is_active': node.is_active,
+    }
+
+
+def _build_scope_tree(nodes, parent_id=None):
+    tree = []
+    for node in nodes:
+        if node['parent_id'] == parent_id:
+            item = dict(node)
+            children = _build_scope_tree(nodes, node['id'])
+            if children:
+                item['children'] = children
+            tree.append(item)
+    return tree
+
+
+def _scope_descendant_ids(node_id):
+    from .models import ScopeNode
+
+    result = set()
+    queue = [node_id]
+    while queue:
+        current = queue.pop()
+        for child in ScopeNode.objects.filter(parent_id=current).values_list('id', flat=True):
+            if child not in result:
+                result.add(child)
+                queue.append(child)
+    return result
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def scope_node_list(request):
+    """GET/POST /api/rbac/scope-nodes/ - 组织节点树与创建入口"""
+    from .models import ScopeNode
+
+    if request.method == 'GET':
+        rows = ScopeNode.objects.filter(is_active=True).order_by('sort', 'id')
+        return success_response(_build_scope_tree([_scope_node_payload(row) for row in rows]))
+
+    if request.method == 'POST':
+        body = get_request_body(request)
+        code = str(body.get('code', '')).strip()
+        name = str(body.get('name', '')).strip()
+        if not code or not name:
+            return error_response('节点编码和名称不能为空', 400)
+        if ScopeNode.objects.filter(code=code).exists():
+            return error_response('节点编码已存在', 400)
+        parent_id = body.get('parent_id') or None
+        node = ScopeNode.objects.create(
+            code=code, name=name, parent_id=parent_id,
+            sort=int(body.get('sort') or 0),
+            is_active=bool(body.get('is_active', True)),
+        )
+        return success_response({'id': node.id}, msg='创建成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def scope_node_detail(request, pk):
+    """GET/PUT/DELETE /api/rbac/scope-nodes/<id>/"""
+    from .models import ScopeNode
+
+    node = ScopeNode.objects.filter(pk=pk).first()
+    if not node:
+        return error_response('节点不存在', 404)
+
+    if request.method == 'GET':
+        return success_response(_scope_node_payload(node))
+
+    if request.method == 'PUT':
+        body = get_request_body(request)
+        if 'code' in body:
+            code = str(body['code']).strip()
+            if ScopeNode.objects.filter(code=code).exclude(pk=pk).exists():
+                return error_response('节点编码已存在', 400)
+            node.code = code
+        if 'name' in body:
+            node.name = str(body['name']).strip()
+        if 'parent_id' in body:
+            parent_id = int(body['parent_id']) if body['parent_id'] else None
+            if parent_id == pk or parent_id in _scope_descendant_ids(pk):
+                return error_response('上级节点不能是自身或后代', 400)
+            node.parent_id = parent_id
+        if 'sort' in body:
+            node.sort = int(body['sort'] or 0)
+        if 'is_active' in body:
+            node.is_active = bool(body['is_active'])
+        node.save()
+        return success_response(msg='更新成功')
+
+    if request.method == 'DELETE':
+        ScopeNode.objects.filter(parent_id=pk).update(parent=None)
+        node.delete()
+        return success_response(msg='删除成功')
+
+    return error_response('Method not allowed', 405)
+
+
+# ==================== 1.4.2 ABAC policies ====================
+
+def _abac_payload(policy, include_expression=True):
+    data = {
+        'id': policy.id,
+        'name': policy.name,
+        'resource': policy.resource,
+        'action': policy.action,
+        'field': policy.field,
+        'effect': policy.effect,
+        'priority': policy.priority,
+        'is_active': policy.is_active,
+    }
+    if include_expression:
+        data['expression'] = policy.expression
+    return data
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def abac_policy_list(request):
+    """GET/POST /api/rbac/abac-policies/"""
+    from .abac import AbacError, validate_expression
+    from .models import AbacPolicy
+
+    if request.method == 'GET':
+        rows = AbacPolicy.objects.all().order_by('priority', 'id')
+        return success_response([_abac_payload(row) for row in rows])
+
+    if request.method == 'POST':
+        body = get_request_body(request)
+        expression = str(body.get('expression', '')).strip()
+        try:
+            validate_expression(expression)
+        except AbacError as exc:
+            return error_response('表达式无效：%s' % exc, 400)
+        if not str(body.get('name', '')).strip() or not str(body.get('resource', '')).strip():
+            return error_response('策略名称和资源不能为空', 400)
+        policy = AbacPolicy.objects.create(
+            name=str(body['name']).strip(),
+            resource=str(body['resource']).strip(),
+            action=str(body.get('action') or 'view').strip(),
+            field=str(body.get('field') or '').strip(),
+            effect=str(body.get('effect') or 'allow'),
+            expression=expression,
+            priority=int(body.get('priority') or 100),
+            is_active=bool(body.get('is_active', True)),
+        )
+        return success_response({'id': policy.id}, msg='创建成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def abac_policy_detail(request, pk):
+    """GET/PUT/DELETE /api/rbac/abac-policies/<id>/"""
+    from .abac import AbacError, validate_expression
+    from .models import AbacPolicy
+
+    policy = AbacPolicy.objects.filter(pk=pk).first()
+    if not policy:
+        return error_response('策略不存在', 404)
+
+    if request.method == 'GET':
+        return success_response(_abac_payload(policy))
+
+    if request.method == 'PUT':
+        body = get_request_body(request)
+        simple_fields = ('name', 'resource', 'action', 'field', 'effect')
+        for key in simple_fields:
+            if key in body:
+                setattr(policy, key, str(body[key] or '').strip())
+        if 'priority' in body:
+            policy.priority = int(body['priority'] or 100)
+        if 'is_active' in body:
+            policy.is_active = bool(body['is_active'])
+        if 'expression' in body:
+            expression = str(body['expression'] or '').strip()
+            try:
+                validate_expression(expression)
+            except AbacError as exc:
+                return error_response('表达式无效：%s' % exc, 400)
+            policy.expression = expression
+        policy.save()
+        return success_response(msg='更新成功')
+
+    if request.method == 'DELETE':
+        policy.delete()
+        return success_response(msg='删除成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def abac_check(request):
+    """POST /api/rbac/abac-check/ - 策略调试与前端字段/行级控制"""
+    from .abac import evaluate_policies
+
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    body = get_request_body(request)
+    target_user = request.user
+    user_id = body.get('user_id')
+    if user_id:
+        target_user = _get_user_model().objects.filter(pk=user_id).first() or request.user
+    decision = evaluate_policies(
+        target_user,
+        str(body.get('action') or 'view'),
+        body.get('resource') or '',
+        field=str(body.get('field') or ''),
+        extra_context=body.get('context') if isinstance(body.get('context'), dict) else None,
+    )
+    return success_response({
+        'allowed': decision.allowed,
+        'matched': decision.matched,
+        'errors': decision.errors,
+    })
+
+
+@csrf_exempt
+@api_login_required
+def frontend_permissions(request):
+    """GET /api/rbac/frontend/permissions/ - Vue/React SDK 的统一权限数据入口"""
+    from .engine import visible_menu_queryset
+    from .models import AbacPolicy, ScopeNode
+    from .plugins import list_plugins
+
+    if request.method != 'GET':
+        return error_response('Method not allowed', 405)
+
+    menus = visible_menu_queryset(request.user, 'frontend').order_by('sort', 'id')
+    language = getattr(request.user, 'language', 'zh-hans')
+    menu_rows = [{
+        'id': menu.id, 'parent_id': menu.parent_id, 'name': menu.get_name_by_lang(language),
+        'path': menu.path, 'component': menu.component, 'menu_type': menu.menu_type,
+        'permission': menu.permission, 'icon': menu.icon, 'sort': menu.sort,
+    } for menu in menus]
+    scope_nodes = list(ScopeNode.objects.filter(is_active=True).order_by('sort', 'id').values(
+        'id', 'code', 'name', 'parent_id', 'sort'
+    ))
+    policies = [_abac_payload(row, include_expression=False) for row in AbacPolicy.objects.filter(is_active=True)]
+    return success_response({
+        'user': {
+            'id': request.user.pk,
+            'username': getattr(request.user, 'username', ''),
+            'language': language,
+        },
+        'permissions': _get_user_permissions(request.user),
+        'roles': list(request.user.roles.values('id', 'code', 'name')) if hasattr(request.user, 'roles') else [],
+        'menus': _build_menu_tree(menu_rows),
+        'plugins': list_plugins(),
+        'scope_nodes': _build_scope_tree(scope_nodes),
+        'abac_policies': policies,
+    })

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     Menu, Role, RoleMutex, RolePrerequisite, PluginRegistry, SoDConstraint,
-    UserProfile, OperationLog, SystemConfig,
+    AbacPolicy, ScopeNode, UserProfile, OperationLog, SystemConfig,
 )
 
 
@@ -90,5 +90,21 @@ class PluginRegistryAdmin(admin.ModelAdmin):
 
 admin.site.register(RoleMutex, RoleMutexAdmin)
 admin.site.register(SoDConstraint, RoleMutexAdmin)
+
+
+class ScopeNodeAdmin(admin.ModelAdmin):
+    list_display = ['id', 'code', 'name', 'parent', 'sort', 'is_active']
+    list_filter = ['is_active']
+    search_fields = ['code', 'name']
+
+
+class AbacPolicyAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'resource', 'action', 'field', 'effect', 'priority', 'is_active']
+    list_filter = ['effect', 'is_active']
+    search_fields = ['name', 'resource', 'expression']
+
+
+admin.site.register(ScopeNode, ScopeNodeAdmin)
+admin.site.register(AbacPolicy, AbacPolicyAdmin)
 admin.site.register(RolePrerequisite, RolePrerequisiteAdmin)
 admin.site.register(PluginRegistry, PluginRegistryAdmin)

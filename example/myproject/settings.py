@@ -108,7 +108,7 @@ AUTH_USER_MODEL = 'django_layuix_rbac.UserProfile'
 # ============================================================
 LAYUI_CONFIG = {
     'system_name': 'Layui Admin 演示',
-    'system_version': '1.4.1',
+    'system_version': '1.4.2',
     'system_description': 'django-layuix 功能演示项目',
     'logo_icon': 'layui-icon-code-circle',
     # 使用自定义图片
@@ -168,7 +168,7 @@ LAYUI_CONFIG = {
 # }
 
 # ============================================================
-# ⑧ 数据权限（1.4.1 可选，不配置时行为与旧版本一致）
+# ⑧ 数据权限（1.4.2 可选，不配置时行为与旧版本一致）
 # ============================================================
 # LAYUIX_SCOPE_HIERARCHY = ['global', 'region', 'team']
 # LAYUIX_SCOPE_TREE = {

@@ -14,6 +14,8 @@ MENU_PATH_MAP = {
     "/permission/role": "/static/layui/pages/role.html",
     "/permission/user": "/static/layui/pages/user.html",
     "/system/rbac-constraints": "/static/layui/pages/constraints.html",
+    "/permission/abac": "/static/layui/pages/abac.html",
+    "/system/scope-nodes": "/static/layui/pages/scope.html",
     "/profile": "/static/layui/pages/profile.html",
     "/system/log": "/static/layui/pages/log.html",
     "/system/info": "/static/layui/pages/dashboard.html",

@@ -166,7 +166,7 @@ python manage.py runserver
 LAYUI_CONFIG = {
     # 系统信息
     'system_name': 'Django Layuix Admin',
-    'system_version': '1.4.1',         # 系统版本号（显示在侧边栏）
+    'system_version': '1.4.2',         # 系统版本号（显示在侧边栏）
     'system_description': '',          # 系统描述（显示在登录页）
 
     # Logo
@@ -204,10 +204,16 @@ LAYUI_CONFIG = {
 }
 
 # 可选：自定义 Layui CDN
-LAYUI_CDN = 'https://cdn.jsdelivr.net/npm/layui@2.13.7/dist/'
+LAYUI_CDN = 'https://cdn.jsdelivr.net/npm/layui@2.13.9/dist/'
 
 # 可选：自定义 Layui 版本
-LAYUI_VERSION = '2.13.7'
+LAYUI_VERSION = '2.13.9'
+
+# 可选：Layui 2.13.9+ 是否从表单提交取值中排除 disabled 字段
+# 默认 false，保持本项目历史行为
+LAYUI_CONFIG = {
+    'form_filter_disabled': False,
+}
 ```
 
 #### 4.2 操作日志配置（可选）
@@ -272,7 +278,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
 | `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
-| `system_version` | 版本号 | 1.4.1 |
+| `system_version` | 版本号 | 1.4.2 |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |
 | `favicon_url` | 浏览器标签页图标 URL | （空） |
@@ -804,7 +810,7 @@ python manage.py collectstatic --noinput
 
 该命令会同步更新 `django_migrations.app` 与 `django_content_type.app_label`，不会修改业务数据表。
 
-## 数据权限（1.4.1+，可选）
+## 数据权限（1.4.2+，可选）
 
 业务模型只需声明 `SCOPE_FIELD` 并继承 `ScopedModelMixin`，即可按用户角色的 `scope_node/scope_depth` 过滤数据：
 
@@ -930,7 +936,7 @@ django-layuix 支持中英文双语，分两层实现：
 
 ### 深色/浅色模式切换
 
-> **版本**: 1.4.1+ | **更新**: 2026-11-24
+> **版本**: 1.4.2+ | **更新**: 2026-11-24
 
 django-layuix 内置深色/浅色双模式切换功能：
 
@@ -1003,7 +1009,8 @@ django-layuix 内置深色/浅色双模式切换功能：
 - [菜单扩展指南](docs/MENU_EXTENSION_GUIDE.md) - 如何添加自定义应用菜单
 - [权限系统使用指南](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例
 - [RBAC3 权限体系使用指南](docs/RBAC3_GUIDE.md) - 角色继承、SSD/DSD 约束、前置角色与后端强制鉴权
-- [权限系统升级说明（1.4.1）](docs/PERMISSION_UPGRADE_1_4_1.md) - SoD 兼容契约、数据权限 Scope 层与 UI 配套
+- [权限系统升级说明](docs/PERMISSION_UPGRADE_1_4_1.md) - SoD 兼容契约、数据权限 Scope、ABAC 与组织节点
+- [前端权限 SDK 使用指南](docs/FRONTEND_SDK_GUIDE.md) - Vue/React 适配器、统一权限端点与 ABAC 调用
 - [纯跨域 Token 认证指南](docs/TOKEN_AUTH_GUIDE.md) - Bearer Token 接入与分离前端对接
 - [认证与权限桥接指南](docs/INTEGRATION_GUIDE.md) - 通用认证桥接、DRF 适配器与 TestHub 对接
 - [插件化扩展契约](docs/PLUGIN_GUIDE.md) - 插件注册、菜单与 API 扩展

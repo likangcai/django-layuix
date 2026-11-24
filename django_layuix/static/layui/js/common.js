@@ -77,13 +77,27 @@ function patchLayerCloseDefaults() {
     return true;
 }
 
+// Layui 2.13.9 新增 form.filterDisabled。默认保持本项目既有行为（disabled 字段参与取值），
+// 可通过 LAYUI_CONFIG.form_filter_disabled = true 显式排除 disabled 字段。
+function applyLayuiCompatibility() {
+    var api = _getLayui();
+    if (!api || !api.form || typeof api.form.set !== 'function' || api.form.__layuiCompatPatched) return false;
+    var raw = (window.LAYUI_CONFIG || {}).form_filter_disabled;
+    var filterDisabled = raw === true || raw === 1 || String(raw).toLowerCase() === 'true';
+    api.form.set({filterDisabled: filterDisabled});
+    api.form.__layuiCompatPatched = true;
+    return true;
+}
+
 if (typeof window !== 'undefined') {
     patchLayerCloseDefaults();
-    var layerPatchAttempts = 0;
-    var layerPatchTimer = setInterval(function() {
-        layerPatchAttempts++;
-        var patched = patchLayerCloseDefaults();
-        if (patched || layerPatchAttempts > 50) clearInterval(layerPatchTimer);
+    applyLayuiCompatibility();
+    var layuiPatchAttempts = 0;
+    var layuiPatchTimer = setInterval(function() {
+        layuiPatchAttempts++;
+        var layerPatched = patchLayerCloseDefaults();
+        var formPatched = applyLayuiCompatibility();
+        if ((layerPatched && formPatched) || layuiPatchAttempts > 50) clearInterval(layuiPatchTimer);
     }, 100);
 }
 

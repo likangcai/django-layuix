@@ -63,6 +63,14 @@ urlpatterns = [
     path('plugins/manifest/', views.plugin_manifest, name='rbac_plugin_manifest'),
     path('plugins/', views.plugin_list, name='rbac_plugin_list'),
 
+    # 1.4.2 ABAC and scope nodes
+    path('scope-nodes/', views.scope_node_list, name='rbac_scope_node_list'),
+    path('scope-nodes/<int:pk>/', views.scope_node_detail, name='rbac_scope_node_detail'),
+    path('abac-policies/', views.abac_policy_list, name='rbac_abac_policy_list'),
+    path('abac-policies/<int:pk>/', views.abac_policy_detail, name='rbac_abac_policy_detail'),
+    path('abac-check/', views.abac_check, name='rbac_abac_check'),
+    path('frontend/permissions/', views.frontend_permissions, name='rbac_frontend_permissions'),
+
     # 1.4.1 SoD compatibility endpoints
     path('sod-constraints/check/', views.sod_constraint_check, name='rbac_sod_constraint_check'),
     path('sod-constraints/', views.sod_constraint_list, name='rbac_sod_constraint_list'),

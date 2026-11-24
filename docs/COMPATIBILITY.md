@@ -48,11 +48,25 @@
 | `webssh>=1.6.0` | 需按实际版本确认 | 新版可能要求 Python >=3.10 |
 | `openai>=1.0` | 需按实际版本确认 | `ai` extra，建议 Python >=3.10 |
 
+## 5. 前端依赖
+
+| 资源 | 当前内置版本 | 说明 |
+|---|---|---|
+| Layui | 2.13.9 | 内置 `layui.js` / `layui.css` / 字体资源均来自官方 2.13.9 发行包 |
+| ECharts | 项目内现有版本 | Dashboard 使用，未随 Layui 升级改动 |
+
+### 2.13.9 兼容处理
+
+- 新增 `form.filterDisabled` 配置，默认显式设置为 `false`，保持旧版本中 disabled 字段参与取值的行为。
+- 如需排除 disabled 字段，可在 `LAYUI_CONFIG` 中设置 `form_filter_disabled: True`。
+- 本项目未使用 2.13.9 修复的 `treeTable.addNodes()` 与 `tabs.add(mode)` 路径；表格、树、Tab、表单渲染已在冒烟中回归。
+- 2.13.8 起 `layui.extend` 路径拼接、table 表头宽度、table 内嵌 form 动态渲染、`form.getValue` 同名字段数组处理均有修复；本项目相关页面需按最新资源回归。
+
 【判断】Python 3.8/3.9 用户建议只安装核心包；如使用 `ops`/`ai`，请先在目标环境验证可选依赖可用性。
 - 【待确认】是否给 `Django` 增加 `<7` 上限，以避免未来主版本升级造成静默破坏。
 - 【待确认】是否在 `ops` / `ai` extras 中标注最低 Python 版本，减少 pip 解析到不兼容版本的概率。
 
-## 5. 升级建议
+## 6. 升级建议
 
 - 如果当前 Django < 4.2：建议先升级到 4.2 LTS，再升级 Python。
 - 如果当前 Python < 3.10：不要直接安装 Django 5/6；先确认 pip 解析结果。

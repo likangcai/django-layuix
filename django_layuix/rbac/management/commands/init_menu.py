@@ -52,6 +52,7 @@ class Command(BaseCommand):
         if rbac_menu_exists and not force:
             self.stdout.write(self.style.WARNING('rbac 菜单数据已存在，跳过菜单初始化。'))
             self._ensure_rbac3_menu()
+            self._ensure_142_menus()
         else:
             if force and rbac_menu_exists:
                 self.stdout.write(self.style.WARNING('使用 --force 模式，将更新现有 rbac 菜单数据（保留角色权限关联）'))
@@ -90,6 +91,30 @@ class Command(BaseCommand):
                 admin_role.menus.add(menu)
             self.stdout.write(self.style.SUCCESS('  创建菜单: 约束管理 (RBAC3)'))
 
+    def _ensure_142_menus(self):
+        """Add ABAC policy and scope node menus to pre-1.4.2 installations."""
+        specs = [
+            ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 5, '权限管理'),
+            ('组织节点', 'Scope Nodes', '组织节点', 'layui-icon-tree', '/system/scope-nodes', 5, '系统管理'),
+        ]
+        for name, name_en, name_zh, icon, path, sort, parent_name in specs:
+            parent = Menu.objects.filter(name=parent_name).first()
+            if not parent:
+                continue
+            menu, created = Menu.objects.get_or_create(
+                name=name,
+                defaults={
+                    'name_en': name_en, 'name_zh_hans': name_zh, 'icon': icon,
+                    'path': path, 'menu_type': 2, 'sort': sort, 'parent': parent,
+                    'status': True, 'visible': True,
+                    'backend_visible': True, 'frontend_visible': True,
+                },
+            )
+            if created:
+                admin_role = Role.objects.filter(code='admin').first()
+                if admin_role:
+                    admin_role.menus.add(menu)
+
     def _init_menus(self, force=False):
         """初始化菜单数据"""
         # 创建菜单
@@ -105,12 +130,14 @@ class Command(BaseCommand):
             ('角色管理', 'Role', '角色管理', 'layui-icon-group', '/permission/role', 2, 2, '权限管理'),
             ('用户管理', 'User', '用户管理', 'layui-icon-username', '/permission/user', 2, 3, '权限管理'),
             ('约束管理', 'Constraints', '约束管理', 'layui-icon-auz', '/system/rbac-constraints', 2, 4, '权限管理'),
+            ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 2, 5, '权限管理'),
 
             # ---- 系统管理 ----
             ('系统管理', 'System', '系统管理', 'layui-icon-set', '', 1, 2, None),
             ('个人中心', 'Profile', '个人中心', 'layui-icon-user', '/static/layui/pages/profile.html', 2, 1, '系统管理'),
             ('操作日志', 'Log', '操作日志', 'layui-icon-log', '/system/log', 2, 2, '系统管理'),
             ('系统配置', 'Config', '系统配置', 'layui-icon-set-sm', '/system/config', 2, 3, '系统管理'),
+            ('组织节点', 'Scope Nodes', '组织节点', 'layui-icon-tree', '/system/scope-nodes', 2, 5, '系统管理'),
 
             # ---- 运维管理 ----
             ('运维管理', 'Operations', '运维管理', 'layui-icon-console', '', 1, 3, None),

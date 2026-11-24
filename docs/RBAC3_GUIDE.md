@@ -1,6 +1,6 @@
 # RBAC3 权限体系使用指南
 
-版本：v1.0　适用版本：django-layuix 1.4.1+
+版本：v1.0　适用版本：django-layuix 1.4.2+
 
 ## 结论（TL;DR）
 【事实】RBAC3 内核统一由 `rbac/engine.py` 计算继承、约束与有效权限。

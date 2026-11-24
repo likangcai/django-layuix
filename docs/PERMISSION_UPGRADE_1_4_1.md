@@ -62,6 +62,7 @@
 
 1. `0006_scope_and_parent.py`：添加 `Role.parent`、`scope_node`、`scope_depth`，幂等回填 `parent`。
 2. `0007_sod_compat.py`：注册 `SoDConstraint` proxy 模型。
+3. `0008_abac_and_scope_nodes.py`：新增 `sys_abac_policy` 与 `sys_scope_node`。
 
 ## 5. 验收口径
 
@@ -69,7 +70,11 @@
 - 新增测试覆盖：继承权限来源、环路检测、SSD 冲突结构、Scope 过滤。
 - 未配置新字段时，现有角色、菜单、API 与页面行为保持一致。
 
-## 6. 后续增强项
-- 【本期不做】字段级/行级表达式权限（ABAC）。
-- 【本期不做】独立组织节点管理页面。
-- 【本期不做】前端 Vue/React 权限 SDK。
+## 6. 1.4.2 后续增强项（已交付）
+- 【事实】已新增 `AbacPolicy`、安全表达式引擎、行级/字段级过滤与 `/abac-policies/`、`/abac-check/` 端点。
+- 【事实】已新增 `ScopeNode` 树形管理 API 与独立管理页，数据库节点可参与 Scope 层级展开。
+- 【事实】已新增 Vue 3 / React 权限 SDK 与统一端点 `/frontend/permissions/`。
+- 【判断】ABAC 未配置时全部放行，组织节点为空时回退 settings 层级配置，前端 SDK 只做展示控制。
+- 【待确认】是否发布独立 npm 包 `@layuix/permission`。
+- 【待确认】是否补充 Svelte / Angular 适配器。
+- 【待确认】是否把 ABAC 表达式下推为 ORM Q 对象以提升大数据量过滤性能。

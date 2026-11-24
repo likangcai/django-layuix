@@ -592,3 +592,96 @@ class Rbac141CompatibilityTests(TestCase):
         self.assertEqual(copied.parent_id, parent.id)
         self.assertEqual(copied.scope_node, 'east_region')
         self.assertEqual(copied.scope_depth, 2)
+
+
+class Rbac142EnhancementTests(TestCase):
+
+    def setUp(self):
+        User = get_user_model()
+        self.admin = User.objects.create_superuser(
+            username='rbac142_admin', email='rbac142@example.com', password='pass12345'
+        )
+        self.user = User.objects.create_user(username='rbac142_user', password='pass12345')
+        self.sales = Role.objects.create(name='销售', code='sales')
+        self.user.roles.add(self.sales)
+        self.client.force_login(self.admin)
+
+    def test_abac_expression_and_policies(self):
+        from .abac import AbacError, evaluate_expression, evaluate_policies, filter_fields
+        from .models import AbacPolicy
+
+        self.assertTrue(evaluate_expression("'sales' in user.roles and resource.amount <= 10000", {
+            'user': {'roles': ['sales']}, 'resource': {'amount': 5000}
+        }))
+        with self.assertRaises(AbacError):
+            evaluate_expression("__import__('os').system('echo bad')", {})
+
+        AbacPolicy.objects.create(
+            name='大额订单拒绝', resource='store.Order', action='view', effect='deny',
+            expression='resource.amount > 10000', priority=10,
+        )
+        self.assertFalse(evaluate_policies(
+            self.user, 'view', 'store.Order',
+            extra_context={'resource': {'amount': 20000}}
+        ).allowed)
+        self.assertTrue(evaluate_policies(
+            self.user, 'view', 'store.Order',
+            extra_context={'resource': {'amount': 5000}}
+        ).allowed)
+
+        AbacPolicy.objects.create(
+            name='成本字段白名单', resource='store.Order', action='view', field='cost',
+            effect='allow', expression="user.username == 'nobody'", priority=10,
+        )
+        self.assertEqual(
+            filter_fields(self.user, 'view', 'store.Order', ['id', 'cost']), ['id']
+        )
+
+    def test_abac_api_rejects_invalid_expression(self):
+        response = self.client.post('/admin/api/rbac/abac-policies/', {
+            'name': '非法表达式', 'resource': 'store.Order',
+            'expression': "__import__('os').system('bad')",
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+        response = self.client.post('/admin/api/rbac/abac-policies/', {
+            'name': '小额可见', 'resource': 'store.Order', 'action': 'view',
+            'effect': 'allow', 'expression': 'resource.amount <= 10000',
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        check = self.client.post('/admin/api/rbac/abac-check/', {
+            'user_id': self.user.id, 'action': 'view', 'resource': 'store.Order',
+            'context': {'resource': {'amount': 5000}},
+        }, content_type='application/json')
+        self.assertEqual(check.status_code, 200)
+        self.assertTrue(check.json()['data']['allowed'])
+
+    def test_scope_node_tree_and_cycle_rejection(self):
+        root = self.client.post('/admin/api/rbac/scope-nodes/', {
+            'code': 'global', 'name': '全局',
+        }, content_type='application/json')
+        self.assertEqual(root.status_code, 200)
+        root_id = root.json()['data']['id']
+
+        child = self.client.post('/admin/api/rbac/scope-nodes/', {
+            'code': 'east_region', 'name': '华东', 'parent_id': root_id,
+        }, content_type='application/json')
+        self.assertEqual(child.status_code, 200)
+        child_id = child.json()['data']['id']
+
+        tree = self.client.get('/admin/api/rbac/scope-nodes/').json()['data']
+        self.assertEqual(tree[0]['code'], 'global')
+        self.assertEqual(tree[0]['children'][0]['code'], 'east_region')
+
+        cycle = self.client.put('/admin/api/rbac/scope-nodes/%s/' % root_id, {
+            'parent_id': child_id,
+        }, content_type='application/json')
+        self.assertEqual(cycle.status_code, 400)
+
+    def test_frontend_permissions_endpoint(self):
+        response = self.client.get('/admin/api/rbac/frontend/permissions/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()['data']
+        for key in ('user', 'permissions', 'roles', 'menus', 'plugins', 'scope_nodes', 'abac_policies'):
+            self.assertIn(key, data)
