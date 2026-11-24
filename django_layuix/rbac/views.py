@@ -2347,7 +2347,9 @@ def abac_check(request):
     target_user = request.user
     user_id = body.get('user_id')
     if user_id:
-        target_user = _get_user_model().objects.filter(pk=user_id).first() or request.user
+        target_user = _get_user_model().objects.filter(pk=user_id).first()
+        if target_user is None:
+            return error_response('目标用户不存在', 404)
     if (
         target_user != request.user
         and getattr(target_user, 'is_superuser', False)
@@ -2374,6 +2376,7 @@ def frontend_permissions(request):
     """GET /api/rbac/frontend/permissions/ - Vue/React SDK 的统一权限数据入口"""
     from .engine import visible_menu_queryset
     from .models import AbacPolicy, ScopeNode
+    from .permissions import has_permission
     from .plugins import list_plugins
 
     if request.method != 'GET':
@@ -2389,7 +2392,14 @@ def frontend_permissions(request):
     scope_nodes = list(ScopeNode.objects.filter(is_active=True).order_by('sort', 'id').values(
         'id', 'code', 'name', 'parent_id', 'sort'
     ))
-    policies = [_abac_payload(row, include_expression=False) for row in AbacPolicy.objects.filter(is_active=True)]
+    can_view_policies = (
+        bool(getattr(request.user, 'is_superuser', False))
+        or has_permission(request.user, 'role:edit', request)
+    )
+    policies = [
+        _abac_payload(row, include_expression=False)
+        for row in AbacPolicy.objects.filter(is_active=True)
+    ] if can_view_policies else []
     return success_response({
         'user': {
             'id': request.user.pk,

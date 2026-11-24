@@ -57,6 +57,8 @@ $env:DEMO_PASSWORD='YourStrongPassword'
 python manage.py init_permission_demo
 ```
 
+非 `DEBUG` 环境不会在命令行输出密码；如需查看，追加 `--show-password`。
+
 ## 4. 体验方式
 
 1. 用 `admin / admin123` 登录后台。

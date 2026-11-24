@@ -1,4 +1,7 @@
 from django.apps import AppConfig
+from django.db.models.signals import post_migrate
+
+from django_layuix.rbac.demo_specs import BUTTON_SPECS, DEMO_PARENT_MENU, MENU_SPECS
 
 
 class PermissionDemoConfig(AppConfig):
@@ -8,33 +11,18 @@ class PermissionDemoConfig(AppConfig):
 
     def ready(self):
         self._register_api_urls()
-        try:
-            self._register_menus()
-        except Exception as exc:
-            print('Warning: Could not register permission demo menus: %s' % exc)
+        post_migrate.connect(
+            self._register_menus,
+            sender=self,
+            dispatch_uid='permission_demo_register_menus',
+        )
 
-    def _register_menus(self):
+    def _register_menus(self, sender=None, **kwargs):
         from django_layuix.rbac.menu_registry import register_menus
         from django_layuix.rbac.models import Menu
 
-        Menu.objects.get_or_create(
-            name='演示应用',
-            defaults={
-                'name_en': 'Demo App', 'name_zh_hans': '演示应用',
-                'icon': 'layui-icon-app', 'path': '', 'menu_type': 1, 'sort': 4,
-                'status': True, 'visible': True, 'backend_visible': True,
-                'frontend_visible': False,
-            },
-        )
-        register_menus(
-            menus_data=[
-                ('示例订单', 'layui-icon-form', '/static/permission_demo/pages/order.html', 2, 6, '演示应用'),
-            ],
-            buttons_data=[
-                ('查看示例订单', '示例订单', 'demo:order:view', 1),
-                ('查看成本字段', '示例订单', 'demo:order:cost:view', 2),
-            ],
-        )
+        Menu.objects.get_or_create(**DEMO_PARENT_MENU)
+        register_menus(menus_data=MENU_SPECS, buttons_data=BUTTON_SPECS)
         Menu.objects.filter(name='示例订单').update(
             name_en='Demo Orders', name_zh_hans='示例订单'
         )

@@ -254,7 +254,7 @@ class ApiOriginGuardMiddleware:
     def __call__(self, request):
         if (
             request.method in self.SAFE_METHODS
-            or not request.path.startswith('/admin/api/')
+            or not self._is_api_path(request.path)
             or getattr(settings, 'LAYUIX_DISABLE_API_ORIGIN_GUARD', False)
         ):
             return self.get_response(request)
@@ -273,6 +273,10 @@ class ApiOriginGuardMiddleware:
         if not source_host or source_host not in self._allowed_hosts(request):
             return JsonResponse({'code': 403, 'msg': 'Cross-origin request blocked'}, status=403)
         return self.get_response(request)
+
+    def _is_api_path(self, path):
+        prefixes = getattr(settings, 'LAYUIX_API_PREFIXES', ['/admin/api/'])
+        return any(str(prefix) and path.startswith(str(prefix)) for prefix in prefixes or [])
 
     def _is_valid_bearer_request(self, request):
         authorization = request.META.get('HTTP_AUTHORIZATION', '')

@@ -34,6 +34,7 @@ _TOKEN_RE = re.compile(
 )
 
 _COMPARISONS = {'==', '!=', '>', '>=', '<', '<=', 'in', 'not in', 'contains'}
+_SENSITIVE_FIELD_TOKENS = ('password', 'secret', 'token', 'api_key', 'private_key', 'access_key')
 
 
 def _tokenize(expression):
@@ -71,42 +72,47 @@ class _Parser:
         self.index += 1
         return token
 
-    def parse(self):
-        value = self.parse_or()
+    def parse(self, skip=False):
+        value = self.parse_or(skip)
         if self.peek()[0] != 'eof':
             raise AbacError('表达式存在多余内容：%s' % self.peek()[1])
         return value
 
-    def parse_or(self):
-        value = self.parse_and()
+    def parse_or(self, skip=False):
+        value = self.parse_and(skip)
         while self.peek() == ('op', 'or'):
             self.consume()
-            right = self.parse_and()
-            value = value or right
+            right = self.parse_and(skip or bool(value))
+            if not skip:
+                value = value or right
         return value
 
-    def parse_and(self):
-        value = self.parse_not()
+    def parse_and(self, skip=False):
+        value = self.parse_not(skip)
         while self.peek() == ('op', 'and'):
             self.consume()
-            right = self.parse_not()
-            value = value and right
+            right = self.parse_not(skip or not value)
+            if not skip:
+                value = value and right
         return value
 
-    def parse_not(self):
+    def parse_not(self, skip=False):
         if self.peek() == ('op', 'not'):
             self.consume()
-            return not self.parse_not()
-        return self.parse_comparison()
+            value = self.parse_not(skip)
+            return value if skip else not value
+        return self.parse_comparison(skip)
 
-    def parse_comparison(self):
+    def parse_comparison(self, skip=False):
         left = self.parse_primary()
         kind, value = self.peek()
         if kind == 'op' and value in _COMPARISONS:
             self.consume()
             right = self.parse_primary()
+            if skip:
+                return False
             return _compare(left, value, right, self.context, self.validate)
-        return bool(left)
+        return False if skip else bool(left)
 
     def parse_primary(self):
         kind, value = self.consume()
@@ -233,7 +239,8 @@ def resource_context(resource):
         return {'value': resource}
     result = {}
     for field in model_meta.concrete_fields:
-        if 'password' in field.name:
+        lowered = field.name.lower()
+        if any(token in lowered for token in _SENSITIVE_FIELD_TOKENS):
             continue
         result[field.name] = getattr(resource, field.attname)
     return result
@@ -286,11 +293,12 @@ def _policies_for(resource, action, field):
     return list(queryset.order_by('priority', 'id'))
 
 
-def evaluate_policies(user, action, resource, field=None, extra_context=None):
+def evaluate_policies(user, action, resource, field=None, extra_context=None, policies=None):
     """Return an ABAC decision. No policy means allow (backward compatible)."""
     if getattr(user, 'is_superuser', False):
         return AbacDecision(True, [], [])
-    policies = _policies_for(resource, action, field)
+    if policies is None:
+        policies = _policies_for(resource, action, field)
     if not policies:
         return AbacDecision(True, [], [])
 
@@ -313,10 +321,10 @@ def evaluate_policies(user, action, resource, field=None, extra_context=None):
     return AbacDecision(True, [policy.id for policy in matched], errors)
 
 
-def filter_queryset(queryset, user, action, resource, extra_context=None):
+def filter_queryset(queryset, user, action, resource, extra_context=None, chunk_size=1000):
     """Python-level row filter; returns a QuerySet restricted by primary keys."""
     allowed_pks = []
-    for obj in queryset:
+    for obj in queryset.iterator(chunk_size=max(1, int(chunk_size or 1000))):
         context = dict(extra_context or {})
         context.setdefault('resource', obj)
         if evaluate_policies(user, action, resource or obj, extra_context=context).allowed:
@@ -336,7 +344,9 @@ def filter_fields(user, action, resource, fields, extra_context=None):
             if policy.field == field
         ]
         has_allow_whitelist = any(policy.effect == 'allow' for policy in field_policies)
-        decision = evaluate_policies(user, action, resource, field, extra_context)
+        decision = evaluate_policies(
+            user, action, resource, field, extra_context, policies=field_policies
+        )
         if decision.allowed and (not has_allow_whitelist or decision.matched):
             visible.append(field)
     return visible

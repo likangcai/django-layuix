@@ -439,6 +439,8 @@ $env:DEMO_PASSWORD='YourStrongPassword'
 python manage.py init_permission_demo
 ```
 
+非 `DEBUG` 环境默认不输出密码；如需显示，追加 `--show-password`。
+
 ### 可复制 demo app
 
 完整示例应用位于：

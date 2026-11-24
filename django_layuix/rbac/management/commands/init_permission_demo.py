@@ -10,35 +10,26 @@
 import os
 
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from django_layuix.rbac.demo_specs import (
+    BUTTON_SPECS, DEMO_PARENT_MENU, MENU_SPECS, ROLE_SPECS,
+)
 from django_layuix.rbac.models import AbacPolicy, Menu, Role, ScopeNode, SoDConstraint
-
-
-ROLE_SPECS = [
-    ('demo_base', '示例基础角色', ['menu:view', 'role:view', 'user:view']),
-    ('demo_manager', '示例区域经理', ['demo:order:view']),
-    ('demo_maker', '示例制单员', ['demo:order:view']),
-    ('demo_checker', '示例审核员', ['demo:order:view']),
-    ('demo_finance', '示例财务', ['demo:order:view', 'demo:order:cost:view']),
-    ('demo_sales', '示例销售', ['demo:order:view']),
-]
-
-MENU_SPECS = [
-    ('示例订单', 'layui-icon-form', '/static/permission_demo/pages/order.html', 2, 6, '演示应用'),
-]
-
-BUTTON_SPECS = [
-    ('查看示例订单', '示例订单', 'demo:order:view', 1),
-    ('查看成本字段', '示例订单', 'demo:order:cost:view', 2),
-]
 
 
 class Command(BaseCommand):
     help = '一键初始化角色继承、SSD、Scope、组织节点与 ABAC 示例数据'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--show-password', action='store_true',
+            help='输出示例用户密码（默认仅在 DEBUG 模式下输出）',
+        )
 
     def handle(self, *args, **options):
         User = get_user_model()
@@ -54,7 +45,7 @@ class Command(BaseCommand):
             self._create_sod(roles)
             self._create_scope_nodes(roles)
             self._create_abac_policies()
-            self._create_users(roles)
+            self._create_users(roles, show_password=options.get('show_password'))
             self._seed_app_data(roles)
 
         self.stdout.write(self.style.SUCCESS('权限示例数据初始化完成'))
@@ -62,15 +53,7 @@ class Command(BaseCommand):
     def _register_demo_menus(self):
         from django_layuix.rbac.menu_registry import register_menus
 
-        Menu.objects.get_or_create(
-            name='演示应用',
-            defaults={
-                'name_en': 'Demo App', 'name_zh_hans': '演示应用',
-                'icon': 'layui-icon-app', 'path': '', 'menu_type': 1, 'sort': 4,
-                'status': True, 'visible': True, 'backend_visible': True,
-                'frontend_visible': False,
-            },
-        )
+        Menu.objects.get_or_create(**DEMO_PARENT_MENU)
         register_menus(menus_data=MENU_SPECS, buttons_data=BUTTON_SPECS)
         Menu.objects.filter(name='示例订单').update(
             name_en='Demo Orders', name_zh_hans='示例订单'
@@ -158,7 +141,7 @@ class Command(BaseCommand):
             },
         )
 
-    def _create_users(self, roles):
+    def _create_users(self, roles, show_password=False):
         User = get_user_model()
         password = os.getenv('DEMO_PASSWORD', 'Demo@2026')
         specs = [
@@ -167,7 +150,7 @@ class Command(BaseCommand):
             ('demo_scope_user', ['demo_sales']),
         ]
         for username, role_codes in specs:
-            user, created = User.objects.get_or_create(
+            user, _ = User.objects.get_or_create(
                 username=username,
                 defaults={'email': '%s@example.com' % username, 'is_staff': True},
             )
@@ -175,7 +158,10 @@ class Command(BaseCommand):
             user.save(update_fields=['password'])
             if hasattr(user, 'roles'):
                 user.roles.add(*[roles[code] for code in role_codes])
-        self.stdout.write('示例用户密码: %s（可用 DEMO_PASSWORD 覆盖）' % password)
+        if show_password or getattr(settings, 'DEBUG', False):
+            self.stdout.write('示例用户密码: %s（可用 DEMO_PASSWORD 覆盖）' % password)
+        else:
+            self.stdout.write('示例用户密码已由 DEMO_PASSWORD 设置，未输出到日志')
 
     def _seed_app_data(self, roles):
         if apps.is_installed('store'):

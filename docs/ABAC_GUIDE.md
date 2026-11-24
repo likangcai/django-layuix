@@ -98,7 +98,7 @@ def order_list(request):
     return JsonResponse({'data': list(queryset.values())})
 ```
 
-当前实现为 Python 层逐行评估，并按主键生成过滤后的 QuerySet。数据量大时建议先按业务条件缩小 QuerySet，再调用 `filter_queryset()`。
+当前实现为 Python 层逐行评估，并按主键生成过滤后的 QuerySet。内部使用 `iterator(chunk_size=1000)` 分批读取，可通过 `chunk_size` 参数调整；数据量大时仍建议先按业务条件缩小 QuerySet，再调用 `filter_queryset()`。
 
 ## 5. 字段级权限示例
 

@@ -18,7 +18,7 @@ export function PermissionProvider(props) {
       if (active) setError(err);
     });
     return () => { active = false; };
-  }, []);
+  }, [client]);
 
   return React.createElement(
     PermissionContext.Provider,

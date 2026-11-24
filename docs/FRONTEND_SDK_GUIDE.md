@@ -24,7 +24,7 @@ GET /admin/api/rbac/frontend/permissions/
 {
   "code": 200,
   "data": {
-    "user": {"id": 1, "username": "admin", "language": "zh-hans"},
+    "user": {"id": 1, "username": "admin", "language": "zh-hans", "is_superuser": true},
     "permissions": ["user:add", "user:edit"],
     "roles": [{"id": 1, "code": "admin", "name": "管理员"}],
     "menus": [],
@@ -35,7 +35,7 @@ GET /admin/api/rbac/frontend/permissions/
 }
 ```
 
-`abac_policies` 只返回策略元数据，不返回表达式，避免把后端规则泄露给前端。
+`abac_policies` 只返回策略元数据，不返回表达式；且仅超级管理员或拥有 `role:edit` 权限的用户会拿到非空列表，普通用户始终为空数组。
 
 ## 2. 框架无关客户端
 

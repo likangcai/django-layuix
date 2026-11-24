@@ -320,6 +320,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | `LAYUI_RBAC_AUTHENTICATORS` | 自定义认证器导入路径 | `[]` |
 | `LAYUIX_DISABLE_API_ORIGIN_GUARD` | 禁用管理 API 跨站来源防护（不推荐） | False |
 | `LAYUIX_API_ALLOWED_ORIGINS` | 管理 API 允许的来源主机白名单 | 未设置（使用 `ALLOWED_HOSTS`） |
+| `LAYUIX_API_PREFIXES` | 应用来源防护的管理 API 路径前缀 | `['/admin/api/']` |
 | `TOKEN_EXPIRE_SECONDS` | Token 有效期（秒） | 86400 |
 | `LAYUIX_SCOPE_HIERARCHY` | 数据作用域层级 | `[]` |
 | `LAYUIX_SCOPE_TREE` | 数据作用域节点树 | `{}` |

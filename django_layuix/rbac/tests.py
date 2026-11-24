@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """RBAC3 regression tests: inheritance, constraints and server-side enforcement."""
 import importlib.util
+import re
+from pathlib import Path
 from unittest import mock, skipUnless
 
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 
 from django_layuix.integrations.auth import (
     authenticate_request, register_authenticator,
@@ -836,6 +838,51 @@ class RbacFinalAuditTests(TestCase):
             filter_fields(self.user, 'view', 'audit.Resource', ['id', 'secret']), ['id']
         )
 
+    def test_abac_boolean_operators_short_circuit(self):
+        from .abac import evaluate_expression
+
+        self.assertTrue(evaluate_expression('true or resource.missing > 1', {}))
+        self.assertFalse(evaluate_expression('false and resource.missing > 1', {}))
+
+    def test_resource_context_filters_sensitive_fields(self):
+        from .abac import resource_context
+
+        context = resource_context(self.user)
+        self.assertNotIn('password', context)
+        self.assertNotIn('api_key', context)
+
+    def test_frontend_permissions_hides_abac_metadata_from_regular_users(self):
+        from django.test import Client
+
+        from .models import AbacPolicy
+
+        AbacPolicy.objects.create(
+            name='public meta', resource='audit.Resource', action='view',
+            effect='deny', expression='true', priority=1,
+        )
+        regular = Client()
+        regular.force_login(self.user)
+        data = regular.get('/admin/api/rbac/frontend/permissions/').json()['data']
+        self.assertEqual(data['abac_policies'], [])
+
+        admin_data = self.client.get('/admin/api/rbac/frontend/permissions/').json()['data']
+        self.assertEqual(len(admin_data['abac_policies']), 1)
+        self.assertNotIn('expression', admin_data['abac_policies'][0])
+
+    @override_settings(LAYUIX_API_PREFIXES=['/custom-api/'])
+    def test_api_prefix_guard_is_configurable(self):
+        from .middleware import ApiOriginGuardMiddleware
+
+        middleware = ApiOriginGuardMiddleware(lambda request: None)
+        self.assertTrue(middleware._is_api_path('/custom-api/rbac/test/'))
+        self.assertFalse(middleware._is_api_path('/admin/api/rbac/test/'))
+
+    def test_abac_check_rejects_unknown_target_user(self):
+        response = self.client.post('/admin/api/rbac/abac-check/', {
+            'user_id': 999999, 'action': 'view', 'resource': 'audit.Resource',
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 404)
+
     def test_fake_bearer_header_does_not_bypass_origin_guard(self):
         response = self.client.post(
             '/admin/api/rbac/scope-nodes/',
@@ -927,3 +974,43 @@ class RbacFinalAuditTests(TestCase):
             visible_scope_nodes('audit_global', 1),
             {'audit_global', 'audit_child'},
         )
+
+
+class I18nCoverageTests(SimpleTestCase):
+
+    def test_template_keys_exist_in_both_languages(self):
+        root = Path(__file__).resolve().parents[2]
+        i18n_path = root / 'django_layuix/static/layui/js/i18n.js'
+        source = i18n_path.read_text(encoding='utf-8')
+
+        dictionaries = {'zh': set(), 'en': set()}
+        current = None
+        key_pattern = re.compile(r"^\s*['\"]([^'\"]+)['\"]\s*:")
+        for line in source.splitlines():
+            if line.strip().startswith("'zh-hans': {"):
+                current = 'zh'
+            elif line.strip().startswith("'en': {"):
+                current = 'en'
+            match = key_pattern.match(line)
+            if current and match:
+                dictionaries[current].add(match.group(1))
+
+        used_keys = set()
+        html_roots = [
+            root / 'django_layuix/static/layui/pages',
+            root / 'django_layuix/templates/admin',
+            root / 'example/permission_demo/static',
+        ]
+        for html_root in html_roots:
+            if not html_root.exists():
+                continue
+            for path in html_root.rglob('*.html'):
+                html = path.read_text(encoding='utf-8')
+                used_keys.update(re.findall(r"\bt\(\s*['\"]([^'\"]+)['\"]", html))
+                used_keys.update(re.findall(r'data-i18n=["\']([^"\']+)["\']', html))
+
+        missing = sorted(
+            key for key in used_keys
+            if key not in dictionaries['zh'] or key not in dictionaries['en']
+        )
+        self.assertEqual(missing, [])

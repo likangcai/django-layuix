@@ -8,21 +8,21 @@ export const PermissionPlugin = {
     const client = createPermissionClient(options);
     app.config.globalProperties.$permission = client;
     app.provide(PERMISSION_KEY, client);
-    app.directive('permission', {
-      mounted(el, binding) {
-        const codes = Array.isArray(binding.value) ? binding.value : [binding.value];
+    const originalDisplay = new WeakMap();
+    const apply = (el, value) => {
+      if (!originalDisplay.has(el)) originalDisplay.set(el, el.style.display);
+      const codes = Array.isArray(value) ? value : [value];
+      el.style.display = 'none';
+      client.load().then(() => {
+        el.style.display = client.canAny(codes) ? (originalDisplay.get(el) || '') : 'none';
+      }).catch(() => {
         el.style.display = 'none';
-        client.load().then(() => {
-          if (client.canAny(codes)) {
-            el.style.display = '';
-          } else if (el.parentNode) {
-            el.parentNode.removeChild(el);
-          }
-        }).catch(() => {
-          if (el.parentNode) {
-            el.parentNode.removeChild(el);
-          }
-        });
+      });
+    };
+    app.directive('permission', {
+      mounted(el, binding) { apply(el, binding.value); },
+      updated(el, binding) {
+        if (binding.value !== binding.oldValue) apply(el, binding.value);
       },
     });
   },
