@@ -23,7 +23,8 @@ python manage.py init_demo_data
 python manage.py runserver
 ```
 
-后台地址：`http://127.0.0.1:8000/admin/`  
+后台地址：`http://127.0.0.1:8000/admin/`
+
 默认管理员由 `init_data` 创建，默认 `admin / admin123`；已有数据库可用 `python manage.py changepassword admin` 重置。
 
 ## 1. RBAC1：角色继承
