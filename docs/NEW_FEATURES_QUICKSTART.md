@@ -339,7 +339,7 @@ user / permissions / roles / menus / plugins / scope_nodes / abac_policies
 
 ```js
 import { createApp } from 'vue';
-import { PermissionPlugin } from '@layuix/permission/vue';
+import { PermissionPlugin } from '/static/sdk/vue/permission.js';
 
 const app = createApp(App);
 app.use(PermissionPlugin, { endpoint: '/admin/api/rbac/frontend/permissions/' });
@@ -354,7 +354,7 @@ app.use(PermissionPlugin, { endpoint: '/admin/api/rbac/frontend/permissions/' })
 ### React
 
 ```jsx
-import { PermissionProvider, Can } from '@layuix/permission/react';
+import { PermissionProvider, Can } from '/static/sdk/react/permission.js';
 
 root.render(
   <PermissionProvider>
@@ -420,7 +420,7 @@ python manage.py migrate
 python manage.py init_permission_demo
 ```
 
-该命令幂等，重复执行不会创建重复数据。它会创建：
+该命令幂等，重复执行不会创建重复数据；若数据库没有超级管理员，会先通过 `init_data` 创建 `admin / admin123`。它会创建：
 
 ```text
 角色继承：demo_base → demo_manager

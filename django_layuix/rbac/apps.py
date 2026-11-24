@@ -23,6 +23,7 @@ class RbacConfig(AppConfig):
         self._register_api_urls()
         self._register_operation_log_middleware()
         self._register_rbac_session_middleware()
+        self._register_api_origin_guard_middleware()
         self._ensure_default_configs()
 
     def _ensure_base_app_registered(self):
@@ -32,12 +33,15 @@ class RbacConfig(AppConfig):
         if 'django_layuix' not in settings.INSTALLED_APPS:
             settings.INSTALLED_APPS.insert(0, 'django_layuix')
 
-        # Set default language to Chinese if not configured
-        if not getattr(settings, 'LANGUAGE_CODE', '').startswith('zh'):
+        # Only provide a Chinese default when Django's built-in default is still in place.
+        # Explicitly configured languages (including English) are preserved.
+        if getattr(settings, 'LANGUAGE_CODE', 'en-us') == 'en-us':
             settings.LANGUAGE_CODE = 'zh-hans'
-            settings.USE_I18N = True
+        settings.USE_I18N = True
 
         # Fix CSRF cookie for iframe/embedded environments
+        # Keep Django's default cookie behavior for normal HTTP deployments.
+        # Cross-domain API clients should use Bearer Token instead of session cookies.
         if getattr(settings, 'CSRF_COOKIE_SAMESITE', 'Lax') != 'None':
             settings.CSRF_COOKIE_SAMESITE = None
         if getattr(settings, 'SESSION_COOKIE_SAMESITE', 'Lax') != 'None':
@@ -180,6 +184,13 @@ class RbacConfig(AppConfig):
         middleware_path = 'django_layuix.rbac.middleware.RbacSessionMiddleware'
         if middleware_path not in settings.MIDDLEWARE:
             settings.MIDDLEWARE.append(middleware_path)
+
+    def _register_api_origin_guard_middleware(self):
+        from django.conf import settings
+
+        middleware_path = 'django_layuix.rbac.middleware.ApiOriginGuardMiddleware'
+        if middleware_path not in settings.MIDDLEWARE:
+            settings.MIDDLEWARE.insert(0, middleware_path)
 
     def _ensure_default_configs(self):
         """Ensure default system configs exist in database"""

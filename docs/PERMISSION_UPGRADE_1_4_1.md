@@ -75,6 +75,7 @@
 - 【事实】已新增 `ScopeNode` 树形管理 API 与独立管理页，数据库节点可参与 Scope 层级展开。
 - 【事实】已新增 Vue 3 / React 权限 SDK 与统一端点 `/frontend/permissions/`。
 - 【判断】ABAC 未配置时全部放行，组织节点为空时回退 settings 层级配置，前端 SDK 只做展示控制。
-- 【待确认】是否发布独立 npm 包 `@layuix/permission`。
+- 【事实】当前 SDK 以 `/static/sdk/` 静态 ES Module 分发，不依赖外部 npm 包。
+- 【待确认】是否发布独立 npm 包。
 - 【待确认】是否补充 Svelte / Angular 适配器。
 - 【待确认】是否把 ABAC 表达式下推为 ORM Q 对象以提升大数据量过滤性能。

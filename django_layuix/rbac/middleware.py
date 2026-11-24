@@ -6,8 +6,10 @@ OperationLogMiddleware - 自动记录 API 操作日志
 import json
 import logging
 import re
+from urllib.parse import urlsplit
 
 from django.conf import settings
+from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
 
@@ -234,6 +236,46 @@ class OperationLogMiddleware:
             )
         except Exception as e:
             logger.warning(f'Failed to record operation log: {e}')
+
+
+class ApiOriginGuardMiddleware:
+    """Reject cross-origin browser writes to admin APIs using session cookies.
+
+    Many API views are ``csrf_exempt`` for Bearer-token clients. This
+    middleware compensates by checking Origin/Referer for unsafe
+    session-authenticated API calls. Token-authenticated calls are unaffected.
+    """
+
+    SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS', 'TRACE')
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if (
+            request.method in self.SAFE_METHODS
+            or not request.path.startswith('/admin/api/')
+            or getattr(settings, 'LAYUIX_DISABLE_API_ORIGIN_GUARD', False)
+        ):
+            return self.get_response(request)
+
+        authorization = request.META.get('HTTP_AUTHORIZATION', '')
+        if authorization.lower().startswith('bearer '):
+            return self.get_response(request)
+
+        source = request.META.get('HTTP_ORIGIN') or request.META.get('HTTP_REFERER')
+        if not source:
+            return self.get_response(request)
+
+        try:
+            source_host = (urlsplit(source).netloc or '').lower()
+        except ValueError:
+            source_host = ''
+        if source_host and source_host != request.get_host().lower():
+            return JsonResponse({'code': 403, 'msg': 'Cross-origin request blocked'}, status=403)
+        if not source_host:
+            return JsonResponse({'code': 403, 'msg': 'Cross-origin request blocked'}, status=403)
+        return self.get_response(request)
 
 
 class RbacSessionMiddleware:

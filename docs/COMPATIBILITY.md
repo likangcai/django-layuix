@@ -62,6 +62,13 @@
 - 本项目未使用 2.13.9 修复的 `treeTable.addNodes()` 与 `tabs.add(mode)` 路径；表格、树、Tab、表单渲染已在冒烟中回归。
 - 2.13.8 起 `layui.extend` 路径拼接、table 表头宽度、table 内嵌 form 动态渲染、`form.getValue` 同名字段数组处理均有修复；本项目相关页面需按最新资源回归。
 
+### API 跨站来源防护
+
+- 管理 API 同时支持会话与 Bearer Token，因此框架默认注入 `ApiOriginGuardMiddleware`。
+- 会话 Cookie 的写请求如果带有跨站 `Origin` / `Referer`，会被拒绝；Bearer Token 请求不受影响。
+- 跨域前端推荐使用 Bearer Token，不需要放宽 Session Cookie 的 `SameSite` 行为。
+- 如需临时关闭，可设置 `LAYUIX_DISABLE_API_ORIGIN_GUARD = True`，但不建议在生产环境使用。
+
 【判断】Python 3.8/3.9 用户建议只安装核心包；如使用 `ops`/`ai`，请先在目标环境验证可选依赖可用性。
 - 【待确认】是否给 `Django` 增加 `<7` 上限，以避免未来主版本升级造成静默破坏。
 - 【待确认】是否在 `ops` / `ai` extras 中标注最低 Python 版本，减少 pip 解析到不兼容版本的概率。

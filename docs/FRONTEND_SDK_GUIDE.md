@@ -5,6 +5,7 @@
 ## 结论（TL;DR）
 【事实】1.4.2 提供框架无关的 `permission-client.js`，并分别提供 Vue 3 与 React 适配层。
 【判断】前端只负责展示控制，最终安全边界仍是后端 `has_permission()` / `api_permission_required()` / ABAC 策略。
+【事实】当前 SDK 随 Django 静态文件分发，示例中的 `/static/sdk/...` 为可直接复制的 ES Module 路径，不是已发布的 npm 包。
 【待确认】是否后续补充 Svelte 与 Angular 适配器。
 【待确认】是否把动态路由组件映射也纳入 SDK。
 【待确认】是否发布独立 npm 包。
@@ -41,7 +42,7 @@ GET /admin/api/rbac/frontend/permissions/
 文件：`django_layuix/static/sdk/core/permission-client.js`
 
 ```js
-import { createPermissionClient } from '@layuix/permission/core';
+import { createPermissionClient } from '/static/sdk/core/permission-client.js';
 
 const permission = createPermissionClient({
   endpoint: '/admin/api/rbac/frontend/permissions/',
@@ -65,7 +66,7 @@ permission.pluginManifest();
 
 ```js
 import { createApp } from 'vue';
-import { PermissionPlugin } from '@layuix/permission/vue';
+import { PermissionPlugin } from '/static/sdk/vue/permission.js';
 
 const app = createApp(App);
 app.use(PermissionPlugin, { endpoint: '/admin/api/rbac/frontend/permissions/' });
@@ -80,7 +81,7 @@ app.use(PermissionPlugin, { endpoint: '/admin/api/rbac/frontend/permissions/' })
 组合式 API：
 
 ```js
-import { usePermission } from '@layuix/permission/vue';
+import { usePermission } from '/static/sdk/vue/permission.js';
 
 const { ready, can, menus } = usePermission();
 ```
@@ -88,8 +89,8 @@ const { ready, can, menus } = usePermission();
 路由守卫：
 
 ```js
-import { createPermissionClient } from '@layuix/permission/core';
-import { createPermissionGuard } from '@layuix/permission/vue';
+import { createPermissionClient } from '/static/sdk/core/permission-client.js';
+import { createPermissionGuard } from '/static/sdk/vue/permission.js';
 
 const client = createPermissionClient();
 router.beforeEach(createPermissionGuard(client));
@@ -106,7 +107,7 @@ router.beforeEach(createPermissionGuard(client));
 文件：`django_layuix/static/sdk/react/permission.js`
 
 ```jsx
-import { PermissionProvider, usePermission, Can } from '@layuix/permission/react';
+import { PermissionProvider, usePermission, Can } from '/static/sdk/react/permission.js';
 
 root.render(
   <PermissionProvider>

@@ -280,7 +280,7 @@ def _policies_for(resource, action, field):
     queryset = AbacPolicy.objects.filter(is_active=True, resource__in=codes)
     queryset = queryset.filter(action__in=[action, '*'])
     if field:
-        queryset = queryset.filter(field__in=[field, ''])
+        queryset = queryset.filter(field=field)
     else:
         queryset = queryset.filter(field='')
     return list(queryset.order_by('priority', 'id'))
@@ -308,6 +308,8 @@ def evaluate_policies(user, action, resource, field=None, extra_context=None):
             matched.append(policy)
             if policy.effect == 'deny':
                 return AbacDecision(False, [policy.id], errors)
+    if errors:
+        return AbacDecision(False, [policy.id for policy in matched], errors)
     return AbacDecision(True, [policy.id for policy in matched], errors)
 
 
@@ -329,7 +331,10 @@ def filter_fields(user, action, resource, fields, extra_context=None):
 
     visible = []
     for field in fields or []:
-        field_policies = _policies_for(resource, action, field)
+        field_policies = [
+            policy for policy in _policies_for(resource, action, field)
+            if policy.field == field
+        ]
         has_allow_whitelist = any(policy.effect == 'allow' for policy in field_policies)
         decision = evaluate_policies(user, action, resource, field, extra_context)
         if decision.allowed and (not has_allow_whitelist or decision.matched):

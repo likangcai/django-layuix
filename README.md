@@ -318,6 +318,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | `LAYUI_RBAC_PREREQ_STRATEGY` | 前置角色策略（无 DB 配置时生效） | auto_grant |
 | `LAYUI_RBAC_DSD_STRATEGY` | DSD 激活策略（无 DB 配置时生效） | greedy |
 | `LAYUI_RBAC_AUTHENTICATORS` | 自定义认证器导入路径 | `[]` |
+| `LAYUIX_DISABLE_API_ORIGIN_GUARD` | 禁用管理 API 跨站来源防护（不推荐） | False |
 | `TOKEN_EXPIRE_SECONDS` | Token 有效期（秒） | 86400 |
 | `LAYUIX_SCOPE_HIERARCHY` | 数据作用域层级 | `[]` |
 | `LAYUIX_SCOPE_TREE` | 数据作用域节点树 | `{}` |

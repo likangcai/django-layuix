@@ -12,7 +12,7 @@ import os
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from django_layuix.rbac.models import AbacPolicy, Menu, Role, ScopeNode, SoDConstraint
 
@@ -40,6 +40,10 @@ class Command(BaseCommand):
     help = '一键初始化角色继承、SSD、Scope、组织节点与 ABAC 示例数据'
 
     def handle(self, *args, **options):
+        User = get_user_model()
+        if not User.objects.filter(is_superuser=True).exists():
+            self.stdout.write('未发现超级管理员，先执行 init_data 创建 admin 用户')
+            call_command('init_data', verbosity=0)
         if not Menu.objects.filter(name='权限管理').exists():
             call_command('init_menu', verbosity=0)
 
@@ -168,10 +172,10 @@ class Command(BaseCommand):
             try:
                 call_command('init_demo_data', verbosity=0)
             except Exception as exc:
-                self.stderr.write('store 示例数据初始化失败: %s' % exc)
+                raise CommandError('store 示例数据初始化失败: %s' % exc) from exc
 
         if apps.is_installed('permission_demo'):
             try:
                 call_command('init_permission_demo_data', verbosity=0)
             except Exception as exc:
-                self.stderr.write('permission_demo 示例数据初始化失败: %s' % exc)
+                raise CommandError('permission_demo 示例数据初始化失败: %s' % exc) from exc

@@ -40,7 +40,7 @@ python manage.py migrate
 python manage.py init_permission_demo
 ```
 
-`init_permission_demo` 会创建：
+`init_permission_demo` 会创建（缺少超级管理员时也会先创建 `admin / admin123`）：
 
 - 角色继承示例：`demo_base` → `demo_manager`
 - SSD 互斥组：`demo_maker_checker_sod`

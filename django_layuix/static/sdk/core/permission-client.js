@@ -30,21 +30,31 @@ export function createPermissionClient(options = {}) {
     return headers;
   }
 
+  let loadPromise = null;
+
   async function load() {
-    const response = await fetch(settings.endpoint, {
-      method: 'GET',
-      credentials: settings.credentials,
-      headers: buildHeaders(),
-    });
-    if (!response.ok) {
-      throw new Error('Permission request failed: ' + response.status);
+    if (loadPromise) return loadPromise;
+    loadPromise = (async () => {
+      const response = await fetch(settings.endpoint, {
+        method: 'GET',
+        credentials: settings.credentials,
+        headers: buildHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error('Permission request failed: ' + response.status);
+      }
+      const payload = await response.json();
+      if (payload.code !== 200) {
+        throw new Error(payload.msg || 'Permission request failed');
+      }
+      snapshot = Object.assign({}, snapshot, payload.data || {});
+      return snapshot;
+    })();
+    try {
+      return await loadPromise;
+    } finally {
+      loadPromise = null;
     }
-    const payload = await response.json();
-    if (payload.code !== 200) {
-      throw new Error(payload.msg || 'Permission request failed');
-    }
-    snapshot = Object.assign({}, snapshot, payload.data || {});
-    return snapshot;
   }
 
   function can(code) {

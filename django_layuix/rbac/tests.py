@@ -769,3 +769,86 @@ class Rbac142EnhancementTests(TestCase):
             data = response.json()
             self.assertEqual(data['count'], count)
             self.assertEqual('cost' in data['fields'], sees_cost)
+
+
+class RbacFinalAuditTests(TestCase):
+
+    def setUp(self):
+        User = get_user_model()
+        self.admin = User.objects.create_superuser(
+            username='audit_admin', email='audit@example.com', password='pass12345'
+        )
+        self.user = User.objects.create_user(username='audit_user', password='pass12345')
+        self.client.force_login(self.admin)
+
+    def test_api_origin_guard_blocks_cross_site_writes(self):
+        cross = self.client.post(
+            '/admin/api/rbac/scope-nodes/',
+            {'code': 'evil', 'name': 'Evil'},
+            content_type='application/json',
+            HTTP_ORIGIN='https://evil.example',
+        )
+        self.assertEqual(cross.status_code, 403)
+
+        same = self.client.post(
+            '/admin/api/rbac/scope-nodes/',
+            {'code': 'same', 'name': 'Same'},
+            content_type='application/json',
+            HTTP_ORIGIN='http://testserver',
+        )
+        self.assertEqual(same.status_code, 200)
+
+    def test_abac_runtime_error_denies(self):
+        from .abac import evaluate_policies
+        from .models import AbacPolicy
+
+        AbacPolicy.objects.create(
+            name='bad expression', resource='audit.Resource', action='view',
+            effect='deny', expression='resource.missing > 10', priority=1,
+        )
+        decision = evaluate_policies(self.user, 'view', 'audit.Resource')
+        self.assertFalse(decision.allowed)
+        self.assertTrue(decision.errors)
+
+    def test_field_whitelist_ignores_row_level_allow(self):
+        from .abac import filter_fields
+        from .models import AbacPolicy
+
+        AbacPolicy.objects.create(
+            name='row allow', resource='audit.Resource', action='view',
+            effect='allow', expression='true', priority=1,
+        )
+        AbacPolicy.objects.create(
+            name='field allow', resource='audit.Resource', action='view', field='secret',
+            effect='allow', expression='false', priority=2,
+        )
+        self.assertEqual(
+            filter_fields(self.user, 'view', 'audit.Resource', ['id', 'secret']), ['id']
+        )
+
+    def test_explicit_english_language_is_preserved(self):
+        from django.conf import settings
+        from django.test import override_settings
+
+        import importlib
+
+        from .apps import RbacConfig
+
+        app = RbacConfig('django_layuix.rbac', importlib.import_module('django_layuix.rbac'))
+        with override_settings(LANGUAGE_CODE='en', USE_I18N=True):
+            app._ensure_base_app_registered()
+            self.assertEqual(settings.LANGUAGE_CODE, 'en')
+            self.assertIn(settings.CSRF_COOKIE_SAMESITE, (None, 'None'))
+            self.assertIn(settings.SESSION_COOKIE_SAMESITE, (None, 'None'))
+
+    def test_scope_node_database_expansion(self):
+        from .models import ScopeNode
+        from .scopes import visible_scope_nodes
+
+        root = ScopeNode.objects.create(code='audit_global', name='Global')
+        child = ScopeNode.objects.create(code='audit_child', name='Child', parent=root)
+        ScopeNode.objects.create(code='audit_grandchild', name='Grandchild', parent=child)
+        self.assertEqual(
+            visible_scope_nodes('audit_global', 1),
+            {'audit_global', 'audit_child'},
+        )

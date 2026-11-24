@@ -11,9 +11,18 @@ export const PermissionPlugin = {
     app.directive('permission', {
       mounted(el, binding) {
         const codes = Array.isArray(binding.value) ? binding.value : [binding.value];
-        if (!client.canAny(codes)) {
-          el.parentNode && el.parentNode.removeChild(el);
-        }
+        el.style.display = 'none';
+        client.load().then(() => {
+          if (client.canAny(codes)) {
+            el.style.display = '';
+          } else if (el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+        }).catch(() => {
+          if (el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+        });
       },
     });
   },

@@ -2,6 +2,16 @@
 
 版本：v1.0　适用版本：django-layuix 1.4.2+
 
+## 结论（TL;DR）
+【事实】`api_login_required` 与 `api_permission_required` 统一通过 `resolve_api_user()` 解析 Session 或 Bearer Token。
+【判断】跨域前端推荐使用 Bearer Token，避免依赖会话 Cookie 的 SameSite 行为。
+【本期不做】OAuth2 / OpenID Connect 服务端能力。
+【待确认】是否提供 Token 撤销列表。
+【待确认】是否支持刷新 Token。
+【待确认】是否补充设备维度的 Token 管理页。
+
+---
+
 ## 1. 结论
 
 `api_login_required` 与 `api_permission_required` 现已统一走 `resolve_api_user()`：**Session 优先，未登录时自动解析 Bearer Token**。因此 Vue/React 独立前端可以在不携带 Cookie 的情况下调用所有 RBAC API。
