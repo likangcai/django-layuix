@@ -6,9 +6,10 @@
 【事实】本文用最小可运行示例串起 1.4.1/1.4.2 新增能力：角色继承、SSD、数据范围、组织节点、ABAC 与前端 SDK。
 【判断】所有新能力默认关闭或平级兼容；不配置新字段时，旧接口与旧页面行为保持不变。
 【已确认】每个示例都可通过后台 UI 或 API 验证，详细语法见对应专项指南。
-【待确认】是否后续提供一键初始化全部示例数据的管理命令。
-【待确认】是否把本文示例拆成可复制的 demo app。
+【已确认】已提供 `init_permission_demo` 一键命令和 `example/permission_demo/` 可复制应用。
 【待确认】是否补充视频或交互式演示页面。
+【待确认】是否把 demo app 发布为独立 pip 包。
+【待确认】是否提供多租户版本的示例应用。
 
 ---
 
@@ -410,7 +411,79 @@ TOKEN_EXPIRE_SECONDS = 86400
 
 完整变量表见 [README.md](../README.md)。
 
-## 9. 功能与示例对照表
+## 9. 一键初始化与可复制 demo app
+
+### 一键初始化全部示例数据
+
+```bash
+python manage.py migrate
+python manage.py init_permission_demo
+```
+
+该命令幂等，重复执行不会创建重复数据。它会创建：
+
+```text
+角色继承：demo_base → demo_manager
+SSD 互斥：demo_maker_checker_sod
+组织节点：demo_global → demo_region → demo_team
+数据范围：demo_sales(scope_node=demo_region, scope_depth=1)
+ABAC 策略：大额订单拒绝、成本字段白名单
+示例用户：demo_manager_user / demo_finance_user / demo_scope_user
+示例订单：permission_demo 应用的 3 条订单
+```
+
+默认密码为 `Demo@2026`，可通过环境变量覆盖：
+
+```powershell
+$env:DEMO_PASSWORD='YourStrongPassword'
+python manage.py init_permission_demo
+```
+
+### 可复制 demo app
+
+完整示例应用位于：
+
+```text
+example/permission_demo/
+```
+
+复制到你的项目：
+
+```bash
+cp -r example/permission_demo /path/to/your/project/
+```
+
+注册应用：
+
+```python
+INSTALLED_APPS = [
+    'django_layuix',
+    'django_layuix.rbac',
+    'permission_demo.apps.PermissionDemoConfig',
+]
+```
+
+然后执行：
+
+```bash
+python manage.py migrate
+python manage.py init_permission_demo
+```
+
+示例应用包含：
+
+```text
+models.py                         ScopedModelMixin 业务模型
+views_api.py                      filter_queryset / filter_fields 示例
+apps.py                           菜单与 API 路由自动注册
+management/commands/...           示例订单数据命令
+static/permission_demo/pages/     Layui 示例页面
+README.md                         单独复制与运行说明
+```
+
+详见 [permission_demo/README.md](../example/permission_demo/README.md)。
+
+## 10. 功能与示例对照表
 
 | 功能 | 快速示例 | 详细文档 |
 |---|---|---|
@@ -422,3 +495,5 @@ TOKEN_EXPIRE_SECONDS = 86400
 | Vue/React SDK | 第 6 节 | `FRONTEND_SDK_GUIDE.md` |
 | Layui 2.13.9 兼容 | 第 7 节 | `COMPATIBILITY.md` |
 | 配置变量 | 第 8 节 | `README.md` |
+| 一键初始化示例 | 第 9 节 | `python manage.py init_permission_demo` |
+| 可复制 demo app | 第 9 节 | `example/permission_demo/README.md` |

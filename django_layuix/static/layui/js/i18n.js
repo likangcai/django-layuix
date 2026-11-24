@@ -547,6 +547,14 @@ var I18N = {
             'role.viewPermissions': '查看权限 - {0}',
             'role.noParentRoles': '暂无可选角色',
             'role.cycleWarning': '不能选择当前角色的后代作为上级角色',
+            'permission_demo.title': '权限示例订单',
+            'permission_demo.scopeHint': '当前列表演示数据范围过滤与 ABAC 字段级控制',
+            'permission_demo.titleField': '订单标题',
+            'permission_demo.owner': '负责人',
+            'permission_demo.department': '作用域节点',
+            'permission_demo.amount': '金额',
+            'permission_demo.cost': '成本',
+            'permission_demo.status': '状态',
 
             // 用户 SoD 提示
             'user.sodConflict': '存在 SSD 互斥角色，请调整后再提交',
@@ -1081,6 +1089,14 @@ var I18N = {
             'role.viewPermissions': 'View Permissions - {0}',
             'role.noParentRoles': 'No available parent roles',
             'role.cycleWarning': 'A descendant of the current role cannot be selected as parent',
+            'permission_demo.title': 'Permission Demo Orders',
+            'permission_demo.scopeHint': 'This list demonstrates data scope filtering and ABAC field-level control',
+            'permission_demo.titleField': 'Order Title',
+            'permission_demo.owner': 'Owner',
+            'permission_demo.department': 'Scope Node',
+            'permission_demo.amount': 'Amount',
+            'permission_demo.cost': 'Cost',
+            'permission_demo.status': 'Status',
 
             // User SoD messages
             'user.sodConflict': 'Conflicting SSD roles detected. Please adjust before submitting.',

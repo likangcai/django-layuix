@@ -725,3 +725,47 @@ class Rbac142EnhancementTests(TestCase):
             context = LayuiAdminSite().each_context(request)
             self.assertEqual(context['layui_config']['site_marker'], 'db')
             self.assertEqual(settings.LAYUI_CONFIG['site_marker'], 'settings')
+
+    def test_init_permission_demo_command_is_idempotent(self):
+        from django.core.management import call_command
+
+        from .models import AbacPolicy, Role, ScopeNode, SoDConstraint
+
+        call_command('init_permission_demo', verbosity=0)
+        counts = (
+            Role.objects.filter(code__startswith='demo_').count(),
+            SoDConstraint.objects.filter(name='demo_maker_checker_sod').count(),
+            ScopeNode.objects.filter(code__startswith='demo_').count(),
+            AbacPolicy.objects.filter(name__startswith='demo_').count(),
+        )
+        self.assertEqual(counts, (6, 1, 3, 2))
+
+        call_command('init_permission_demo', verbosity=0)
+        self.assertEqual(counts, (
+            Role.objects.filter(code__startswith='demo_').count(),
+            SoDConstraint.objects.filter(name='demo_maker_checker_sod').count(),
+            ScopeNode.objects.filter(code__startswith='demo_').count(),
+            AbacPolicy.objects.filter(name__startswith='demo_').count(),
+        ))
+
+    def test_permission_demo_api_applies_scope_and_abac(self):
+        from django.contrib.auth import get_user_model
+        from django.core.management import call_command
+        from django.test import Client
+
+        call_command('init_permission_demo', verbosity=0)
+        User = get_user_model()
+
+        expectations = {
+            self.admin.username: (3, True),
+            'demo_scope_user': (1, False),
+            'demo_finance_user': (3, True),
+        }
+        for username, (count, sees_cost) in expectations.items():
+            client = Client()
+            client.force_login(User.objects.get(username=username))
+            response = client.get('/admin/api/permission-demo/orders/')
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data['count'], count)
+            self.assertEqual('cost' in data['fields'], sees_cost)

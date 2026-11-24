@@ -315,13 +315,18 @@ def filter_queryset(queryset, user, action, resource, extra_context=None):
     """Python-level row filter; returns a QuerySet restricted by primary keys."""
     allowed_pks = []
     for obj in queryset:
-        if evaluate_policies(user, action, resource or obj, extra_context=extra_context).allowed:
+        context = dict(extra_context or {})
+        context.setdefault('resource', obj)
+        if evaluate_policies(user, action, resource or obj, extra_context=context).allowed:
             allowed_pks.append(obj.pk)
     return queryset.filter(pk__in=allowed_pks)
 
 
 def filter_fields(user, action, resource, fields, extra_context=None):
     """Return fields visible to the user for the given resource and action."""
+    if getattr(user, 'is_superuser', False):
+        return list(fields or [])
+
     visible = []
     for field in fields or []:
         field_policies = _policies_for(resource, action, field)

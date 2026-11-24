@@ -121,6 +121,9 @@ python manage.py init_data
 
 # 演示应用（商品分类/商品/订单）需要单独初始化示例数据
 python manage.py init_demo_data
+
+# 一键初始化全部权限示例（继承/SSD/Scope/组织节点/ABAC/demo app）
+python manage.py init_permission_demo
 ```
 
 `init_menu` 命令会自动创建：
@@ -888,6 +891,7 @@ LAYUIX_SCOPE_TREE = {
 | `python manage.py init_menu` | 初始化默认菜单、角色和系统配置，并自动同步系统版本号 |
 | `python manage.py init_data` | 快速初始化：创建超级管理员、内置角色、完整菜单树（含运维管理） |
 | `python manage.py init_demo_data` | 初始化演示应用的分类/商品/订单示例数据 |
+| `python manage.py init_permission_demo` | 一键初始化角色继承、SSD、Scope、组织节点、ABAC 与 demo app 示例数据 |
 | `python manage.py rename_app_labels` | 升级旧库：把 `django_layui_rbac/ops` 应用标签迁移为 `django_layuix_rbac/ops` |
 
 ### init_data 命令详解
@@ -1049,6 +1053,7 @@ django-layuix 内置深色/浅色双模式切换功能：
 - [权限系统使用指南](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例
 - [RBAC3 权限体系使用指南](docs/RBAC3_GUIDE.md) - 角色继承、SSD/DSD 约束、前置角色与后端强制鉴权
 - [新增功能快速上手示例](docs/NEW_FEATURES_QUICKSTART.md) - 角色继承、SSD、Scope、组织节点、ABAC、SDK 的最小可运行示例
+- [权限示例应用](example/permission_demo/README.md) - 可复制的业务模型、API、菜单与 Layui 页面示例
 - [权限系统升级说明](docs/PERMISSION_UPGRADE_1_4_1.md) - SoD 兼容契约、数据权限 Scope、ABAC 与组织节点
 - [前端权限 SDK 使用指南](docs/FRONTEND_SDK_GUIDE.md) - Vue/React 适配器、统一权限端点与 ABAC 调用
 - [ABAC 表达式权限使用指南](docs/ABAC_GUIDE.md) - 策略语法、行级/字段级过滤与调试示例

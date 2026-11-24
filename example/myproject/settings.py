@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'django_layuix.rbac',      # RBAC 扩展（用户/角色/菜单/操作日志/系统配置）
     'django_layuix.ops',       # 运维管理扩展（服务器管理/AI日志分析），可选
     'store.apps.StoreConfig',  # 演示应用：商品管理（必须在 admin 之前，确保在 django_layuix ready() 前导入 admin.py）
+    'permission_demo.apps.PermissionDemoConfig',  # 可复制的权限示例应用
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -91,6 +92,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR.parent / 'django_layuix' / 'static',
     BASE_DIR / 'store' / 'static',
+    BASE_DIR / 'permission_demo' / 'static',
 ]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
