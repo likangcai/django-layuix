@@ -102,6 +102,8 @@ urlpatterns = [
 > - [ ] 已运行 `python manage.py init_menu`
 > - [ ] 重启服务器并清除浏览器缓存 (Ctrl+F5)
 
+> 💡 想直接体验角色继承、SSD、数据范围、ABAC 与前端 SDK，请先阅读：[新增功能快速上手示例](docs/NEW_FEATURES_QUICKSTART.md)。
+
 #### Step 3: 初始化数据库
 
 运行迁移命令创建数据表，然后初始化默认数据：
@@ -1046,6 +1048,7 @@ django-layuix 内置深色/浅色双模式切换功能：
 - [菜单扩展指南](docs/MENU_EXTENSION_GUIDE.md) - 如何添加自定义应用菜单
 - [权限系统使用指南](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例
 - [RBAC3 权限体系使用指南](docs/RBAC3_GUIDE.md) - 角色继承、SSD/DSD 约束、前置角色与后端强制鉴权
+- [新增功能快速上手示例](docs/NEW_FEATURES_QUICKSTART.md) - 角色继承、SSD、Scope、组织节点、ABAC、SDK 的最小可运行示例
 - [权限系统升级说明](docs/PERMISSION_UPGRADE_1_4_1.md) - SoD 兼容契约、数据权限 Scope、ABAC 与组织节点
 - [前端权限 SDK 使用指南](docs/FRONTEND_SDK_GUIDE.md) - Vue/React 适配器、统一权限端点与 ABAC 调用
 - [ABAC 表达式权限使用指南](docs/ABAC_GUIDE.md) - 策略语法、行级/字段级过滤与调试示例
