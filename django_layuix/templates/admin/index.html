@@ -352,9 +352,14 @@
             } else if (window.LANG === 'zh-hans' && menu.name_zh_hans) {
                 name = menu.name_zh_hans;
             }
+            var groupId = 'menu-group-' + menu.id;
             var html = '<div class="menu-group has-children" data-menu-id="' + menu.id + '">';
-            html += '<div class="menu-group-title"><i class="layui-icon ' + escapeAttr(icon) + ' menu-dir-icon"></i><i class="menu-arrow"></i><span>' + escapeHtml(name) + '</span></div>';
-            html += '<div class="sub-menu open">';
+            html += '<div class="menu-group-title" role="button" tabindex="0" aria-expanded="true" aria-controls="' + groupId + '">';
+            html += '<i class="layui-icon ' + escapeAttr(icon) + ' menu-dir-icon"></i>';
+            html += '<span class="menu-group-name">' + escapeHtml(name) + '</span>';
+            html += '<span class="menu-arrow" aria-hidden="true"></span>';
+            html += '</div>';
+            html += '<div class="sub-menu open" id="' + groupId + '">';
             children.forEach(function(child) {
                 // 检查子菜单的可见性
                 if (child.visible === false) return;
@@ -418,19 +423,25 @@
         });
 
         // Menu group collapse/expand
+        function toggleMenuGroup($title) {
+            var $subMenu = $title.siblings('.sub-menu');
+            var expanded = $title.attr('aria-expanded') === 'true';
+            $title.toggleClass('collapsed', expanded);
+            $title.attr('aria-expanded', expanded ? 'false' : 'true');
+            $subMenu.toggleClass('open', !expanded);
+        }
+
         $(document).off('click.menuGroup').on('click.menuGroup', '.menu-group-title', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            var $title = $(this);
-            var $subMenu = $title.siblings('.sub-menu');
-            var isCollapsed = $title.hasClass('collapsed');
-            if (isCollapsed) {
-                $title.removeClass('collapsed');
-                $subMenu.addClass('open');
-            } else {
-                $title.addClass('collapsed');
-                $subMenu.removeClass('open');
-            }
+            toggleMenuGroup($(this));
+        });
+
+        $(document).off('keydown.menuGroup').on('keydown.menuGroup', '.menu-group-title', function(e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            e.stopPropagation();
+            toggleMenuGroup($(this));
         });
 
         // ==================== Tab Management ====================
