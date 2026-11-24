@@ -781,6 +781,16 @@ class RbacFinalAuditTests(TestCase):
         self.user = User.objects.create_user(username='audit_user', password='pass12345')
         self.client.force_login(self.admin)
 
+    def test_init_permission_demo_syncs_configured_password(self):
+        import os
+
+        from django.core.management import call_command
+
+        with mock.patch.dict(os.environ, {'DEMO_PASSWORD': 'Audit@2026'}):
+            call_command('init_permission_demo', verbosity=0)
+        user = get_user_model().objects.get(username='demo_scope_user')
+        self.assertTrue(user.check_password('Audit@2026'))
+
     def test_api_origin_guard_blocks_cross_site_writes(self):
         cross = self.client.post(
             '/admin/api/rbac/scope-nodes/',
@@ -825,6 +835,71 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(
             filter_fields(self.user, 'view', 'audit.Resource', ['id', 'secret']), ['id']
         )
+
+    def test_fake_bearer_header_does_not_bypass_origin_guard(self):
+        response = self.client.post(
+            '/admin/api/rbac/scope-nodes/',
+            {'code': 'fake', 'name': 'Fake'},
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Bearer invalid.token',
+            HTTP_ORIGIN='https://evil.example',
+        )
+        self.assertEqual(response.status_code, 403)
+
+    @override_settings(LAYUIX_API_ALLOWED_ORIGINS=['admin.example.com'])
+    def test_api_allowed_origins_supports_reverse_proxy(self):
+        allowed = self.client.post(
+            '/admin/api/rbac/scope-nodes/',
+            {'code': 'proxy', 'name': 'Proxy'},
+            content_type='application/json',
+            HTTP_ORIGIN='https://admin.example.com',
+        )
+        self.assertEqual(allowed.status_code, 200)
+        blocked = self.client.post(
+            '/admin/api/rbac/scope-nodes/',
+            {'code': 'proxy2', 'name': 'Proxy2'},
+            content_type='application/json',
+            HTTP_ORIGIN='https://evil.example',
+        )
+        self.assertEqual(blocked.status_code, 403)
+
+    def test_frontend_permissions_includes_superuser_flag(self):
+        data = self.client.get('/admin/api/rbac/frontend/permissions/').json()['data']
+        self.assertTrue(data['user']['is_superuser'])
+
+    def test_abac_check_rejects_superuser_impersonation(self):
+        from django.contrib.auth import get_user_model
+        from django.test import Client
+
+        from .models import AbacPolicy
+
+        AbacPolicy.objects.create(
+            name='audit policy', resource='audit.Resource', action='view',
+            effect='deny', expression='true', priority=1,
+        )
+        editor = get_user_model().objects.create_user(username='audit_editor', password='pass12345')
+        editor.roles.add(Role.objects.create(name='编辑', code='audit_editor'))
+        client = Client()
+        client.force_login(editor)
+        response = client.post('/admin/api/rbac/abac-check/', {
+            'user_id': self.admin.id, 'action': 'view', 'resource': 'audit.Resource',
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+
+    def test_abac_admin_form_validates_expression(self):
+        from .admin import AbacPolicyForm
+        from .abac import AbacError
+
+        form = AbacPolicyForm(data={
+            'name': 'Bad', 'resource': 'audit.Resource', 'action': 'view',
+            'field': '', 'effect': 'deny', 'expression': "__import__('os')",
+            'priority': 1, 'is_active': True,
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('expression', form.errors)
+        with self.assertRaises(AbacError):
+            from .abac import validate_expression
+            validate_expression("__import__('os')")
 
     def test_explicit_english_language_is_preserved(self):
         from django.conf import settings

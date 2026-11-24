@@ -68,6 +68,7 @@
 - 会话 Cookie 的写请求如果带有跨站 `Origin` / `Referer`，会被拒绝；Bearer Token 请求不受影响。
 - 跨域前端推荐使用 Bearer Token，不需要放宽 Session Cookie 的 `SameSite` 行为。
 - 如需临时关闭，可设置 `LAYUIX_DISABLE_API_ORIGIN_GUARD = True`，但不建议在生产环境使用。
+- 反向代理场景若外部域名与内部 `Host` 不同，请设置 `USE_X_FORWARDED_HOST = True` 或显式配置 `LAYUIX_API_ALLOWED_ORIGINS = ['admin.example.com']`。
 
 【判断】Python 3.8/3.9 用户建议只安装核心包；如使用 `ops`/`ai`，请先在目标环境验证可选依赖可用性。
 - 【待确认】是否给 `Django` 增加 `<7` 上限，以避免未来主版本升级造成静默破坏。
@@ -84,7 +85,7 @@
   python manage.py test django_layuix.rbac
   ```
 
-## 6. 文档索引
+## 7. 文档索引
 
 - `pyproject.toml`：声明 `requires-python`、依赖与分类器。
 - `README.md`：环境要求摘要。

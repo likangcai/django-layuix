@@ -259,8 +259,7 @@ class ApiOriginGuardMiddleware:
         ):
             return self.get_response(request)
 
-        authorization = request.META.get('HTTP_AUTHORIZATION', '')
-        if authorization.lower().startswith('bearer '):
+        if self._is_valid_bearer_request(request):
             return self.get_response(request)
 
         source = request.META.get('HTTP_ORIGIN') or request.META.get('HTTP_REFERER')
@@ -271,11 +270,34 @@ class ApiOriginGuardMiddleware:
             source_host = (urlsplit(source).netloc or '').lower()
         except ValueError:
             source_host = ''
-        if source_host and source_host != request.get_host().lower():
-            return JsonResponse({'code': 403, 'msg': 'Cross-origin request blocked'}, status=403)
-        if not source_host:
+        if not source_host or source_host not in self._allowed_hosts(request):
             return JsonResponse({'code': 403, 'msg': 'Cross-origin request blocked'}, status=403)
         return self.get_response(request)
+
+    def _is_valid_bearer_request(self, request):
+        authorization = request.META.get('HTTP_AUTHORIZATION', '')
+        if not authorization.lower().startswith('bearer '):
+            return False
+        try:
+            from .token_auth import verify_token
+
+            result = verify_token(authorization.split(None, 1)[1].strip())
+            user = result.get('user')
+            return bool(result.get('valid') and user and getattr(user, 'is_authenticated', False))
+        except Exception:
+            return False
+
+    def _allowed_hosts(self, request):
+        hosts = {request.get_host().lower()}
+        configured = getattr(settings, 'LAYUIX_API_ALLOWED_ORIGINS', None)
+        if configured is None:
+            configured = [
+                host for host in getattr(settings, 'ALLOWED_HOSTS', [])
+                if host and host != '*'
+            ]
+        for host in configured or []:
+            hosts.add(str(host).lower().lstrip('.'))
+        return hosts
 
 
 class RbacSessionMiddleware:

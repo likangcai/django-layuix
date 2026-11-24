@@ -2348,6 +2348,12 @@ def abac_check(request):
     user_id = body.get('user_id')
     if user_id:
         target_user = _get_user_model().objects.filter(pk=user_id).first() or request.user
+    if (
+        target_user != request.user
+        and getattr(target_user, 'is_superuser', False)
+        and not getattr(request.user, 'is_superuser', False)
+    ):
+        return error_response('无权以超级管理员上下文调试策略', 403)
     decision = evaluate_policies(
         target_user,
         str(body.get('action') or 'view'),
@@ -2389,6 +2395,7 @@ def frontend_permissions(request):
             'id': request.user.pk,
             'username': getattr(request.user, 'username', ''),
             'language': language,
+            'is_superuser': bool(getattr(request.user, 'is_superuser', False)),
         },
         'permissions': _get_user_permissions(request.user),
         'roles': list(request.user.roles.values('id', 'code', 'name')) if hasattr(request.user, 'roles') else [],

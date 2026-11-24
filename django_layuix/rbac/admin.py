@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
@@ -98,7 +99,24 @@ class ScopeNodeAdmin(admin.ModelAdmin):
     search_fields = ['code', 'name']
 
 
+class AbacPolicyForm(forms.ModelForm):
+    class Meta:
+        model = AbacPolicy
+        fields = '__all__'
+
+    def clean_expression(self):
+        from .abac import AbacError, validate_expression
+
+        expression = self.cleaned_data['expression']
+        try:
+            validate_expression(expression)
+        except AbacError as exc:
+            raise forms.ValidationError('表达式无效：%s' % exc)
+        return expression
+
+
 class AbacPolicyAdmin(admin.ModelAdmin):
+    form = AbacPolicyForm
     list_display = ['id', 'name', 'resource', 'action', 'field', 'effect', 'priority', 'is_active']
     list_filter = ['effect', 'is_active']
     search_fields = ['name', 'resource', 'expression']

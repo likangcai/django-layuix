@@ -7,20 +7,28 @@ class PermissionDemoConfig(AppConfig):
     verbose_name = '权限示例'
 
     def ready(self):
+        self._register_api_urls()
         try:
             self._register_menus()
-            self._register_api_urls()
         except Exception as exc:
-            print('Warning: Could not register permission demo: %s' % exc)
+            print('Warning: Could not register permission demo menus: %s' % exc)
 
     def _register_menus(self):
         from django_layuix.rbac.menu_registry import register_menus
         from django_layuix.rbac.models import Menu
 
-        parent = '演示应用' if Menu.objects.filter(name='演示应用').exists() else None
+        Menu.objects.get_or_create(
+            name='演示应用',
+            defaults={
+                'name_en': 'Demo App', 'name_zh_hans': '演示应用',
+                'icon': 'layui-icon-app', 'path': '', 'menu_type': 1, 'sort': 4,
+                'status': True, 'visible': True, 'backend_visible': True,
+                'frontend_visible': False,
+            },
+        )
         register_menus(
             menus_data=[
-                ('示例订单', 'layui-icon-form', '/static/permission_demo/pages/order.html', 2, 6, parent),
+                ('示例订单', 'layui-icon-form', '/static/permission_demo/pages/order.html', 2, 6, '演示应用'),
             ],
             buttons_data=[
                 ('查看示例订单', '示例订单', 'demo:order:view', 1),

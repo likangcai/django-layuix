@@ -13,6 +13,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 
 from django_layuix.rbac.models import AbacPolicy, Menu, Role, ScopeNode, SoDConstraint
 
@@ -41,25 +42,35 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         User = get_user_model()
-        if not User.objects.filter(is_superuser=True).exists():
-            self.stdout.write('未发现超级管理员，先执行 init_data 创建 admin 用户')
-            call_command('init_data', verbosity=0)
-        if not Menu.objects.filter(name='权限管理').exists():
-            call_command('init_menu', verbosity=0)
+        with transaction.atomic():
+            if not User.objects.filter(is_superuser=True).exists():
+                self.stdout.write('未发现超级管理员，先执行 init_data 创建 admin 用户')
+                call_command('init_data', verbosity=0)
+            if not Menu.objects.filter(name='权限管理').exists():
+                call_command('init_menu', verbosity=0)
 
-        self._register_demo_menus()
-        roles = self._create_roles()
-        self._create_sod(roles)
-        self._create_scope_nodes(roles)
-        self._create_abac_policies()
-        self._create_users(roles)
-        self._seed_app_data(roles)
+            self._register_demo_menus()
+            roles = self._create_roles()
+            self._create_sod(roles)
+            self._create_scope_nodes(roles)
+            self._create_abac_policies()
+            self._create_users(roles)
+            self._seed_app_data(roles)
 
         self.stdout.write(self.style.SUCCESS('权限示例数据初始化完成'))
 
     def _register_demo_menus(self):
         from django_layuix.rbac.menu_registry import register_menus
 
+        Menu.objects.get_or_create(
+            name='演示应用',
+            defaults={
+                'name_en': 'Demo App', 'name_zh_hans': '演示应用',
+                'icon': 'layui-icon-app', 'path': '', 'menu_type': 1, 'sort': 4,
+                'status': True, 'visible': True, 'backend_visible': True,
+                'frontend_visible': False,
+            },
+        )
         register_menus(menus_data=MENU_SPECS, buttons_data=BUTTON_SPECS)
         Menu.objects.filter(name='示例订单').update(
             name_en='Demo Orders', name_zh_hans='示例订单'
@@ -160,9 +171,8 @@ class Command(BaseCommand):
                 username=username,
                 defaults={'email': '%s@example.com' % username, 'is_staff': True},
             )
-            if created or not user.has_usable_password():
-                user.set_password(password)
-                user.save()
+            user.set_password(password)
+            user.save(update_fields=['password'])
             if hasattr(user, 'roles'):
                 user.roles.add(*[roles[code] for code in role_codes])
         self.stdout.write('示例用户密码: %s（可用 DEMO_PASSWORD 覆盖）' % password)
