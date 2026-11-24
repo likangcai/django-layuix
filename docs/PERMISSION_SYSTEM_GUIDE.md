@@ -1,5 +1,12 @@
 # django-layuix 权限系统使用指南
 
+## 结论（TL;DR）
+【事实】权限内核统一走 `rbac/engine.py`，支持菜单、按钮权限码、角色继承与 SSD/DSD 约束。
+【判断】前端隐藏按钮只改善体验，真正安全边界是服务端 `has_permission()` / `api_permission_required`。
+【本期不做】多租户隔离、字段/行级权限与 ABAC；1.4.0 已支持权限级互斥、策略可配与跨框架认证桥接。
+
+---
+
 ## 目录
 
 - [1. 概述](#1-概述)
@@ -926,4 +933,4 @@ def product_list(request):
 
 **文档版本**: v1.0  
 **最后更新**: 2026-05-05  
-**适用版本**: django-layuix >= 1.0.0
+**适用版本**: django-layuix >= 1.4.0

@@ -897,7 +897,7 @@ django-layuix 支持中英文双语，分两层实现：
 
 ### 深色/浅色模式切换
 
-> **版本**: 1.0.3+ | **更新**: 2026-05-07
+> **版本**: 1.4.0+ | **更新**: 2026-11-24
 
 django-layuix 内置深色/浅色双模式切换功能：
 
@@ -1241,10 +1241,12 @@ python manage.py init_menu
 # ✅ 创建角色: 注册用户 (仅个人中心权限)
 # ✅ 创建系统配置: system_name, logo_icon, ...
 
-# 默认管理员账号
+# 默认管理员账号（仅 init_data 首次创建时生效）
 # 用户名: admin
 # 密码: admin123
 ```
+
+> 如果已有数据库修改过 admin 密码，可用 `python manage.py changepassword admin` 重置；运行 `example/test_api.py` 时可通过 `DEMO_ADMIN_USERNAME` / `DEMO_ADMIN_PASSWORD` 环境变量指定凭据。
 
 **如果 init_menu 命令不存在**:
 ```bash

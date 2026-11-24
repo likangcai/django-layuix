@@ -1,5 +1,12 @@
 # 首页自定义快速链接配置指南
 
+## 结论（TL;DR）
+【事实】首页快捷链接通过 `LAYUI_CONFIG['home_quick_links']` 配置，支持内部路径与外部 URL。
+【判断】若链接包含 `javascript:` 协议，仅允许用户显式声明的白名单无参函数，避免任意脚本执行。
+【本期不做】复杂带参快捷调用；如需动态操作，请在页面代码中注册具名函数后再配置。
+
+---
+
 ## 📋 功能概述
 
 django-layuix 支持在首页仪表盘显示自定义快速链接，方便用户快速访问常用页面或外部网站。
@@ -96,7 +103,7 @@ layui-icon-chart         - 图表
 ```python
 LAYUI_CONFIG = {
     'system_name': '我的管理系统',
-    'system_version': '1.0.0',
+    'system_version': '1.4.0',
     'logo_icon': 'layui-icon-code-circle',
     
     # 首页自定义快速链接

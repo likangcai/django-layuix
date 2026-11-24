@@ -14,6 +14,8 @@
 - 🐛 **演示应用可见性修复** — 补充 store 静态目录、修正菜单修复命令路径，并支持 `init_demo_data` 初始化示例数据
 - 🐛 **弹窗表单事件修复** — layui `form` 没有 `off()`，改用一次性绑定助手，修复系统配置/服务器/角色/菜单弹窗报错
 - 🐛 **演示菜单国际化修复** — 补齐演示应用菜单的中英文名称，语言切换时菜单与后台保持一致
+- 📝 **文档状态刷新** — 统一版本号 1.4.0、测试数量 33 项、TestHub/RBAC4 已交付状态，修正文档内相对链接
+- 🐛 **冒烟脚本凭据修正** — `example/test_api.py` 支持环境变量指定管理员账号密码，不再硬编码 `admin/admin`
 
 ## [1.4.0] - 2026-11-23
 
@@ -381,7 +383,7 @@
 ### 📚 文档更新
 
 #### 新增文档
-- ✅ [docs/I18N_GUIDE.md](docs/I18N_GUIDE.md) - 国际化使用指南
+- ✅ [I18N_GUIDE.md](I18N_GUIDE.md) - 国际化使用指南
   - 完整的前端国际化开发教程
   - 后端菜单多语言实现说明
   - 常用翻译键速查表
@@ -428,8 +430,8 @@
 - 修复迁移冲突问题
 
 ### 📚 文档更新
-- [docs/HOME_QUICK_LINKS_GUIDE.md](docs/HOME_QUICK_LINKS_GUIDE.md)
-- [docs/AJAX_ADMIN_GUIDE.md](docs/AJAX_ADMIN_GUIDE.md)
+- [HOME_QUICK_LINKS_GUIDE.md](HOME_QUICK_LINKS_GUIDE.md)
+- [AJAX_ADMIN_GUIDE.md](AJAX_ADMIN_GUIDE.md)
 
 ---
 

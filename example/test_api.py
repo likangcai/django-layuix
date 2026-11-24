@@ -14,15 +14,19 @@ print(f"Users count: {User.objects.count()}")
 for u in User.objects.all():
     print(f"  User: {u.username}, superuser={u.is_superuser}")
 
-# Try login with Client
+# Try login with Client. Override via DEMO_ADMIN_USERNAME / DEMO_ADMIN_PASSWORD
+# if the local database uses different credentials.
+username = os.getenv('DEMO_ADMIN_USERNAME', 'admin')
+password = os.getenv('DEMO_ADMIN_PASSWORD', 'admin123')
+
 c = Client()
-resp = c.post('/admin/api/rbac/login/', json.dumps({'username': 'admin', 'password': 'admin'}),
+resp = c.post('/admin/api/rbac/login/', json.dumps({'username': username, 'password': password}),
               content_type='application/json')
-print(f"Login admin/admin: {resp.status_code} {resp.json()}")
+print(f"Login {username}/***: {resp.status_code} {resp.json()}")
 
 # If that doesn't work, try direct
 if resp.status_code != 200:
-    resp2 = c.post('/admin/login/', {'username': 'admin', 'password': 'admin', 'csrfmiddlewaretoken': ''})
+    resp2 = c.post('/admin/login/', {'username': username, 'password': password, 'csrfmiddlewaretoken': ''})
     print(f"Django login: {resp2.status_code}")
 
 # Test categories API
