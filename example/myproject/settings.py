@@ -90,6 +90,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # 开发环境：让 example 使用主项目的静态文件（指向 django_layuix/static）
 STATICFILES_DIRS = [
     BASE_DIR.parent / 'django_layuix' / 'static',
+    BASE_DIR / 'store' / 'static',
 ]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

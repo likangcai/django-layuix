@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-清理无效菜单的管理命令
+恢复 store 演示应用菜单到 Layui 静态页面路径。
 
 用法: python manage.py fix_store_menu_urls
 """
@@ -18,17 +18,16 @@ class Command(BaseCommand):
         store_menus = Menu.objects.filter(
             name__in=['商品分类', '商品管理', '订单管理']
         )
-        
+
         fixed_count = 0
         for menu in store_menus:
             old_path = menu.path
-            new_path = f'/admin/store/{menu.name}/'
-            
-            # 标准化模型名称到 URL 路径
+
+            # 菜单必须指向 Layui 静态页面，而不是 Django admin 原生列表页。
             url_map = {
-                '商品分类': '/admin/store/category/',
-                '商品管理': '/admin/store/product/',
-                '订单管理': '/admin/store/order/',
+                '商品分类': '/static/store/pages/category.html',
+                '商品管理': '/static/store/pages/product.html',
+                '订单管理': '/static/store/pages/order.html',
             }
             
             correct_path = url_map.get(menu.name)

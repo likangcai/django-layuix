@@ -116,6 +116,9 @@ python manage.py init_menu
 
 # 需要同步创建测试数据的也可以执行以下命令
 python manage.py init_data
+
+# 演示应用（商品分类/商品/订单）需要单独初始化示例数据
+python manage.py init_demo_data
 ```
 
 `init_menu` 命令会自动创建：
@@ -806,6 +809,7 @@ python manage.py collectstatic --noinput
 |------|------|
 | `python manage.py init_menu` | 初始化默认菜单、角色和系统配置 |
 | `python manage.py init_data` | 快速初始化：创建超级管理员、内置角色、完整菜单树（含运维管理） |
+| `python manage.py init_demo_data` | 初始化演示应用的分类/商品/订单示例数据 |
 | `python manage.py rename_app_labels` | 升级旧库：把 `django_layui_rbac/ops` 应用标签迁移为 `django_layuix_rbac/ops` |
 
 ### init_data 命令详解
