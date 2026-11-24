@@ -791,9 +791,7 @@ a:hover {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-color);
+    margin-top: 8px;
 }
 
 /* 1.4.2 ABAC 策略列表 */
@@ -906,7 +904,7 @@ a:hover {
 }
 
 .field-help::after {
-    content: attr(title);
+    content: attr(data-tips);
     position: absolute;
     left: 26px;
     top: 50%;

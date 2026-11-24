@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title data-i18n="abac.title">ABAC 策略管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261124e">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261124f">
 </head>
 <body>
 <div class="page-container">
@@ -32,42 +32,42 @@
                             <div class="layui-form-item">
                                 <label class="layui-form-label">{{ t('abac.resource') }}</label>
                                 <div class="layui-input-block field-with-help">
-                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.resourceHint') }}" title="{{ t('abac.resourceHint') }}">?</span>
+                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.resourceHint') }}" data-tips="{{ t('abac.resourceHint') }}">?</span>
                                     <input name="resource" required class="layui-input" placeholder="store.Order / order:view">
                                 </div>
                             </div>
                             <div class="layui-form-item">
                                 <label class="layui-form-label">{{ t('abac.action') }}</label>
                                 <div class="layui-input-block field-with-help">
-                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.actionHint') }}" title="{{ t('abac.actionHint') }}">?</span>
+                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.actionHint') }}" data-tips="{{ t('abac.actionHint') }}">?</span>
                                     <input name="action" value="view" class="layui-input">
                                 </div>
                             </div>
                             <div class="layui-form-item">
                                 <label class="layui-form-label">{{ t('abac.field') }}</label>
                                 <div class="layui-input-block field-with-help">
-                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.fieldHint') }}" title="{{ t('abac.fieldHint') }}">?</span>
+                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.fieldHint') }}" data-tips="{{ t('abac.fieldHint') }}">?</span>
                                     <input name="field" class="layui-input" placeholder="{{ t('abac.fieldPlaceholder') }}">
                                 </div>
                             </div>
                             <div class="layui-form-item">
                                 <label class="layui-form-label">{{ t('abac.effect') }}</label>
                                 <div class="layui-input-block field-with-help">
-                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.effectHint') }}" title="{{ t('abac.effectHint') }}">?</span>
+                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.effectHint') }}" data-tips="{{ t('abac.effectHint') }}">?</span>
                                     <select name="effect"><option value="allow">{{ t('abac.allow') }}</option><option value="deny">{{ t('abac.deny') }}</option></select>
                                 </div>
                             </div>
                             <div class="layui-form-item">
                                 <label class="layui-form-label">{{ t('abac.priority') }}</label>
                                 <div class="layui-input-block field-with-help">
-                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.priorityHint') }}" title="{{ t('abac.priorityHint') }}">?</span>
+                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.priorityHint') }}" data-tips="{{ t('abac.priorityHint') }}">?</span>
                                     <input name="priority" type="number" value="100" class="layui-input">
                                 </div>
                             </div>
                             <div class="layui-form-item layui-form-text">
                                 <label class="layui-form-label">{{ t('abac.expression') }}</label>
                                 <div class="layui-input-block field-with-help field-help-top">
-                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.expressionHint') }}" title="{{ t('abac.expressionHint') }}">?</span>
+                                    <span class="field-help" tabindex="0" role="img" aria-label="{{ t('abac.expressionHint') }}" data-tips="{{ t('abac.expressionHint') }}">?</span>
                                     <textarea name="expression" required class="layui-textarea" style="height:120px;" placeholder="{{ t('abac.expressionPlaceholder') }}"></textarea>
                                 </div>
                             </div>
