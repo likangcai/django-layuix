@@ -1048,6 +1048,7 @@ django-layuix 内置深色/浅色双模式切换功能：
 - [RBAC3 权限体系使用指南](docs/RBAC3_GUIDE.md) - 角色继承、SSD/DSD 约束、前置角色与后端强制鉴权
 - [权限系统升级说明](docs/PERMISSION_UPGRADE_1_4_1.md) - SoD 兼容契约、数据权限 Scope、ABAC 与组织节点
 - [前端权限 SDK 使用指南](docs/FRONTEND_SDK_GUIDE.md) - Vue/React 适配器、统一权限端点与 ABAC 调用
+- [ABAC 表达式权限使用指南](docs/ABAC_GUIDE.md) - 策略语法、行级/字段级过滤与调试示例
 - [纯跨域 Token 认证指南](docs/TOKEN_AUTH_GUIDE.md) - Bearer Token 接入与分离前端对接
 - [认证与权限桥接指南](docs/INTEGRATION_GUIDE.md) - 通用认证桥接、DRF 适配器与 TestHub 对接
 - [插件化扩展契约](docs/PLUGIN_GUIDE.md) - 插件注册、菜单与 API 扩展
