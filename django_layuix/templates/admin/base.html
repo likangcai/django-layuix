@@ -7,7 +7,7 @@
     <title>{% block title %}{% endblock %} | {% system_name %}</title>
     <link rel="icon" type="image/x-icon" href="{% static 'layui/favicon.ico' %}">
     <link rel="stylesheet" href="{% static 'layui/lib/layui.css' %}">
-    <link rel="stylesheet" href="{% static 'layui/css/admin.css' %}">
+    <link rel="stylesheet" href="{% static 'layui/css/admin.css' %}?v={% static_version %}">
     <style>
         .layui-form-checkbox[lay-skin="primary"] span { color: var(--text-primary); }
         .layui-form-switch { background: var(--bg-tertiary); border-color: var(--border-color); }
@@ -121,8 +121,8 @@
     })();
     </script>
     <script src="{% static 'layui/lib/layui.js' %}"></script>
-    <script src="{% static 'layui/js/common.js' %}"></script>
-    <script src="{% static 'layui/js/i18n.js' %}"></script>
+    <script src="{% static 'layui/js/common.js' %}?v={% static_version %}"></script>
+    <script src="{% static 'layui/js/i18n.js' %}?v={% static_version %}"></script>
     {% block extrajs %}
     {# BUG-08 FIX: 加载 Django admin 标准 JS，确保 admin 功能正常 #}
     <script src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>

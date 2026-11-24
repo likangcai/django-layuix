@@ -689,6 +689,8 @@ a:hover {
     flex-shrink: 0;
     transition: width 0.3s ease;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .admin-sidebar.collapsed {
@@ -750,6 +752,30 @@ a:hover {
 
 .sidebar-menu {
     padding: 10px 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.admin-sidebar.collapsed .sidebar-menu {
+    overflow: visible;
 }
 
 .sidebar-menu .empty-state {
@@ -792,6 +818,7 @@ a:hover {
     flex-shrink: 0;
     font-size: 10px;
     color: var(--text-muted);
+    transform: rotate(90deg);
 }
 
 .menu-group-title .menu-dir-icon {
@@ -811,7 +838,7 @@ a:hover {
 }
 
 .menu-group-title.collapsed .menu-arrow {
-    transform: rotate(-90deg);
+    transform: rotate(0);
 }
 
 .sub-menu {
