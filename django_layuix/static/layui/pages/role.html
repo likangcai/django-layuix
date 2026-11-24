@@ -537,7 +537,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
                     }, 300);
                     
                     // 添加 checkbox 点击事件，实现父节点勾选联动子节点
-                    layero.on('click', '.layui-form-checkbox', function(e) {
+                    layero.off('click.menuPermTree').on('click.menuPermTree', '#menuPermTree .layui-form-checkbox', function(e) {
                         var $checkbox = $(this);
                         var $input = $checkbox.prev('input[type="checkbox"]');
                         var $treeSet = $checkbox.closest('.layui-tree-set');

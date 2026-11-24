@@ -798,6 +798,7 @@ django_layuix/templates/admin/change_form.html → 模型编辑页
 ```bash
 python manage.py rename_app_labels
 python manage.py migrate
+python manage.py init_menu
 python manage.py collectstatic --noinput
 ```
 

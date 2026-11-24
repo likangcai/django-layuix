@@ -26,11 +26,12 @@ def visible_scope_nodes(node, depth=0):
     for _ in range(max(0, int(depth or 0))):
         children = []
         for current in frontier:
-            children.extend(tree.get(current, []) or [])
-        if not children and node in hierarchy:
-            index = hierarchy.index(node)
-            if index + 1 < len(hierarchy):
-                children = [hierarchy[index + 1]]
+            current_children = list(tree.get(current, []) or [])
+            if not current_children and current in hierarchy:
+                index = hierarchy.index(current)
+                if index + 1 < len(hierarchy):
+                    current_children.append(hierarchy[index + 1])
+            children.extend(current_children)
         if not children:
             break
         children = [str(item) for item in children if item]

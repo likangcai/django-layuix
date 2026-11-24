@@ -19,6 +19,7 @@ class RoleAdmin(admin.ModelAdmin):
     list_filter = ['is_system', 'status']
     search_fields = ['name', 'code', 'scope_node']
     filter_horizontal = ['menus', 'parent_roles']
+    readonly_fields = ['parent']
 
 
 # BUG-30 FIX: 继承 UserAdmin 以正确处理密码字段

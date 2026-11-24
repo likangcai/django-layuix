@@ -546,3 +546,49 @@ class Rbac141CompatibilityTests(TestCase):
         self.cashier.scope_depth = 1
         self.cashier.save(update_fields=['scope_node', 'scope_depth'])
         self.assertEqual({'east_region', 'east_team_a'}, get_user_scope_nodes(self.user))
+
+    @override_settings(
+        LAYUIX_SCOPE_HIERARCHY=['global', 'region', 'team'],
+        LAYUIX_SCOPE_TREE={},
+    )
+    def test_scope_hierarchy_expands_multiple_levels(self):
+        from .scopes import visible_scope_nodes
+
+        self.assertEqual({'global', 'region', 'team'}, visible_scope_nodes('global', 2))
+
+    def test_sod_check_without_user_id_is_not_exempt_for_admin_editor(self):
+        role_a = self._create_role('制单', 'rbac141_maker2')
+        role_b = self._create_role('审核', 'rbac141_checker2')
+        self.client.post('/admin/api/rbac/sod-constraints/', {
+            'name': '制单审核互斥2', 'role_ids': [role_a.id, role_b.id],
+        }, content_type='application/json')
+        response = self.client.post('/admin/api/rbac/sod-constraints/check/', {
+            'role_ids': [role_a.id, role_b.id],
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['data']['allowed'])
+        self.assertFalse(response.json()['data']['exempt'])
+
+    def test_parent_ids_sync_compatible_parent_field(self):
+        role_a = self._create_role('父同步A', 'rbac141_sync_a')
+        role_b = self._create_role('父同步B', 'rbac141_sync_b')
+        response = self.client.put(
+            '/admin/api/rbac/roles/%s/update/' % role_a.id,
+            {'parent_ids': [role_b.id]}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        role_a.refresh_from_db()
+        self.assertEqual(role_a.parent_id, role_b.id)
+
+    def test_role_copy_keeps_scope_and_parent(self):
+        parent = self._create_role('复制父', 'rbac141_copy_parent')
+        source = self._create_role(
+            '复制源', 'rbac141_copy_source',
+            parent_id=parent.id, scope_node='east_region', scope_depth=2,
+        )
+        response = self.client.post('/admin/api/rbac/roles/%s/copy/' % source.id, {}, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        copied = Role.objects.get(code='rbac141_copy_source_copy')
+        self.assertEqual(copied.parent_id, parent.id)
+        self.assertEqual(copied.scope_node, 'east_region')
+        self.assertEqual(copied.scope_depth, 2)

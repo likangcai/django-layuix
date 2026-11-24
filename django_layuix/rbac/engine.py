@@ -63,9 +63,12 @@ def expand_role_ids(role_ids):
     queue = deque(result)
     while queue:
         role_id = queue.popleft()
-        parent_ids = Role.objects.filter(
-            pk=role_id, parent_roles__status=True
-        ).values_list('parent_roles__id', flat=True)
+        role = Role.objects.filter(pk=role_id).prefetch_related('parent_roles').first()
+        if not role:
+            continue
+        parent_ids = {item.id for item in role.parent_roles.all() if item.status}
+        if role.parent_id:
+            parent_ids.add(role.parent_id)
         for parent_id in parent_ids:
             if parent_id and parent_id not in result:
                 result.add(parent_id)
@@ -80,7 +83,8 @@ def expand_child_ids(role_ids):
     queue = deque(result)
     while queue:
         role_id = queue.popleft()
-        child_ids = Role.objects.filter(pk=role_id).values_list('child_roles__id', flat=True)
+        child_ids = set(Role.objects.filter(pk=role_id).values_list('child_roles__id', flat=True))
+        child_ids.update(Role.objects.filter(parent_id=role_id).values_list('id', flat=True))
         for child_id in child_ids:
             if child_id and child_id not in result:
                 result.add(child_id)
@@ -340,7 +344,7 @@ def effective_permissions_for_role(role_id):
     }
 
 
-def check_sod_conflict(user, new_role_ids):
+def check_sod_conflict(user, new_role_ids, audit=True):
     """1.4.1 compatible SSD check with structured conflict details."""
     Role, *_ = _models()
     candidate_ids = get_assigned_role_ids(user) | _as_int_set(new_role_ids)
@@ -382,6 +386,8 @@ def check_sod_conflict(user, new_role_ids):
     if conflicts and is_full_access(user):
         result['allowed'] = True
         result['exempt'] = True
+        if not audit:
+            return result
         try:
             from .models import OperationLog
             OperationLog.objects.create(

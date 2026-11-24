@@ -224,10 +224,16 @@ layui.use(['form', 'layer'], function() {
         $('input[name="mutex_role"]:checked').each(function() { ids.push(parseInt($(this).val(), 10)); });
         var permIds = [];
         $('input[name="mutex_permission"]:checked').each(function() { permIds.push(parseInt($(this).val(), 10)); });
-        postApi('/admin/api/rbac/constraints/mutex/', {
+        var payload = {
             name: data.field.name, kind: data.field.kind,
-            role_ids: ids, permission_ids: permIds, description: data.field.description
-        }, function(res) {
+            role_ids: ids, description: data.field.description
+        };
+        var endpoint = '/admin/api/rbac/sod-constraints/';
+        if (permIds.length) {
+            payload.permission_ids = permIds;
+            endpoint = '/admin/api/rbac/constraints/mutex/';
+        }
+        postApi(endpoint, payload, function(res) {
             layer.msg(res.msg || (res.code === 200 ? '已创建' : '失败'), {icon: res.code === 200 ? 1 : 2});
             if (res.code === 200) {
                 data.form.reset();

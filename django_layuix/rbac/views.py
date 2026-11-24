@@ -1132,6 +1132,9 @@ def role_detail(request, pk):
             except RbacConstraintError as e:
                 return error_response(e.message, 400)
             role.parent_roles.set(parents)
+            if 'parent_id' not in body:
+                role.parent = Role.objects.filter(id__in=parents).order_by('id').first()
+                role.save(update_fields=['parent'])
         return success_response(msg='更新成功')
 
     elif request.method == 'DELETE':
@@ -1196,10 +1199,14 @@ def role_create(request):
 
     if parent_ids_payload is not None:
         try:
-            role.parent_roles.set(validate_role_parents(role.id, parent_ids_payload))
+            parents = validate_role_parents(role.id, parent_ids_payload)
+            role.parent_roles.set(parents)
         except RbacConstraintError as e:
             role.delete()
             return error_response(e.message, 400)
+        if 'parent_id' not in body:
+            role.parent = Role.objects.filter(id__in=parents).order_by('id').first()
+            role.save(update_fields=['parent'])
 
     if 'menu_ids' in body and body['menu_ids']:
         role.menus.set(body['menu_ids'])
@@ -1251,6 +1258,9 @@ def role_copy(request, pk):
         description=role.description,
         status=role.status,
         max_users=role.max_users,
+        parent=role.parent,
+        scope_node=role.scope_node,
+        scope_depth=role.scope_depth,
     )
     new_role.save()
     new_role.menus.set(role.menus.all())
@@ -1955,18 +1965,19 @@ def sod_constraint_detail(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('role:edit')
 def sod_constraint_check(request):
     """POST /api/rbac/sod-constraints/check/ - 实时 SSD 预校验"""
     from .engine import check_sod_conflict
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     body = get_request_body(request)
-    target_user = request.user
+    target_user = None
     user_id = body.get('user_id')
     if user_id:
         from django.contrib.auth import get_user_model
-        target_user = get_user_model().objects.filter(pk=user_id).first() or request.user
-    result = check_sod_conflict(target_user, body.get('role_ids') or [])
+        target_user = get_user_model().objects.filter(pk=user_id).first()
+    result = check_sod_conflict(target_user, body.get('role_ids') or [], audit=False)
     if result['exempt']:
         result['message'] = '已豁免，操作将记录审计'
     return success_response(result)
