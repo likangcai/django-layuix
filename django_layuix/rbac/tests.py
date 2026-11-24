@@ -185,6 +185,7 @@ class Rbac3ApiTests(TestCase):
             {'language': 'en'}, content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['language'], 'en')
         self.assertEqual(response.cookies.get('django_language').value, 'en')
         self.assertEqual(self.client.session.get('_language'), 'en')
         self.admin.refresh_from_db()

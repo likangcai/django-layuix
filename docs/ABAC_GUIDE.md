@@ -11,7 +11,27 @@
 
 ---
 
-## 1. 表达式语法
+## 1. 字段与动作速查
+
+| 字段 | 含义 | 示例 |
+|---|---|---|
+| 资源 | 策略作用对象。会匹配资源标识、模型标签或 `app.Model` | `store.Order`、`order:view` |
+| 动作 | 业务操作类型。由调用方传入 `filter_queryset()` / `filter_fields()` | `view`、`add`、`edit`、`delete`、`*` |
+| 字段 | 留空为行级策略；填写字段名则为字段级策略 | 留空、`cost`、`phone` |
+| 效果 | 命中后的结果。`deny` 优先于 `allow` | `allow`、`deny` |
+| 优先级 | 数值越小越先匹配 | `10`、`100` |
+| 表达式 | 返回 `true` 时策略命中 | `resource.amount > 10000` |
+
+`view` 表示“查看类操作”，通常对应列表、详情、导出等读取接口。它不是框架自动根据 HTTP GET 推断出来的，而是业务代码调用 ABAC 时传入的 `action` 参数：
+
+```python
+filter_queryset(queryset, request.user, 'view', 'store.Order')
+filter_fields(request.user, 'view', 'store.Order', ['id', 'amount', 'cost'])
+```
+
+如果业务代码传入的是 `export`，则应创建 `action = 'export'` 的策略；传 `*` 的策略会对所有动作生效。
+
+## 2. 表达式语法
 
 | 类型 | 示例 | 说明 |
 |---|---|---|
@@ -24,7 +44,7 @@
 
 表达式不能调用函数、导入模块或访问上下文外的 Python 对象。非法表达式会在 API 保存时被拒绝。
 
-## 2. 后台 UI 示例
+## 3. 后台 UI 示例
 
 进入：
 
@@ -50,7 +70,7 @@
 - `amount > 10000` 且没有 `finance` 角色：拒绝。
 - 超级管理员：默认豁免。
 
-## 3. API 创建示例
+## 4. API 创建示例
 
 ```http
 POST /admin/api/rbac/abac-policies/
@@ -80,7 +100,7 @@ DELETE /admin/api/rbac/abac-policies/<id>/
 POST   /admin/api/rbac/abac-check/
 ```
 
-## 4. 行级权限示例
+## 5. 行级权限示例
 
 在业务 API 中替换普通查询：
 
@@ -100,7 +120,7 @@ def order_list(request):
 
 当前实现为 Python 层逐行评估，并按主键生成过滤后的 QuerySet。内部使用 `iterator(chunk_size=1000)` 分批读取，可通过 `chunk_size` 参数调整；数据量大时仍建议先按业务条件缩小 QuerySet，再调用 `filter_queryset()`。
 
-## 5. 字段级权限示例
+## 6. 字段级权限示例
 
 先创建字段白名单策略：
 
@@ -134,7 +154,7 @@ def order_detail(request, pk):
 
 没有 `finance` 角色时，`cost` 会从返回字段中移除。
 
-## 6. 策略调试
+## 7. 策略调试
 
 ```http
 POST /admin/api/rbac/abac-check/
@@ -166,7 +186,7 @@ POST /admin/api/rbac/abac-check/
 
 `matched` 是命中的策略 ID；`errors` 返回表达式求值错误，便于排查策略配置问题。
 
-## 7. 常见策略模板
+## 8. 常见策略模板
 
 ### 7.1 只看本人创建的数据
 
@@ -200,7 +220,7 @@ POST /admin/api/rbac/abac-check/
 表达式:   'hr' in user.roles or 'admin' in user.roles
 ```
 
-## 8. 决策规则
+## 9. 决策规则
 
 1. 没有匹配策略：允许。
 2. 命中任意 `deny`：拒绝。

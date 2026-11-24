@@ -244,6 +244,16 @@
             });
         }
 
+        window.addEventListener('message', function(event) {
+            var data = event.data;
+            if (!data || data.type !== 'languageChange' || !data.lang) return;
+            if (I18N.currentLang === data.lang) return;
+            I18N.setLang(data.lang);
+            updateLangUI(data.lang);
+            window.LANG = data.lang;
+            if (window.currentUser) window.currentUser.language = data.lang;
+        });
+
         // Language switch
         $(document).on('click', '#langBtn', function() {
             var current = I18N.getLang();
@@ -253,6 +263,7 @@
                     I18N.setLang(next);
                     updateLangUI(next);
                     window.LANG = next;
+                    if (window.currentUser) window.currentUser.language = next;
                     $('iframe[id^="iframe_"]').each(function() {
                         try {
                             this.contentWindow.postMessage({ type: 'languageChange', lang: next }, '*');

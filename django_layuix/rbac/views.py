@@ -736,7 +736,7 @@ def set_language(request):
 
     # Django <=5 使用 session 键；Django 6 起 LocaleMiddleware 只读取语言 Cookie
     request.session['_language'] = language
-    response = success_response(msg='语言已切换')
+    response = success_response({'language': language}, msg='语言已切换')
     response.set_cookie(
         settings.LANGUAGE_COOKIE_NAME,
         language,

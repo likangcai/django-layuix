@@ -786,6 +786,184 @@ a:hover {
     margin-bottom: 10px;
 }
 
+/* 1.4.2 表单操作区 */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* 1.4.2 ABAC 策略列表 */
+.abac-relation-hint {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--primary-color);
+    border-radius: 6px;
+    background: var(--bg-tertiary, transparent);
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.abac-policy-list {
+    padding: 12px 16px;
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+}
+
+.abac-policy-card {
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary, transparent);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.abac-policy-card + .abac-policy-card { margin-top: 10px; }
+.abac-policy-card:hover { border-color: var(--primary-color); box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05)); }
+
+.abac-policy-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.abac-policy-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.abac-policy-head .layui-btn { flex-shrink: 0; }
+
+.abac-policy-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.abac-policy-priority {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.abac-policy-expression {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--bg-tertiary, rgba(0,0,0,.03));
+    color: var(--text-secondary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+.abac-policy-empty { padding: 24px 0; text-align: center; }
+
+.field-with-help {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.field-help {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 18px;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary, transparent);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: help;
+    user-select: none;
+    transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.field-help:hover,
+.field-help:focus-visible {
+    color: #ffffff;
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    outline: none;
+}
+
+.field-help::after {
+    content: attr(title);
+    position: absolute;
+    left: 26px;
+    top: 50%;
+    z-index: 1200;
+    width: max-content;
+    max-width: min(280px, calc(100vw - 48px));
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary, var(--card-bg, #ffffff));
+    color: var(--text-primary);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.12));
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.6;
+    white-space: normal;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-50%);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+
+.field-help:hover::after,
+.field-help:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%);
+}
+
+.field-help-top { align-items: flex-start; }
+.field-help-top .field-help { margin-top: 10px; }
+.field-help-top .layui-textarea { flex: 1; }
+
+.field-hint {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.abac-examples {
+    margin: 6px 0 14px 120px;
+    padding: 10px 12px;
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.abac-examples summary { cursor: pointer; font-weight: 500; }
+.abac-example { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-bottom: 1px solid var(--border-color); }
+.abac-example:last-child { border-bottom: 0; }
+.abac-example code { color: var(--primary-color); font-size: 12px; }
+.abac-example span { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+
 /* 1.4.1 角色权限查看弹层 */
 .permission-line {
     display: flex;
