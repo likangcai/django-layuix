@@ -126,7 +126,7 @@ python manage.py init_demo_data
 | 数据类型 | 创建内容 | 说明 |
 |---------|---------|------|
 | **默认菜单** | 权限管理、系统管理 | 包含子菜单：菜单/角色/用户、个人中心/操作日志/系统配置 |
-| **按钮权限** | 15 个权限项 | 每个菜单下的增删改查按钮级权限 |
+| **按钮权限** | 25 个权限项 | 菜单/角色/用户/配置/服务器/AI 的按钮级权限 |
 | **管理员角色** | `管理员` | 绑定所有菜单和按钮权限 |
 | **注册角色** | `注册用户` | 仅个人中心权限（前端注册用户默认绑定） |
 | **系统配置** | 17 个配置项 | 系统信息、Logo、登录背景、首页卡片/链接、WebSSH、RBAC 策略等 |
@@ -250,7 +250,7 @@ OPERATION_LOG = {
 
 **业务逻辑说明：**
 
-1. **默认值**：代码中定义的初始值（在 `init_menu` 命令中设置）
+1. **默认值**：`django_layuix/rbac/defaults.py` 中定义的初始值，由 `apps.py` 与 `init_menu` 共同引用
 2. **settings.py 配置**：开发者在项目中自定义的默认值
 3. **数据库配置**：通过后台界面动态修改的值（**最高优先级**）
 
@@ -308,6 +308,11 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | `LAYUI_CDN` | Layui 静态资源路径 | `/static/layui/lib/` |
 | `LAYUI_VERSION` | Layui 版本 | 2.13.9 |
 | `LAYUI_LANGUAGES` | 语言列表 | 简体中文 / English |
+| `LAYUI_CONFIG.form_filter_disabled` | 表单取值是否排除 disabled 字段 | False |
+| `LAYUI_RBAC_MAX_ROLES_PER_USER` | 每用户最多角色数（无 DB 配置时生效） | 0 |
+| `LAYUI_RBAC_PREREQ_STRATEGY` | 前置角色策略（无 DB 配置时生效） | auto_grant |
+| `LAYUI_RBAC_DSD_STRATEGY` | DSD 激活策略（无 DB 配置时生效） | greedy |
+| `LAYUI_RBAC_AUTHENTICATORS` | 自定义认证器导入路径 | `[]` |
 | `TOKEN_EXPIRE_SECONDS` | Token 有效期（秒） | 86400 |
 | `LAYUIX_SCOPE_HIERARCHY` | 数据作用域层级 | `[]` |
 | `LAYUIX_SCOPE_TREE` | 数据作用域节点树 | `{}` |

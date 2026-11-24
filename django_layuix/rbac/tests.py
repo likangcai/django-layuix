@@ -707,3 +707,21 @@ class Rbac142EnhancementTests(TestCase):
         call_command('init_menu', verbosity=0)
         stored = set(SystemConfig.objects.values_list('key', flat=True))
         self.assertTrue(set(keys).issubset(stored))
+
+    def test_admin_context_does_not_mutate_settings(self):
+        from django.conf import settings
+        from django.test import override_settings
+
+        from django_layuix.admin import LayuiAdminSite
+
+        from .models import SystemConfig
+
+        SystemConfig.objects.create(
+            key='site_marker', value='db', description='test', config_type='string', sort=99
+        )
+        with override_settings(LAYUI_CONFIG={'site_marker': 'settings'}):
+            request = RequestFactory().get('/admin/')
+            request.user = self.admin
+            context = LayuiAdminSite().each_context(request)
+            self.assertEqual(context['layui_config']['site_marker'], 'db')
+            self.assertEqual(settings.LAYUI_CONFIG['site_marker'], 'settings')

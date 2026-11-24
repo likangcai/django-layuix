@@ -9,6 +9,8 @@ import socket
 from functools import wraps
 from datetime import datetime
 import time
+
+import django_layuix
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -584,7 +586,7 @@ def public_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.4.2'),
+        'system_version': get_config('system_version', django_layuix.__version__),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),
         'favicon_url': get_config('favicon_url', ''),
@@ -620,7 +622,7 @@ def system_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.4.2'),
+        'system_version': get_config('system_version', django_layuix.__version__),
         'system_description': get_config('system_description', ''),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),

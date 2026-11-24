@@ -3,6 +3,8 @@ from django.conf import settings
 
 from datetime import datetime
 
+import django_layuix
+
 register = template.Library()
 
 # 静态资源版本号：与 iframe 缓存参数保持同一量级（分钟级），避免两套口径
@@ -56,7 +58,7 @@ def static_version():
 @register.simple_tag
 def system_version():
     """Return system version"""
-    return _get_db_config('system_version', '1.4.2')
+    return _get_db_config('system_version', django_layuix.__version__)
 
 
 @register.simple_tag
