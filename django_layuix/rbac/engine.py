@@ -7,6 +7,7 @@ Single source of truth for:
   - RBAC2 constraints (SSD / DSD / prerequisites / cardinality)
   - session-scoped active roles
 """
+import logging
 from collections import deque
 
 from django.conf import settings
@@ -16,6 +17,8 @@ ACTIVE_ROLES_SESSION_KEY = 'layui_active_roles'
 MAX_ROLES_CONFIG_KEY = 'rbac_max_roles_per_user'
 PREREQ_STRATEGY_KEY = 'rbac_prerequisite_strategy'
 DSD_STRATEGY_KEY = 'rbac_dsd_strategy'
+
+logger = logging.getLogger(__name__)
 
 
 class RbacConstraintError(Exception):
@@ -299,6 +302,99 @@ def check_permission_conflicts(permission_codes, kind):
                 ),
                 '%s_permission_conflict' % kind,
             )
+
+
+def effective_permissions_for_role(role_id):
+    """Return own and inherited permissions of a role with source roles."""
+    Role, Menu, *_ = _models()
+    role = Role.objects.filter(pk=role_id).first()
+    if not role:
+        return None
+
+    own = list(Menu.objects.filter(
+        status=True, permission__gt='', roles=role
+    ).values('id', 'name', 'permission').distinct())
+
+    ancestor_ids = expand_role_ids([role_id]) - {int(role_id)}
+    inherited = []
+    if ancestor_ids:
+        ancestors = Role.objects.filter(id__in=ancestor_ids).order_by('id').prefetch_related('menus')
+        for ancestor in ancestors:
+            for menu in ancestor.menus.filter(status=True, permission__gt=''):
+                inherited.append({
+                    'id': menu.id,
+                    'name': menu.name,
+                    'permission': menu.permission,
+                    'source_role_id': ancestor.id,
+                    'source_role_name': ancestor.name,
+                })
+
+    return {
+        'role_id': role.id,
+        'role_name': role.name,
+        'own': own,
+        'inherited': inherited,
+        'all_permissions': sorted({
+            item['permission'] for item in own + inherited if item.get('permission')
+        }),
+    }
+
+
+def check_sod_conflict(user, new_role_ids):
+    """1.4.1 compatible SSD check with structured conflict details."""
+    Role, *_ = _models()
+    candidate_ids = get_assigned_role_ids(user) | _as_int_set(new_role_ids)
+    conflicts = []
+
+    effective_ids = expand_role_ids(candidate_ids)
+    for group in _active_mutex_groups('ssd'):
+        overlap = effective_ids & {r.id for r in group.roles.all()}
+        if len(overlap) > 1:
+            conflicts.append({
+                'type': 'role',
+                'constraint_id': group.id,
+                'constraint_name': group.name,
+                'roles': [
+                    {'id': r.id, 'name': r.name}
+                    for r in Role.objects.filter(id__in=overlap).order_by('id')
+                ],
+            })
+
+    permission_codes = effective_permission_codes_for_roles(candidate_ids)
+    for group in _active_mutex_groups('ssd'):
+        codes = set(group.permissions.filter(
+            status=True, permission__gt=''
+        ).values_list('permission', flat=True))
+        overlap = permission_codes & codes
+        if len(overlap) > 1:
+            conflicts.append({
+                'type': 'permission',
+                'constraint_id': group.id,
+                'constraint_name': group.name,
+                'permissions': sorted(overlap),
+            })
+
+    result = {
+        'allowed': not bool(conflicts),
+        'exempt': False,
+        'conflicts': conflicts,
+    }
+    if conflicts and is_full_access(user):
+        result['allowed'] = True
+        result['exempt'] = True
+        try:
+            from .models import OperationLog
+            OperationLog.objects.create(
+                user=user if getattr(user, 'pk', None) else None,
+                module='RBAC',
+                action='SoD 约束豁免：%s' % '；'.join(
+                    item['constraint_name'] for item in conflicts
+                ),
+                status=1,
+            )
+        except Exception:
+            logger.warning('Failed to record SoD exemption audit for user %s', getattr(user, 'pk', None))
+    return result
 
 
 def validate_assignment(user, role_ids, exclude_user_pk=None):

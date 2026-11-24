@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
-    Menu, Role, RoleMutex, RolePrerequisite, PluginRegistry,
+    Menu, Role, RoleMutex, RolePrerequisite, PluginRegistry, SoDConstraint,
     UserProfile, OperationLog, SystemConfig,
 )
 
@@ -15,9 +15,9 @@ class MenuAdmin(admin.ModelAdmin):
 
 
 class RoleAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'code', 'is_system', 'status']
+    list_display = ['id', 'name', 'code', 'is_system', 'status', 'scope_node', 'scope_depth']
     list_filter = ['is_system', 'status']
-    search_fields = ['name', 'code']
+    search_fields = ['name', 'code', 'scope_node']
     filter_horizontal = ['menus', 'parent_roles']
 
 
@@ -88,5 +88,6 @@ class PluginRegistryAdmin(admin.ModelAdmin):
 
 
 admin.site.register(RoleMutex, RoleMutexAdmin)
+admin.site.register(SoDConstraint, RoleMutexAdmin)
 admin.site.register(RolePrerequisite, RolePrerequisiteAdmin)
 admin.site.register(PluginRegistry, PluginRegistryAdmin)

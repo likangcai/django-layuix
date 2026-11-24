@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-11-24
+
+### 🔐 权限系统契约与数据范围补齐
+- ✅ **RBAC1 兼容层** — 新增 `Role.parent` 单父兼容字段、`parent_id/children_ids` 与角色有效权限来源端点
+- ✅ **RBAC2 SoD 兼容层** — 新增 `SoDConstraint` 代理模型、`check_sod_conflict()` 与 `/sod-constraints/` CRUD/预校验端点
+- ✅ **数据权限 Scope 层** — 新增 `Role.scope_node/scope_depth`、`ScopedManager/ScopedModelMixin` 与可选层级配置
+- ✅ **UI 配套** — 角色树形缩进、权限来源查看、角色选择实时 SSD 提示、SoD 模板入口与数据作用域高级面板
+- ✅ **版本升级至 1.4.1** — 同步包版本、锁文件、文档与界面显示版本
+
 - 🐛 **i18n 占位符渲染修复** — 支持嵌套 `t()` 参数、字符串拼接、`||` 默认值与 `lay-reqtext` 等属性，消除“请输入t('profile.oldPassword')”
 - 🐛 **弹窗关闭链路修复** — 统一 X/底部取消/内联取消按钮的关闭行为，修复系统配置等弹窗取消无效
 - 🐛 **演示应用可见性修复** — 补充 store 静态目录、修正菜单修复命令路径，并支持 `init_demo_data` 初始化示例数据

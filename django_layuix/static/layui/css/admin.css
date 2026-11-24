@@ -786,6 +786,28 @@ a:hover {
     margin-bottom: 10px;
 }
 
+/* 1.4.1 角色权限查看弹层 */
+.permission-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.permission-line code {
+    margin-left: auto;
+    color: var(--primary-color);
+}
+
+.permission-line small {
+    color: var(--text-muted);
+}
+
+.muted {
+    color: var(--text-muted);
+}
+
 .menu-group {
     margin-bottom: 2px;
 }

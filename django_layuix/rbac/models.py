@@ -58,6 +58,14 @@ class Role(models.Model):
         'self', symmetrical=False, blank=True,
         related_name='child_roles', verbose_name='继承角色'
     )
+    # 1.4.1 兼容字段：旧版单父继承契约。新代码优先读取 parent_roles。
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='children', verbose_name='上级角色（兼容）'
+    )
+    # 1.4.1 数据权限：默认空白/0，不影响未配置的现有角色。
+    scope_node = models.CharField(max_length=100, blank=True, default='', verbose_name='数据作用域节点')
+    scope_depth = models.PositiveIntegerField(default=0, verbose_name='作用域向下层数')
     # RBAC2: 角色级人数上限，0/None 表示不限
     max_users = models.PositiveIntegerField(null=True, blank=True, verbose_name='人数上限')
     is_system = models.BooleanField(default=False, verbose_name='系统内置')
@@ -99,6 +107,15 @@ class RoleMutex(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SoDConstraint(RoleMutex):
+    """1.4.1 compatibility proxy for static separation-of-duty constraints."""
+
+    class Meta:
+        proxy = True
+        verbose_name = 'SSD 互斥约束'
+        verbose_name_plural = verbose_name
 
 
 class RolePrerequisite(models.Model):

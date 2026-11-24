@@ -45,6 +45,7 @@ urlpatterns = [
     # Role CRUD
     path('roles/', views.role_list, name='rbac_role_list'),
     path('roles/create/', views.role_create, name='rbac_role_create'),
+    path('roles/<int:pk>/effective_permissions/', views.role_effective_permissions, name='rbac_role_effective_permissions'),
     path('roles/<int:pk>/', views.role_detail, name='rbac_role_detail'),
     path('roles/<int:pk>/update/', views.role_detail, name='rbac_role_update'),
     path('roles/<int:pk>/delete/', views.role_detail, name='rbac_role_delete'),
@@ -61,6 +62,11 @@ urlpatterns = [
     # Plugin registry
     path('plugins/manifest/', views.plugin_manifest, name='rbac_plugin_manifest'),
     path('plugins/', views.plugin_list, name='rbac_plugin_list'),
+
+    # 1.4.1 SoD compatibility endpoints
+    path('sod-constraints/check/', views.sod_constraint_check, name='rbac_sod_constraint_check'),
+    path('sod-constraints/', views.sod_constraint_list, name='rbac_sod_constraint_list'),
+    path('sod-constraints/<int:pk>/', views.sod_constraint_detail, name='rbac_sod_constraint_detail'),
 
     # RBAC3 / RBAC4 constraints & active roles
     path('constraints/', views.constraint_list, name='rbac_constraint_list'),

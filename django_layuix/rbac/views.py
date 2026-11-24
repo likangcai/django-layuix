@@ -583,7 +583,7 @@ def public_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.4.0'),
+        'system_version': get_config('system_version', '1.4.1'),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),
         'favicon_url': get_config('favicon_url', ''),
@@ -619,7 +619,7 @@ def system_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.4.0'),
+        'system_version': get_config('system_version', '1.4.1'),
         'system_description': get_config('system_description', ''),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),
@@ -1020,6 +1020,31 @@ def menu_create(request):
 
 # ==================== Role CRUD ====================
 
+def _role_payload(role):
+    parent_ids = list(role.parent_roles.values_list('id', flat=True))
+    children_ids = sorted(set(
+        list(role.children.values_list('id', flat=True)) +
+        list(role.child_roles.values_list('id', flat=True))
+    ))
+    return {
+        'id': role.id,
+        'name': role.name,
+        'code': role.code,
+        'description': role.description,
+        'is_system': role.is_system,
+        'status': role.status,
+        'menu_ids': list(role.menus.values_list('id', flat=True)),
+        'parent_ids': parent_ids,
+        'parent_id': role.parent_id or (parent_ids[0] if parent_ids else None),
+        'children_ids': children_ids,
+        'max_users': role.max_users,
+        'scope_node': role.scope_node,
+        'scope_depth': role.scope_depth,
+        'create_time': fmt_time(role.create_time),
+        'update_time': fmt_time(role.update_time),
+    }
+
+
 @csrf_exempt
 @api_login_required
 def role_list(request):
@@ -1027,21 +1052,17 @@ def role_list(request):
     from .models import Role
 
     roles = Role.objects.all().order_by('id')
-    data = []
-    for r in roles:
-        data.append({
-            'id': r.id,
-            'name': r.name,
-            'code': r.code,
-            'description': r.description,
-            'is_system': r.is_system,
-            'status': r.status,
-            'menu_ids': list(r.menus.values_list('id', flat=True)),
-            'parent_ids': list(r.parent_roles.values_list('id', flat=True)),
-            'max_users': r.max_users,
-            'create_time': fmt_time(r.create_time),
-            'update_time': fmt_time(r.update_time),
-        })
+    return success_response([_role_payload(role) for role in roles])
+
+
+@csrf_exempt
+@api_login_required
+def role_effective_permissions(request, pk):
+    """GET /api/rbac/roles/<id>/effective_permissions/ - 自有与继承权限来源"""
+    from .engine import effective_permissions_for_role
+    data = effective_permissions_for_role(pk)
+    if data is None:
+        return error_response('角色不存在', 404)
     return success_response(data)
 
 
@@ -1057,20 +1078,7 @@ def role_detail(request, pk):
         return error_response('角色不存在', 404)
 
     if request.method == 'GET':
-        data = {
-            'id': role.id,
-            'name': role.name,
-            'code': role.code,
-            'description': role.description,
-            'is_system': role.is_system,
-            'status': role.status,
-            'menu_ids': list(role.menus.values_list('id', flat=True)),
-            'parent_ids': list(role.parent_roles.values_list('id', flat=True)),
-            'max_users': role.max_users,
-            'create_time': fmt_time(role.create_time),
-            'update_time': fmt_time(role.update_time),
-        }
-        return success_response(data)
+        return success_response(_role_payload(role))
 
     elif request.method == 'PUT':
         if not request.user.has_perm('role:edit'):
@@ -1090,12 +1098,37 @@ def role_detail(request, pk):
                 role.max_users = int(body['max_users']) or None
             except (TypeError, ValueError):
                 return error_response('人数上限必须是整数', 400)
+        if 'scope_node' in body:
+            role.scope_node = str(body['scope_node'] or '')[:100]
+        if 'scope_depth' in body:
+            try:
+                role.scope_depth = max(0, int(body['scope_depth'] or 0))
+            except (TypeError, ValueError):
+                return error_response('作用域层数必须是非负整数', 400)
+
+        parent_ids_payload = body.get('parent_ids')
+        if 'parent_id' in body:
+            raw_parent = body['parent_id']
+            try:
+                parent_id = int(raw_parent) if raw_parent else None
+            except (TypeError, ValueError):
+                return error_response('上级角色必须是整数', 400)
+            if parent_id == role.pk:
+                return error_response('上级角色不能是自身', 400)
+            try:
+                parent_ids_payload = validate_role_parents(
+                    role.id, [parent_id] if parent_id else []
+                )
+            except RbacConstraintError as e:
+                return error_response(e.message, 400)
+            role.parent_id = parent_id
+
         role.save()
         if 'menu_ids' in body:
             role.menus.set(body['menu_ids'])
-        if 'parent_ids' in body:
+        if parent_ids_payload is not None:
             try:
-                parents = validate_role_parents(role.id, body['parent_ids'])
+                parents = validate_role_parents(role.id, parent_ids_payload)
             except RbacConstraintError as e:
                 return error_response(e.message, 400)
             role.parent_roles.set(parents)
@@ -1135,8 +1168,19 @@ def role_create(request):
     from .engine import RbacConstraintError, validate_role_parents
     try:
         max_users = int(body.get('max_users') or 0) or None
+        scope_depth = max(0, int(body.get('scope_depth') or 0))
     except (TypeError, ValueError):
-        return error_response('人数上限必须是整数', 400)
+        return error_response('人数上限/作用域层数必须是整数', 400)
+
+    parent_ids_payload = body.get('parent_ids')
+    parent_id = None
+    if 'parent_id' in body:
+        raw_parent = body['parent_id']
+        try:
+            parent_id = int(raw_parent) if raw_parent else None
+        except (TypeError, ValueError):
+            return error_response('上级角色必须是整数', 400)
+        parent_ids_payload = [parent_id] if parent_id else []
 
     role = Role(
         name=name,
@@ -1144,12 +1188,15 @@ def role_create(request):
         description=body.get('description', ''),
         status=bool(body.get('status', True)),
         max_users=max_users,
+        scope_node=str(body.get('scope_node') or '')[:100],
+        scope_depth=scope_depth,
+        parent_id=parent_id,
     )
     role.save()
 
-    if 'parent_ids' in body:
+    if parent_ids_payload is not None:
         try:
-            role.parent_roles.set(validate_role_parents(role.id, body['parent_ids']))
+            role.parent_roles.set(validate_role_parents(role.id, parent_ids_payload))
         except RbacConstraintError as e:
             role.delete()
             return error_response(e.message, 400)
@@ -1807,6 +1854,122 @@ def constraint_list(request):
             'dsd_strategy': _get_config(DSD_STRATEGY_KEY, 'greedy'),
         },
     })
+
+
+def _sod_payload(group):
+    return {
+        'id': group.id,
+        'name': group.name,
+        'mutually_exclusive_roles': [
+            {'id': role.id, 'name': role.name}
+            for role in group.roles.all().order_by('id')
+        ],
+        'role_ids': list(group.roles.values_list('id', flat=True)),
+        'description': group.description,
+        'is_active': group.is_active,
+    }
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def sod_constraint_list(request):
+    """GET/POST /api/rbac/sod-constraints/ - 1.4.1 SSD 兼容端点"""
+    from .engine import RbacConstraintError, require_roles
+    from .models import SoDConstraint
+
+    if request.method == 'GET':
+        groups = SoDConstraint.objects.filter(kind='ssd').order_by('id').prefetch_related('roles')
+        return success_response([_sod_payload(group) for group in groups])
+
+    if request.method == 'POST':
+        body = get_request_body(request)
+        name = str(body.get('name', '')).strip()
+        if not name:
+            return error_response('约束名称不能为空', 400)
+        if SoDConstraint.objects.filter(name=name).exists():
+            return error_response('约束名称已存在', 400)
+        try:
+            role_ids = require_roles(body.get('mutually_exclusive_role_ids') or body.get('role_ids') or [])
+        except RbacConstraintError as e:
+            return error_response(e.message, 400)
+        if len(role_ids) < 2:
+            return error_response('互斥约束至少包含两个角色', 400)
+        group = SoDConstraint.objects.create(
+            name=name, kind='ssd',
+            description=body.get('description', ''),
+            is_active=bool(body.get('is_active', True)),
+        )
+        group.roles.set(role_ids)
+        return success_response({'id': group.id}, msg='创建成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def sod_constraint_detail(request, pk):
+    """GET/PUT/DELETE /api/rbac/sod-constraints/<id>/ - 1.4.1 SSD 兼容端点"""
+    from .engine import RbacConstraintError, require_roles
+    from .models import SoDConstraint
+
+    group = SoDConstraint.objects.filter(pk=pk, kind='ssd').first()
+    if not group:
+        return error_response('约束不存在', 404)
+
+    if request.method == 'GET':
+        return success_response(_sod_payload(group))
+
+    if request.method == 'PUT':
+        body = get_request_body(request)
+        if 'name' in body:
+            name = str(body['name']).strip()
+            if not name:
+                return error_response('约束名称不能为空', 400)
+            if SoDConstraint.objects.filter(name=name).exclude(pk=pk).exists():
+                return error_response('约束名称已存在', 400)
+            group.name = name
+        if 'description' in body:
+            group.description = body['description']
+        if 'is_active' in body:
+            group.is_active = bool(body['is_active'])
+        group.save()
+        role_key = 'mutually_exclusive_role_ids' if 'mutually_exclusive_role_ids' in body else 'role_ids'
+        if role_key in body:
+            try:
+                role_ids = require_roles(body[role_key] or [])
+            except RbacConstraintError as e:
+                return error_response(e.message, 400)
+            if len(role_ids) < 2:
+                return error_response('互斥约束至少包含两个角色', 400)
+            group.roles.set(role_ids)
+        return success_response(msg='更新成功')
+
+    if request.method == 'DELETE':
+        group.delete()
+        return success_response(msg='删除成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+def sod_constraint_check(request):
+    """POST /api/rbac/sod-constraints/check/ - 实时 SSD 预校验"""
+    from .engine import check_sod_conflict
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    body = get_request_body(request)
+    target_user = request.user
+    user_id = body.get('user_id')
+    if user_id:
+        from django.contrib.auth import get_user_model
+        target_user = get_user_model().objects.filter(pk=user_id).first() or request.user
+    result = check_sod_conflict(target_user, body.get('role_ids') or [])
+    if result['exempt']:
+        result['message'] = '已豁免，操作将记录审计'
+    return success_response(result)
 
 
 @csrf_exempt

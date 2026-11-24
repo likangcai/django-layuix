@@ -59,6 +59,14 @@
                 <label class="layui-form-label">说明</label>
                 <div class="layui-input-block"><input name="description" class="layui-input"></div>
             </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">快捷模板</label>
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn layui-btn-xs layui-btn-primary sod-template" data-name="制单/审核" data-keywords="制单,审核">制单/审核</button>
+                    <button type="button" class="layui-btn layui-btn-xs layui-btn-primary sod-template" data-name="申请/审批" data-keywords="申请,审批">申请/审批</button>
+                    <button type="button" class="layui-btn layui-btn-xs layui-btn-primary sod-template" data-name="出纳/会计" data-keywords="出纳,会计">出纳/会计</button>
+                </div>
+            </div>
             <button class="layui-btn layui-btn-sm" lay-submit lay-filter="mutexSubmit">新增互斥组</button>
         </form>
         <div id="mutexList" style="margin-top:14px;"></div>
@@ -125,6 +133,22 @@ layui.use(['form', 'layer'], function() {
         }).join('') || '<span class="muted">暂无角色</span>');
         form.render('checkbox');
     }
+
+    $(document).off('click.sodTemplate').on('click.sodTemplate', '.sod-template', function() {
+        var $btn = $(this);
+        var keywords = String($btn.data('keywords') || '').split(',').filter(Boolean);
+        var matched = [];
+        roles.forEach(function(role) {
+            keywords.forEach(function(word) {
+                if (role.name.indexOf(word) > -1 && matched.indexOf(role.id) === -1) matched.push(role.id);
+            });
+        });
+        $('[name="name"]').val($btn.data('name') || '');
+        $('[name="kind"]').val('ssd');
+        renderRoleCheckboxes('#mutexRoles', matched);
+        form.render('select');
+        layer.msg(matched.length ? '已按模板勾选匹配角色，请核对' : '已填入模板名称，请手动选择角色', {icon: 1});
+    });
 
     function flattenPermissions(nodes, result) {
         (nodes || []).forEach(function(node) {

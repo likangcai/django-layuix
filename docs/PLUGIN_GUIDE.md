@@ -1,6 +1,6 @@
 # 第三方插件体系
 
-版本：v2.0　适用版本：django-layuix 1.4.0+
+版本：v2.0　适用版本：django-layuix 1.4.1+
 
 ## 1. 插件组成
 
@@ -29,7 +29,7 @@ class MyAppConfig(PluginConfig):
     plugin_api_prefix = '/admin/api/my_crm/'
     plugin_menu_path = '/mycrm/customers'
     plugin_dependencies = ('requests>=2.0',)
-    min_layuix_version = '1.4.0'
+    min_layuix_version = '1.4.1'
 
     plugin_menus = [
         ('CRM 管理', 'layui-icon-component', '/mycrm/customers', 2, 1, None),

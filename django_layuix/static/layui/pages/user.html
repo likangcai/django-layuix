@@ -287,6 +287,31 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
     // 角色列表缓存
     var roleList = [];
 
+    function checkSodConflict(containerId, roleIds, userId) {
+        var $warning = $('#' + containerId).find('.sod-warning');
+        if (!roleIds.length) {
+            $warning.attr('data-blocked', '0').text('');
+            return;
+        }
+        postApi('/admin/api/rbac/sod-constraints/check/', {user_id: userId || null, role_ids: roleIds}, function(res) {
+            if (res.code !== 200) return;
+            var data = res.data || {};
+            if (data.exempt) {
+                $warning.attr('data-blocked', '0').text(data.message || '已豁免，操作将记录审计');
+                return;
+            }
+            if (!data.allowed) {
+                var names = [];
+                (data.conflicts || []).forEach(function(item) {
+                    names.push(item.constraint_name);
+                });
+                $warning.attr('data-blocked', '1').text('SSD 冲突：' + names.join('、'));
+            } else {
+                $warning.attr('data-blocked', '0').text('');
+            }
+        });
+    }
+
     // 当前操作的用户数据缓存
     var currentEditUserData = null;
     var currentResetPwdUserData = null;
@@ -329,6 +354,7 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
         html += '</dl>';
         // 隐藏字段存储选中的ID
         html += '<input type="hidden" name="role_ids" value="' + selectedIds.join(',') + '" />';
+        html += '<div class="sod-warning" data-blocked="0" style="color:var(--danger-color,#ff5722);font-size:12px;padding:4px 10px;"></div>';
         html += '</div>';
         
         $('#' + containerId).html(html);
@@ -427,6 +453,7 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
             // 更新隐藏字段和标签
             $hiddenInput.val(selectedIds.join(','));
             renderTags();
+            checkSodConflict(containerId, selectedIds, currentEditUserData && currentEditUserData.id);
         });
         
         // 点击外部收起
@@ -554,6 +581,10 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
         if (field.role_ids && field.role_ids !== '') {
             roleIds = field.role_ids.split(',').map(function(id) { return parseInt(id); });
         }
+        if ($('#addRoleSelect').find('.sod-warning').attr('data-blocked') === '1') {
+            layer.msg('存在 SSD 互斥角色，请调整后再提交', {icon: 2});
+            return false;
+        }
 
         var submitData = {
             username: field.username,
@@ -618,6 +649,10 @@ layui.use(['table', 'form', 'layer', 'laypage'], function(){
         var roleIds = [];
         if (field.role_ids && field.role_ids !== '') {
             roleIds = field.role_ids.split(',').map(function(id) { return parseInt(id); });
+        }
+        if ($('#editRoleSelect').find('.sod-warning').attr('data-blocked') === '1') {
+            layer.msg('存在 SSD 互斥角色，请调整后再提交', {icon: 2});
+            return false;
         }
 
         var submitData = {

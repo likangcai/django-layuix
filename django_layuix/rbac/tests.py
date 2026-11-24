@@ -4,7 +4,7 @@ import importlib.util
 from unittest import mock, skipUnless
 
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 
 from django_layuix.integrations.auth import (
     authenticate_request, register_authenticator,
@@ -461,3 +461,88 @@ class Rbac4ExtensionTests(TestCase):
         user_request.user = self.user
         with self.assertRaises(HttpError):
             protected(user_request)
+
+
+class Rbac141CompatibilityTests(TestCase):
+
+    def setUp(self):
+        User = get_user_model()
+        self.admin = User.objects.create_superuser(
+            username='rbac141_admin', email='rbac141@example.com', password='pass12345'
+        )
+        self.user = User.objects.create_user(username='rbac141_user', password='pass12345')
+        self.cashier = Role.objects.create(name='范围角色', code='rbac141_scope')
+        self.client.force_login(self.admin)
+
+    def _create_role(self, name, code, **extra):
+        payload = {'name': name, 'code': code, 'menu_ids': []}
+        payload.update(extra)
+        response = self.client.post('/admin/api/rbac/roles/create/', payload, content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        return Role.objects.get(code=code)
+
+    def test_parent_id_and_effective_permissions(self):
+        menu = Menu.objects.create(name='支付查看', menu_type=3, permission='rbac141:pay:view')
+        parent = self._create_role('财务经理', 'rbac141_manager', menu_ids=[menu.id])
+        child = self._create_role('财务专员', 'rbac141_staff', parent_id=parent.id)
+
+        roles = self.client.get('/admin/api/rbac/roles/').json()['data']
+        child_payload = next(item for item in roles if item['id'] == child.id)
+        parent_payload = next(item for item in roles if item['id'] == parent.id)
+        self.assertEqual(child_payload['parent_id'], parent.id)
+        self.assertIn(child.id, parent_payload['children_ids'])
+
+        response = self.client.get('/admin/api/rbac/roles/%s/effective_permissions/' % child.id)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()['data']
+        self.assertIn('rbac141:pay:view', data['all_permissions'])
+        self.assertTrue(any(item['source_role_id'] == parent.id for item in data['inherited']))
+
+    def test_parent_cycle_rejected(self):
+        role_a = self._create_role('角色A', 'rbac141_a')
+        role_b = self._create_role('角色B', 'rbac141_b', parent_id=role_a.id)
+        response = self.client.put(
+            '/admin/api/rbac/roles/%s/update/' % role_a.id,
+            {'parent_id': role_b.id}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        role_a.refresh_from_db()
+        self.assertIsNone(role_a.parent_id)
+
+    def test_sod_constraint_api_and_check(self):
+        from .models import SoDConstraint
+
+        role_a = self._create_role('制单员', 'rbac141_maker')
+        role_b = self._create_role('审核员', 'rbac141_checker')
+        response = self.client.post('/admin/api/rbac/sod-constraints/', {
+            'name': '制单审核互斥', 'role_ids': [role_a.id, role_b.id],
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(SoDConstraint.objects.filter(name='制单审核互斥', kind='ssd').exists())
+
+        check = self.client.post('/admin/api/rbac/sod-constraints/check/', {
+            'user_id': self.user.id, 'role_ids': [role_a.id, role_b.id],
+        }, content_type='application/json')
+        self.assertEqual(check.status_code, 200)
+        self.assertFalse(check.json()['data']['allowed'])
+        self.assertTrue(check.json()['data']['conflicts'])
+
+        response = self.client.post('/admin/api/rbac/users/create/', {
+            'username': 'rbac141_conflict', 'password': 'pass12345',
+            'role_ids': [role_a.id, role_b.id],
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+    @override_settings(
+        LAYUIX_SCOPE_HIERARCHY=['global', 'region', 'team'],
+        LAYUIX_SCOPE_TREE={'east_region': ['east_team_a']},
+    )
+    def test_scope_node_expansion(self):
+        from .scopes import get_user_scope_nodes, visible_scope_nodes
+
+        self.assertEqual({'east_region', 'east_team_a'}, visible_scope_nodes('east_region', 1))
+        self.user.roles.add(self.cashier)
+        self.cashier.scope_node = 'east_region'
+        self.cashier.scope_depth = 1
+        self.cashier.save(update_fields=['scope_node', 'scope_depth'])
+        self.assertEqual({'east_region', 'east_team_a'}, get_user_scope_nodes(self.user))
