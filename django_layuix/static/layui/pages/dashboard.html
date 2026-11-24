@@ -59,13 +59,13 @@
             font-size: 22px; flex-shrink: 0;
         }
         .stat-card .stat-icon.blue { background: rgba(30,159,255,0.1); color: #1e9fff; }
-        [data-theme="dark"] .stat-card .stat-icon.blue { background: rgba(30,159,255,0.15); color: #4db8ff; }
+        [data-theme-mode="dark"] .stat-card .stat-icon.blue { background: rgba(30,159,255,0.15); color: #4db8ff; }
         .stat-card .stat-icon.green { background: rgba(95,184,120,0.1); color: #5FB878; }
-        [data-theme="dark"] .stat-card .stat-icon.green { background: rgba(95,184,120,0.15); color: #7dcea0; }
+        [data-theme-mode="dark"] .stat-card .stat-icon.green { background: rgba(95,184,120,0.15); color: #7dcea0; }
         .stat-card .stat-icon.orange { background: rgba(255,184,0,0.1); color: #FFB800; }
-        [data-theme="dark"] .stat-card .stat-icon.orange { background: rgba(255,184,0,0.15); color: #ffc940; }
+        [data-theme-mode="dark"] .stat-card .stat-icon.orange { background: rgba(255,184,0,0.15); color: #ffc940; }
         .stat-card .stat-icon.purple { background: rgba(30,159,255,0.1); color: #1e9fff; }
-        [data-theme="dark"] .stat-card .stat-icon.purple { background: rgba(30,159,255,0.15); color: #4db8ff; }
+        [data-theme-mode="dark"] .stat-card .stat-icon.purple { background: rgba(30,159,255,0.15); color: #4db8ff; }
         .stat-card .stat-info h3 { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
         .stat-card .stat-info p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
         .quick-links { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
@@ -122,7 +122,7 @@
         <!-- Welcome Banner -->
         <div class="dashboard-welcome">
             <h2 id="welcomeText">Welcome</h2>
-            <p id="welcomeDesc">Django Layui Admin</p>
+            <p id="welcomeDesc">Django Layuix Admin</p>
             <div class="welcome-time" id="currentTime"></div>
         </div>
 
@@ -317,8 +317,9 @@
                                 
                                 if (res.code === 200) {
                                     layer.msg(t('profile.password.success'), {icon: 1, time: 2000, end: function() {
-                                        // 跳转到登录页面（顶层窗口）
-                                        window.top.location.href = '/admin/login/';
+                                        // 跳转到登录页面（优先使用父窗口注入的后台登录地址）
+                                        var loginUrl = (window.parent && window.parent.LAYUI_CONFIG && window.parent.LAYUI_CONFIG.admin_login_url) || '/admin/login/';
+                                        window.top.location.href = loginUrl;
                                     }});
                                 } else { layer.msg(res.msg || t('common.fail'), {icon: 2}); }
                             });
@@ -454,8 +455,8 @@
                     var link = links[i];
                     // 使用 data-url 存储链接，避免 onclick 中的引号转义问题
                     html += '<div class="quick-link-item" data-url="' + escapeHtml(link.url) + '" data-name="' + escapeHtml(link.name) + '">';
-                    html += '<i class="layui-icon ' + link.icon + '"></i>';
-                    html += '<span>' + link.name + '</span>';
+                    html += '<i class="layui-icon ' + escapeHtml(link.icon) + '"></i>';
+                    html += '<span>' + escapeHtml(link.name) + '</span>';
                     html += '</div>';
                 }
                 $container.html(html);
@@ -472,12 +473,22 @@
             function handleQuickLinkClick(url, name) {
                 if (!url) return;
                 
-                // JavaScript 协议：直接执行
+                // JavaScript 协议：仅允许调用白名单中的无参函数，避免执行任意代码
                 if (url.indexOf('javascript:') === 0) {
-                    try {
-                        eval(url.substring(11));
-                    } catch(e) {
-                        console.error('执行 JavaScript 失败:', e);
+                    var expr = url.substring(11).trim();
+                    var match = /^([A-Za-z_$][\w$]*)\s*\(\s*\)\s*;?$/.exec(expr);
+                    if (match) {
+                        var fn = null;
+                        try {
+                            fn = (window.parent && window.parent[match[1]]) || window[match[1]];
+                        } catch(e) {}
+                        if (typeof fn === 'function') {
+                            fn();
+                        } else {
+                            console.warn('快捷入口函数不可用:', match[1]);
+                        }
+                    } else {
+                        console.warn('已拦截不安全的快捷入口表达式');
                     }
                     return;
                 }
@@ -773,66 +784,45 @@
                 }
             });
             
-            // 尝试 SSE 实时推送，失败则使用轮询
-            var sseConnected = false;
-            var usePolling = false; // 优先使用 SSE，失败后自动降级为轮询
-            
-            if (usePolling) {
-                // 轮询模式：每5秒更新一次
-                setInterval(function() {
+            // SSE 优先，失败后降级为轮询；轮询定时器只启动一次
+            var pollTimer = null;
+            function startPolling() {
+                if (pollTimer) return;
+                pollTimer = setInterval(function() {
                     getApi('/admin/api/rbac/system/info/', function(res) {
                         if (res.code === 200 && res.data) {
                             updateSystemInfo(res.data);
                         }
                     });
                 }, 5000);
-            } else {
-                // SSE 模式
-                try {
-                    var sseUrl = '/admin/api/rbac/system/info/stream/';
-                    var eventSource = new EventSource(sseUrl);
-                    
-                    eventSource.onopen = function() {
-                        sseConnected = true;
-                        console.log('SSE connected');
-                    };
-                    
-                    eventSource.onmessage = function(event) {
-                        try {
-                            var data = JSON.parse(event.data);
-                            if (data.code === 200 && data.data) {
-                                updateSystemInfo(data.data);
-                            }
-                        } catch(e) {
-                            console.error('SSE parse error:', e);
+            }
+            try {
+                var sseUrl = '/admin/api/rbac/system/info/stream/';
+                var eventSource = new EventSource(sseUrl);
+
+                eventSource.onopen = function() {
+                    console.log('SSE connected');
+                };
+
+                eventSource.onmessage = function(event) {
+                    try {
+                        var data = JSON.parse(event.data);
+                        if (data.code === 200 && data.data) {
+                            updateSystemInfo(data.data);
                         }
-                    };
-                    
-                    eventSource.onerror = function() {
-                        console.warn('SSE error, fallback to polling');
-                        eventSource.close();
-                        sseConnected = false;
-                        
-                        // 降级为轮询
-                        setInterval(function() {
-                            getApi('/admin/api/rbac/system/info/', function(res) {
-                                if (res.code === 200 && res.data) {
-                                    updateSystemInfo(res.data);
-                                }
-                            });
-                        }, 5000);
-                    };
-                } catch(e) {
-                    console.error('SSE not supported, using polling:', e);
-                    // 降级为轮询
-                    setInterval(function() {
-                        getApi('/admin/api/rbac/system/info/', function(res) {
-                            if (res.code === 200 && res.data) {
-                                updateSystemInfo(res.data);
-                            }
-                        });
-                    }, 5000);
-                }
+                    } catch(e) {
+                        console.error('SSE parse error:', e);
+                    }
+                };
+
+                eventSource.onerror = function() {
+                    console.warn('SSE error, fallback to polling');
+                    eventSource.close();
+                    startPolling();
+                };
+            } catch(e) {
+                console.error('SSE not supported, using polling:', e);
+                startPolling();
             }
 
         });

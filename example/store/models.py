@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 store/models.py - 商品管理示例模型
-演示 django-layui 主题在普通 Django Admin 模型上的效果
+演示 django-layuix 主题在普通 Django Admin 模型上的效果
 """
 from django.db import models
 

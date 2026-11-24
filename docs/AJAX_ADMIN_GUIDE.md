@@ -1,4 +1,4 @@
-# Django-Layui AJAX Admin 使用指南
+# Django-Layuix AJAX Admin 使用指南
 
 ## 概述
 
@@ -248,7 +248,7 @@ def my_action(self, request, queryset):
 
 ## 与django-simpleui对比
 
-| 特性 | django-simpleui | django-layui |
+| 特性 | django-simpleui | django-layuix |
 |------|----------------|---------------|
 | AJAX批量操作 | ✅ | ✅ |
 | Layer弹窗配置 | ✅ | ✅ |

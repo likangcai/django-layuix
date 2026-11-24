@@ -1,12 +1,12 @@
 from django import template
 from django.conf import settings
 
-import time
+from datetime import datetime
 
 register = template.Library()
 
-# 静态资源版本号（每次部署时更新，用于缓存刷新）
-_STATIC_VERSION = str(int(time.time()))
+# 静态资源版本号：与 iframe 缓存参数保持同一量级（分钟级），避免两套口径
+_STATIC_VERSION = datetime.now().strftime('%Y%m%d%H%M')
 
 
 def _get_db_config(key, default=''):
@@ -25,9 +25,8 @@ def _get_db_config(key, default=''):
 
 @register.simple_tag
 def layui_config(key, default=''):
-    """Get configuration value from settings.LAYUI_CONFIG dict"""
-    config = getattr(settings, 'LAYUI_CONFIG', {})
-    return config.get(key, default)
+    """Get configuration value: database first, settings second, default last."""
+    return _get_db_config(key, default)
 
 
 @register.simple_tag
@@ -45,7 +44,7 @@ def layui_cdn():
 @register.simple_tag
 def system_name():
     """Return system name from config (database first, settings fallback)"""
-    return _get_db_config('system_name', 'Django Layui Admin')
+    return _get_db_config('system_name', 'Django Layuix Admin')
 
 
 @register.simple_tag
@@ -57,7 +56,7 @@ def static_version():
 @register.simple_tag
 def system_version():
     """Return system version"""
-    return _get_db_config('system_version', '1.0.0')
+    return _get_db_config('system_version', '1.4.0')
 
 
 @register.simple_tag
@@ -111,7 +110,7 @@ def login_bg_image():
 @register.simple_tag
 def copyright_text():
     """Return copyright text"""
-    return _get_db_config('copyright', 'YingZi © 2024 Django Layui Admin')
+    return _get_db_config('copyright', '')
 
 
 @register.simple_tag

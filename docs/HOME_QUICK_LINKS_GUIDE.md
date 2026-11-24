@@ -2,7 +2,7 @@
 
 ## 📋 功能概述
 
-django-layui 支持在首页仪表盘显示自定义快速链接，方便用户快速访问常用页面或外部网站。
+django-layuix 支持在首页仪表盘显示自定义快速链接，方便用户快速访问常用页面或外部网站。
 
 ## ⚙️ 配置位置
 
@@ -225,4 +225,4 @@ LAYUI_CONFIG = {
 
 - [Layui 图标文档](https://layui.dev/docs/2/icon/)
 - [Django 官方文档](https://docs.djangoproject.com/)
-- [README 配置说明](../README.md#44-首页自定义快速链接类似-django-simpleui)
+- [README 配置说明](../README.md)

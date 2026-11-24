@@ -1,8 +1,8 @@
-# Django-Layui 深色/浅色双模式系统使用指南
+# Django-Layuix 深色/浅色双模式系统使用指南
 
 ## 🎨 概述
 
-Django-Layui 采用现代化的**深色/浅色双模式（Dark/Light Mode）**设计，为用户提供舒适的视觉体验。系统支持一键切换，自动保存用户偏好，并完美适配所有界面组件。
+Django-Layuix 采用现代化的**深色/浅色双模式（Dark/Light Mode）**设计，为用户提供舒适的视觉体验。系统支持一键切换，自动保存用户偏好，并完美适配所有界面组件。
 
 ### 核心特性
 
@@ -20,7 +20,7 @@ Django-Layui 采用现代化的**深色/浅色双模式（Dark/Light Mode）**�
 
 ### 基础使用（无需配置）
 
-安装 django-layui 后，访问 `/admin/` 即可看到带有主题切换功能的后台界面。
+安装 django-layuix 后，访问 `/admin/` 即可看到带有主题切换功能的后台界面。
 
 - **默认主题**: 深色模式（Dark）
 - **切换位置**: 页面右上角 ☀️ / 🌙 图标按钮
@@ -30,7 +30,7 @@ Django-Layui 采用现代化的**深色/浅色双模式（Dark/Light Mode）**�
 
 #### 方式一：在 Admin 后台设置
 
-访问 `/admin/django_layui_rbac/userprofile/`，编辑用户记录，选择：
+访问 `/admin/django_layuix_rbac/userprofile/`，编辑用户记录，选择：
 - `默认深色` (Dark Mode)
 - `默认浅色` (Light Mode)
 
@@ -532,7 +532,7 @@ if (window.parent && window.parent.getCurrentTheme) {
 
 ## 📊 与其他框架对比
 
-| 特性 | django-simpleui | django-layui (新版) |
+| 特性 | django-simpleui | django-layuix (新版) |
 |------|----------------|---------------------|
 | **主题数量** | 10+种 | 2种（深色/浅色） |
 | **切换方式** | 配置文件 | 用户级别，实时切换 |
@@ -625,7 +625,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e =
 
 ## 🎉 总结
 
-Django-Layui 的深色/浅色双模式系统让你可以:
+Django-Layuix 的深色/浅色双模式系统让你可以:
 
 - ✅ 提供现代化的用户体验（类似 macOS / Windows 11 / VS Code）
 - ✅ 降低视觉疲劳（特别是夜间使用）

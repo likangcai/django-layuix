@@ -410,7 +410,7 @@ layui.use(['table', 'form', 'layer'], function(){
                 form.render(null, formFilter);
 
                 // 类型切换事件
-                form.on('select(configType)', function(data) {
+                form.off('select(configType)').on('select(configType)', function(data) {
                     switchValueInput(data.value);
                     form.render(null, formFilter);
                 });

@@ -6,7 +6,7 @@
 
 - 🌗 现代化 Layui 后台管理界面（深色/浅色主题切换）
 - 🌐 **完整国际化支持**（中文/英文），前端 JS + 后端 Django i18n 双层翻译，菜单多语言字段
-- 🔐 RBAC 权限管理（菜单管理、角色管理、用户管理、按钮级权限控制）
+- 🔐 RBAC3 权限管理（菜单管理、角色管理、用户管理、按钮级权限控制、角色继承、SSD/DSD 约束、前置角色与人数限制）
 - 📊 Dashboard 仪表盘（CPU/内存折线图、磁盘饼图、网络监控）
 - 📝 操作日志（自动记录用户操作，支持自定义路径前缀，可记录前端 API）
 - ⚙️ 系统配置（键值对配置，数据库动态管理，实时生效）
@@ -67,7 +67,7 @@ INSTALLED_APPS = [
 ]
 
 # 使用自定义用户模型（推荐）
-AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'
+AUTH_USER_MODEL = 'django_layuix_rbac.UserProfile'
 ```
 
 > **注意**：如果需要 iframe 嵌入功能，请从 `MIDDLEWARE` 中移除 `django.middleware.clickjacking.XFrameOptionsMiddleware`。
@@ -162,8 +162,8 @@ python manage.py runserver
 # settings.py
 LAYUI_CONFIG = {
     # 系统信息
-    'system_name': 'Django Layui Admin',
-    'system_version': '1.0.0',         # 系统版本号（显示在侧边栏）
+    'system_name': 'Django Layuix Admin',
+    'system_version': '1.4.0',         # 系统版本号（显示在侧边栏）
     'system_description': '',          # 系统描述（显示在登录页）
 
     # Logo
@@ -195,7 +195,7 @@ LAYUI_CONFIG = {
         # {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
         # {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
         # {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
-        # {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django_layui'}
+        # {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django-layuix'}
         # {'name': '自定义页面', 'icon': 'layui-icon-app', 'url': '/custom-page/'},
     ],
 }
@@ -268,8 +268,8 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
-| `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layui Admin |
-| `system_version` | 版本号 | 1.0.0 |
+| `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
+| `system_version` | 版本号 | 1.4.0 |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |
 | `favicon_url` | 浏览器标签页图标 URL | （空） |
@@ -300,7 +300,7 @@ LAYUI_CONFIG = {
         {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
         {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
         {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
-        {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django_layui'},
+        {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django-layuix'},
         
         # 自定义应用页面
         {'name': '商品管理', 'icon': 'layui-icon-cart-simple', 'url': '/store/product'},
@@ -363,7 +363,6 @@ django-layuix 提供完整的中英文双语切换功能，包括前端界面和
 - **菜单名称（中文）**：必填，默认显示
 - **英文名称**：选填，英文用户显示
 - **简体中文**：选填，简体中文用户显示
-- **繁体中文**：选填，繁体中文用户显示
 
 系统会根据用户的语言偏好自动返回对应的菜单名称。如果某个语言的翻译缺失，会自动回退到中文名称。
 
@@ -789,12 +788,25 @@ django_layuix/templates/admin/change_form.html → 模型编辑页
 
 ---
 
+## 从 django-layui 升级
+
+【判断】分发名已统一为 `django-layuix`，包名仍为 `django_layuix`。旧版本数据库中的应用标签为 `django_layui_rbac` / `django_layui_ops`，升级到新版本前请执行：
+
+```bash
+python manage.py rename_app_labels
+python manage.py migrate
+python manage.py collectstatic --noinput
+```
+
+该命令会同步更新 `django_migrations.app` 与 `django_content_type.app_label`，不会修改业务数据表。
+
 ## 管理命令
 
 | 命令 | 说明 |
 |------|------|
 | `python manage.py init_menu` | 初始化默认菜单、角色和系统配置 |
 | `python manage.py init_data` | 快速初始化：创建超级管理员、内置角色、完整菜单树（含运维管理） |
+| `python manage.py rename_app_labels` | 升级旧库：把 `django_layui_rbac/ops` 应用标签迁移为 `django_layuix_rbac/ops` |
 
 ### init_data 命令详解
 
@@ -907,8 +919,11 @@ django-layuix 内置深色/浅色双模式切换功能：
 
 ## 环境要求
 
-- Python >= 3.8
-- Django >= 3.2
+- **Python**：3.8–3.13（CI 实际验证 3.10–3.13；3.8/3.9 已通过语法与 API 审计）
+- **Django**：3.2–6.0，需按 Python 版本选择兼容组合
+- 推荐组合：Python 3.12 + Django 5.2/6.0；旧环境建议 Python 3.8/3.9 + Django 4.2 LTS
+
+完整矩阵与兼容处理见 [COMPATIBILITY.md](docs/COMPATIBILITY.md)。
 
 ---
 
@@ -949,6 +964,12 @@ django-layuix 内置深色/浅色双模式切换功能：
 - [首页自定义快速链接配置](docs/HOME_QUICK_LINKS_GUIDE.md) - 仪表盘的快速入口配置
 - [菜单扩展指南](docs/MENU_EXTENSION_GUIDE.md) - 如何添加自定义应用菜单
 - [权限系统使用指南](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例
+- [RBAC3 权限体系使用指南](docs/RBAC3_GUIDE.md) - 角色继承、SSD/DSD 约束、前置角色与后端强制鉴权
+- [纯跨域 Token 认证指南](docs/TOKEN_AUTH_GUIDE.md) - Bearer Token 接入与分离前端对接
+- [认证与权限桥接指南](docs/INTEGRATION_GUIDE.md) - 通用认证桥接、DRF 适配器与 TestHub 对接
+- [插件化扩展契约](docs/PLUGIN_GUIDE.md) - 插件注册、菜单与 API 扩展
+- [TestHub 平台集成评估](docs/TESTHUB_INTEGRATION.md) - 与前后端分离项目的集成方案
+- [发布流程说明](docs/RELEASE_GUIDE.md) - Tag 触发测试、构建与 PyPI 自动发布
 - [AJAX Admin 使用指南](docs/AJAX_ADMIN_GUIDE.md) - AJAX 增强功能
 - [国际化 (i18n) 使用指南](docs/I18N_GUIDE.md) - 中英文双语切换与多语言开发
 
@@ -957,6 +978,7 @@ django-layuix 内置深色/浅色双模式切换功能：
 - [前台菜单可见性控制指南](docs/FRONTEND_MENU_GUIDE.md) - frontend_visible 前后台菜单独立控制
 
 ### 版本信息
+- [版本兼容性说明](docs/COMPATIBILITY.md) - Python/Django 支持矩阵与升级建议
 - [**更新日志 (CHANGELOG)**](docs/CHANGELOG.md) - 版本历史和更新记录
 
 ---
@@ -1085,7 +1107,7 @@ except Exception as e:
 print("\n[3] 用户模型检查:")
 user_model = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 print(f"  当前模型: {user_model}")
-if user_model == 'django_layui_rbc.UserProfile':
+if user_model == 'django_layuix_rbac.UserProfile':
     print("  ✅ 使用自定义 UserProfile")
 else:
     print("  ⚠️ 使用默认 User 模型（RBAC功能可能受限）")
@@ -1224,8 +1246,8 @@ python manage.py init_menu
 # 检查是否正确安装了 django_layuix.rbac
 python manage.py shell
 
->>> import django_layuix.rbac
->>> print(django_layuix.rbac.__version__)  # 如果报错，说明安装有问题
+>>> import django_layuix
+>>> print(django_layuix.__version__)  # 如果报错，说明安装有问题
 
 # 重新安装
 pip install --force-reinstall django-layuix
@@ -1302,7 +1324,7 @@ pip install django-layuix
 # 编辑 your_project/settings.py:
 #   INSTALLED_APPS = ['django_layuix', 'django_layuix.rbac', 'django.contrib.admin', ...]
 #   ⚠️ 注意: 'django_layuix.rbac' 是必需的，不是可选的！
-#   AUTH_USER_MODEL = 'django_layui_rbac.UserProfile' (推荐，启用自定义用户模型)
+#   AUTH_USER_MODEL = 'django_layuix_rbac.UserProfile' (推荐，启用自定义用户模型)
 
 # ===== Step 3: 配置 urls.py =====
 # 编辑 your_project/urls.py:
@@ -1337,7 +1359,7 @@ python manage.py runserver
 如果以上方法都无法解决您的问题：
 
 1. **查看详细文档**: `docs/` 目录下的各专题指南
-2. **搜索已知 Issues**: [GitHub Issues](https://github.com/likangcai/django-layui/issues)
+2. **搜索已知 Issues**: [GitHub Issues](https://github.com/likangcai/django-layuix/issues)
 3. **提交新 Issue**: 请包含以下信息：
    - Django 版本 (`python -c "import django; print(django.VERSION)"`)
    - django-layuix 版本 (`pip show django-layuix`)

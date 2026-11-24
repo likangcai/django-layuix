@@ -50,6 +50,7 @@ class Command(BaseCommand):
             
         if rbac_menu_exists and not force:
             self.stdout.write(self.style.WARNING('rbac 菜单数据已存在，跳过菜单初始化。'))
+            self._ensure_rbac3_menu()
         else:
             if force and rbac_menu_exists:
                 self.stdout.write(self.style.WARNING('使用 --force 模式，将更新现有 rbac 菜单数据（保留角色权限关联）'))
@@ -60,6 +61,33 @@ class Command(BaseCommand):
         self._init_roles(force)
         self._init_default_configs(force)
         self.stdout.write(self.style.SUCCESS('\n初始化完成！'))
+
+    def _ensure_rbac3_menu(self):
+        """Add the constraint-management menu to installations created before RBAC3."""
+        parent = Menu.objects.filter(name='权限管理').first()
+        if not parent:
+            return
+        menu, created = Menu.objects.get_or_create(
+            name='约束管理',
+            defaults={
+                'name_en': 'Constraints',
+                'name_zh_hans': '约束管理',
+                'icon': 'layui-icon-auz',
+                'path': '/system/rbac-constraints',
+                'menu_type': 2,
+                'sort': 4,
+                'parent': parent,
+                'status': True,
+                'visible': True,
+                'backend_visible': True,
+                'frontend_visible': True,
+            },
+        )
+        if created:
+            admin_role = Role.objects.filter(code='admin').first()
+            if admin_role:
+                admin_role.menus.add(menu)
+            self.stdout.write(self.style.SUCCESS('  创建菜单: 约束管理 (RBAC3)'))
 
     def _init_menus(self, force=False):
         """初始化菜单数据"""
@@ -75,6 +103,7 @@ class Command(BaseCommand):
             ('菜单管理', 'Menu', '菜单管理', 'layui-icon-menu-fill', '/permission/menu', 2, 1, '权限管理'),
             ('角色管理', 'Role', '角色管理', 'layui-icon-group', '/permission/role', 2, 2, '权限管理'),
             ('用户管理', 'User', '用户管理', 'layui-icon-username', '/permission/user', 2, 3, '权限管理'),
+            ('约束管理', 'Constraints', '约束管理', 'layui-icon-auz', '/system/rbac-constraints', 2, 4, '权限管理'),
 
             # ---- 系统管理 ----
             ('系统管理', 'System', '系统管理', 'layui-icon-set', '', 1, 2, None),
@@ -435,8 +464,8 @@ class Command(BaseCommand):
         """初始化默认系统配置项"""
         self.stdout.write(self.style.MIGRATE_HEADING('\n  初始化系统配置:'))
         configs = [
-            ('system_name', 'Django Layui Admin', '系统名称，显示在浏览器标题栏和侧边栏', 'string', 1),
-            ('system_version', '1.0.0', '系统版本号', 'string', 2),
+            ('system_name', 'Django Layuix Admin', '系统名称，显示在浏览器标题栏和侧边栏', 'string', 1),
+            ('system_version', '1.4.0', '系统版本号', 'string', 2),
             ('system_description', '', '系统描述信息（显示在管理后台底部）', 'text', 3),
             ('logo_icon', 'layui-icon-code-circle', 'Logo图标（layui图标类名）', 'string', 4),
             ('logo_url', '', 'Logo图片URL（设置后替换图标，支持本地上传）', 'image', 5),
@@ -449,7 +478,7 @@ class Command(BaseCommand):
             ('login_bg_image', '', '登录页背景图片URL（当type为image时生效，支持本地上传）', 'image', 12),
             # 以下配置不会在 ready() 中提前创建，只在 init_menu 中创建
             ('home_stats_cards', '[{"title":"系统用户","icon":"layui-icon-user","color":"#1E9FFF","api_field":"user_count"},{"title":"系统角色","icon":"layui-icon-template-1","color":"#5FB878","api_field":"role_count"},{"title":"菜单数量","icon":"layui-icon-app","color":"#FFB800","api_field":"menu_count"},{"title":"操作日志","icon":"layui-icon-log","color":"#FF5722","api_field":"log_count"}]', '首页统计卡片配置（JSON 格式）', 'json', 13),
-            ('home_quick_links', '[{"name":"Django官网","icon":"layui-icon-website","url":"https://www.djangoproject.com/"},{"name":"Layui文档","icon":"layui-icon-template","url":"https://www.layui.dev/"},{"name":"GitHub","icon":"layui-icon-github","url":"https://github.com/likangcai/django-layui"},{"name":"Gitee","icon":"layui-icon-gitee","url":"https://gitee.com/yingzi_shadow/django_layui"}]', '首页快速链接配置（JSON 格式）', 'json', 14),
+            ('home_quick_links', '[{"name":"Django官网","icon":"layui-icon-website","url":"https://www.djangoproject.com/"},{"name":"Layui文档","icon":"layui-icon-template","url":"https://www.layui.dev/"},{"name":"GitHub","icon":"layui-icon-github","url":"https://github.com/likangcai/django-layuix"},{"name":"Gitee","icon":"layui-icon-gitee","url":"https://gitee.com/yingzi_shadow/django-layuix"}]', '首页快速链接配置（JSON 格式）', 'json', 14),
         ]
         created_count = 0
         updated_count = 0

@@ -163,6 +163,15 @@
                                 </div>
                             </div>
                             <div class="layui-form-item">
+                                <label class="layui-form-label" data-i18n="profile.language">语言设置</label>
+                                <div class="layui-input-block">
+                                    <select name="language">
+                                        <option value="zh-hans">{{ t('profile.language.zhHans') }}</option>
+                                        <option value="en">{{ t('profile.language.en') }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
                                 <div class="layui-input-block">
                                     <button type="button" class="layui-btn btn-submit" id="btnSaveProfile">{{ t('common.save') }}</button>
                                 </div>
@@ -253,10 +262,10 @@
         function renderAvatar(avatarUrl, nickname) {
             var avatarContent = $('#avatarContent');
             if (avatarUrl) {
-                avatarContent.html('<img src="' + avatarUrl + '" alt="' + t('profile.avatar') + '">');
+                avatarContent.html('<img src="' + escapeHtml(avatarUrl) + '" alt="' + t('profile.avatar') + '">');
             } else {
                 var initial = (nickname || 'U').charAt(0).toUpperCase();
-                avatarContent.html('<div class="default-avatar">' + initial + '</div>');
+                avatarContent.html('<div class="default-avatar">' + escapeHtml(initial) + '</div>');
             }
         }
 
@@ -275,7 +284,7 @@
             var rolesHtml = '';
             if (user.roles && user.roles.length > 0) {
                 user.roles.forEach(function(role) {
-                    rolesHtml += '<span class="profile-role-tag">' + role.name + '</span> ';
+                    rolesHtml += '<span class="profile-role-tag">' + escapeHtml(role.name) + '</span> ';
                 });
             }
             $('#sidebarRoles').html(rolesHtml);
@@ -284,7 +293,8 @@
                 username: user.username || '',
                 nickname: user.nickname || '',
                 phone: user.phone || '',
-                email: user.email || ''
+                email: user.email || '',
+                language: user.language || 'zh-hans'
             });
 
             renderRoleCards(user.roles);
@@ -300,9 +310,9 @@
             var html = '';
             roles.forEach(function(role) {
                 html += '<div class="role-card">';
-                html += '  <div class="role-name">' + (role.name || '--') + '</div>';
-                html += '  <div class="role-code">' + (role.code || '--') + '</div>';
-                html += '  <div class="role-desc">' + (role.description || t('common.noDescription')) + '</div>';
+                html += '  <div class="role-name">' + escapeHtml(role.name || '--') + '</div>';
+                html += '  <div class="role-code">' + escapeHtml(role.code || '--') + '</div>';
+                html += '  <div class="role-desc">' + escapeHtml(role.description || t('common.noDescription')) + '</div>';
                 html += '</div>';
             });
             container.html(html);
@@ -397,17 +407,38 @@
             }, function(res) {
                 layer.close(loadIndex);
                 if (res.code === 200) {
+                    var newLang = formData.language || 'zh-hans';
                     layer.msg(t('profile.save.success'), {icon: 1});
                     try {
                         if (window.parent && window.parent.currentUser) {
                             window.parent.currentUser.nickname = nickname;
                             window.parent.currentUser.phone = phone;
                             window.parent.currentUser.email = email;
+                            window.parent.currentUser.language = newLang;
                         }
                     } catch (e) {}
+                    currentUser.language = newLang;
                     $('#sidebarUsername').text(nickname || currentUser.username);
                     if (nickname) {
                         renderAvatar(currentUser.avatar, nickname);
+                    }
+                    if (newLang !== (user.language || 'zh-hans')) {
+                        postApi('/admin/api/rbac/set-language/', {language: newLang}, function(langRes) {
+                            if (langRes.code !== 200) return;
+                            I18N.setLang(newLang);
+                            renderI18n();
+                            $('[data-i18n]').each(function() {
+                                var key = $(this).attr('data-i18n');
+                                if (key) $(this).text(t(key));
+                            });
+                            user.language = newLang;
+                            try {
+                                if (window.parent) {
+                                    window.parent.postMessage({type: 'languageChange', lang: newLang}, '*');
+                                }
+                            } catch (e) {}
+                            layer.msg(t('common.languageChanged'), {icon: 1});
+                        });
                     }
                 } else {
                     layer.msg(res.msg || t('common.fail'), {icon: 2});

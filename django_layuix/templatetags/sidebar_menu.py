@@ -1,11 +1,26 @@
 # -*- coding: utf-8 -*-
-"""django-layui sidebar menu template tag"""
+"""django-layuix sidebar menu template tag"""
 from django import template
 from django.utils.safestring import mark_safe
 register = template.Library()
 
 _LT = chr(60)
 _GT = chr(62)
+
+# 与 SPA 外壳 index.html 的 menuPathMap 保持一致：
+# 数据库种子中的前端路由 path 需要映射到静态功能页，否则服务端渲染外壳会 404。
+MENU_PATH_MAP = {
+    "/permission/menu": "/static/layui/pages/menu.html",
+    "/permission/role": "/static/layui/pages/role.html",
+    "/permission/user": "/static/layui/pages/user.html",
+    "/system/rbac-constraints": "/static/layui/pages/constraints.html",
+    "/profile": "/static/layui/pages/profile.html",
+    "/system/log": "/static/layui/pages/log.html",
+    "/system/info": "/static/layui/pages/dashboard.html",
+    "/system/config": "/static/layui/pages/config.html",
+    "/ops/server": "/static/layui/pages/server.html",
+    "/ops/ai-config": "/static/layui/pages/ai-config.html",
+}
 
 def _build_menu_tree(menus, parent_id=None):
     tree = []
@@ -29,12 +44,8 @@ def render_sidebar_menu(context):
         return mark_safe("")
     user = request.user
     lang = getattr(user, "language", "zh-hans") if hasattr(user, "language") else "zh-hans"
-    from django_layuix.rbac.models import Menu
-    if user.is_superuser:
-        qs = Menu.objects.filter(status=True, visible=True, backend_visible=True)
-    else:
-        qs = Menu.objects.filter(status=True, visible=True, backend_visible=True, roles__users=user).distinct()
-    qs = qs.order_by("sort", "id")
+    from django_layuix.rbac.engine import visible_menu_queryset
+    qs = visible_menu_queryset(user, 'backend').order_by("sort", "id")
     tree = _build_menu_tree(qs)
     if not tree:
         return mark_safe("")
@@ -70,7 +81,8 @@ def _render_dir(item, name, children, lang):
 
 def _render_item(item, name):
     icon = item.get("icon", "layui-icon-app")
-    url = item.get("path") or item.get("component") or ""
+    raw_url = item.get("path") or item.get("component") or ""
+    url = MENU_PATH_MAP.get(raw_url, raw_url)
     return (
         _LT + 'div class="menu-item" data-url="%s" data-title="%s"' + _GT +
         _LT + 'i class="layui-icon %s menu-icon"' + _GT + _LT + '/i' + _GT +

@@ -1,5 +1,5 @@
 """
-URL 配置 - django-layui example project
+URL 配置 - django-layuix example project
 
 django_layuix.rbac 的 AppConfig.ready() 会自动将 RBAC API 路由注册到
 /admin/api/rbac/ 和 /admin/api/ops/ 下，无需在此手动配置。

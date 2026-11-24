@@ -88,7 +88,9 @@ def verify_token(token):
             user = User.objects.get(id=payload.get('user_id'))
         except User.DoesNotExist:
             return {'valid': False, 'error': 'User not found'}
-        
+        if not getattr(user, 'is_active', True):
+            return {'valid': False, 'error': 'User inactive'}
+
         # 验证签名
         user_secret = getattr(user, 'password', '')
         secret_key = getattr(settings, 'SECRET_KEY', 'django-insecure-fallback')
@@ -156,7 +158,7 @@ def token_authenticate(request):
             import json
             body = json.loads(request.body)
             token = body.get('token')
-        except:
+        except (json.JSONDecodeError, TypeError, AttributeError, ValueError):
             pass
     
     if not token:

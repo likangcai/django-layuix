@@ -4,7 +4,7 @@ from django.contrib import admin
 
 class DjangoLayuiConfig(AppConfig):
     name = 'django_layuix'
-    verbose_name = 'Django Layui Admin'
+    verbose_name = 'Django Layuix Admin'
     default_auto_field = 'django.db.models.BigAutoField'
 
     def ready(self):
@@ -36,7 +36,21 @@ class DjangoLayuiConfig(AppConfig):
         # 替换为自定义站点
         admin.site = layui_admin_site
         
-        # BUG-05 FIX: 不直接修改 settings.MIDDLEWARE（线程不安全且可能无效）
-        # 改为通过文档告知用户手动移除 XFrameOptionsMiddleware
-        # 或者在模板中通过 django.middleware.common.BreakPathMiddleware 处理
-        pass
+        # 加载通用认证桥接与第三方框架适配器
+        from .integrations.auth import load_configured_authenticators
+        load_configured_authenticators()
+        try:
+            from .integrations import drf  # noqa: F401
+        except ImportError:
+            pass
+        try:
+            from .integrations import ninja  # noqa: F401
+        except ImportError:
+            pass
+
+        # 发现通过 entry_points 安装的第三方插件
+        from .rbac.plugins import discover_entry_point_plugins
+        try:
+            discover_entry_point_plugins()
+        except Exception:
+            pass

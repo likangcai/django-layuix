@@ -311,7 +311,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         for (var i = 0; i < treeData.length; i++) {
             var item = treeData[i];
             if (item.id === excludeId) continue;
-            html += '<option value="' + item.id + '">' + prefix + item.name + '</option>';
+            html += '<option value="' + escapeHtml(item.id) + '">' + prefix + escapeHtml(item.name) + '</option>';
             if (item.children && item.children.length > 0) {
                 html += buildParentOptions(item.children, prefix + '-- ', excludeId);
             }
@@ -380,8 +380,8 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                             for (var i = 0; i < d.level; i++) {
                                 indent += '&nbsp;&nbsp;&nbsp;&nbsp;';
                             }
-                            var icon = d.icon ? '<i class="layui-icon ' + d.icon + ' icon-preview"></i>' : '';
-                            return indent + icon + d.name;
+                            var icon = d.icon ? '<i class="layui-icon ' + escapeHtml(d.icon) + ' icon-preview"></i>' : '';
+                            return indent + icon + escapeHtml(d.name);
                         }},
                         {field: 'icon', title: t('menu.icon'), width: 80, align: 'center', templet: function(d) {
                             return d.icon ? '<i class="layui-icon ' + d.icon + '" style="font-size:20px;"></i>' : '';
@@ -475,7 +475,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     form.render(null, 'menuForm');
 
                     // ===== 联动逻辑：visible 总开关控制 =====
-                    form.on('switch(visibleSwitch)', function(data) {
+                    form.off('switch(visibleSwitch)').on('switch(visibleSwitch)', function(data) {
                         var isVisible = data.elem.checked;
                         var $layero = $(layero);
                         
@@ -507,7 +507,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     });
 
                     // 菜单类型切换
-                    form.on('radio(menu_type)', function(data) {
+                    form.off('radio(menu_type)').on('radio(menu_type)', function(data) {
                         toggleMenuFields(layero, data.value);
                     });
 
@@ -746,7 +746,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         } else if (obj.event === 'edit') {
             openMenuForm(data);
         } else if (obj.event === 'del') {
-            layer.confirm(t('common.confirmDelete') + '<br><b>' + data.name + '</b>', {
+            layer.confirm(t('common.confirmDelete') + '<br><b>' + escapeHtml(data.name) + '</b>', {
                 icon: 3,
                 title: t('common.deleteConfirm.title'),
                 btn: [t('common.confirm'), t('common.cancel')]

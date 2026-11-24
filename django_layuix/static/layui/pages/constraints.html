@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBAC3 约束管理</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <script>
+        (function() {
+            var mode = localStorage.getItem('theme') || 'dark';
+            if (mode !== 'dark' && mode !== 'light') mode = 'dark';
+            document.documentElement.setAttribute('data-theme-mode', mode);
+        })();
+    </script>
+    <style>
+        .page-container { padding: 18px; }
+        .constraint-card { margin-bottom: 16px; }
+        .constraint-card .card-title { font-weight: 600; margin-bottom: 12px; color: var(--text-primary); }
+        .role-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+        .constraint-row { padding: 8px 0; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
+        .muted { color: var(--text-muted); font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="search-card constraint-card">
+        <div class="card-title">RBAC3 约束概览</div>
+        <div id="limitInfo" class="muted">加载中...</div>
+    </div>
+
+    <div class="table-card constraint-card">
+        <div class="card-title">角色互斥组（SSD / DSD）</div>
+        <form class="layui-form" lay-filter="mutexForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">组名称</label>
+                    <div class="layui-input-block"><input name="name" required class="layui-input" placeholder="如：财务互斥"></div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">类型</label>
+                    <div class="layui-input-block">
+                        <select name="kind">
+                            <option value="ssd">SSD 静态互斥</option>
+                            <option value="dsd">DSD 动态互斥</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">互斥角色</label>
+                <div class="layui-input-block role-checks" id="mutexRoles"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">互斥权限</label>
+                <div class="layui-input-block role-checks" id="mutexPerms"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">说明</label>
+                <div class="layui-input-block"><input name="description" class="layui-input"></div>
+            </div>
+            <button class="layui-btn layui-btn-sm" lay-submit lay-filter="mutexSubmit">新增互斥组</button>
+        </form>
+        <div id="mutexList" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="table-card constraint-card">
+        <div class="card-title">前置角色</div>
+        <form class="layui-form" lay-filter="prereqForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">角色</label>
+                    <div class="layui-input-block"><select name="role_id" id="prereqRole"></select></div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">前置角色</label>
+                    <div class="layui-input-block"><select name="prerequisite_id" id="prereqTarget"></select></div>
+                </div>
+            </div>
+            <button class="layui-btn layui-btn-sm" lay-submit lay-filter="prereqSubmit">新增前置关系</button>
+        </form>
+        <div id="prereqList" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="table-card constraint-card">
+        <div class="card-title">当前会话激活角色（DSD）</div>
+        <div id="activeRoles" class="role-checks" style="margin-bottom:12px;"></div>
+        <button class="layui-btn layui-btn-sm" id="saveActiveRoles">保存激活角色</button>
+    </div>
+</div>
+
+<script src="/static/layui/lib/layui.js"></script>
+<script src="/static/layui/js/common.js"></script>
+<script src="/static/layui/js/i18n.js"></script>
+<script>
+inheritTheme();
+renderI18n();
+layui.use(['form', 'layer'], function() {
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.$;
+    var roles = [];
+    var roleMap = {};
+    var permissions = [];
+
+    function roleName(id) { return roleMap[id] ? escapeHtml(roleMap[id].name) : '#' + id; }
+
+    function loadRoles(callback) {
+        if (roles.length) { if (callback) callback(); return; }
+        getApi('/admin/api/rbac/roles/', function(res) {
+            if (res.code === 200) {
+                roles = res.data || [];
+                roles.forEach(function(r) { roleMap[r.id] = r; });
+            }
+            if (callback) callback();
+        });
+    }
+
+    function renderRoleCheckboxes(container, checkedIds) {
+        var selected = {};
+        (checkedIds || []).forEach(function(id) { selected[String(id)] = true; });
+        $(container).html(roles.map(function(r) {
+            return '<label style="margin-right:14px;"><input type="checkbox" name="mutex_role" value="' + r.id + '"'
+                + (selected[String(r.id)] ? ' checked' : '') + '> ' + escapeHtml(r.name) + '</label>';
+        }).join('') || '<span class="muted">暂无角色</span>');
+        form.render('checkbox');
+    }
+
+    function flattenPermissions(nodes, result) {
+        (nodes || []).forEach(function(node) {
+            if (node.permission) result.push({id: node.id, name: node.permission});
+            flattenPermissions(node.children, result);
+        });
+        return result;
+    }
+
+    function loadPermissions(callback) {
+        if (permissions.length) { if (callback) callback(); return; }
+        getApi('/admin/api/rbac/menus/tree/', function(res) {
+            if (res.code === 200) permissions = flattenPermissions(res.data || [], []);
+            if (callback) callback();
+        });
+    }
+
+    function renderPermissionCheckboxes(container, checkedIds) {
+        var selected = {};
+        (checkedIds || []).forEach(function(id) { selected[String(id)] = true; });
+        $(container).html(permissions.map(function(p) {
+            return '<label style="margin-right:14px;"><input type="checkbox" name="mutex_permission" value="' + p.id + '"'
+                + (selected[String(p.id)] ? ' checked' : '') + '> ' + escapeHtml(p.name) + '</label>';
+        }).join('') || '<span class="muted">暂无带权限标识的菜单</span>');
+        form.render('checkbox');
+    }
+
+    function renderRoleSelect($select, selectedId) {
+        $select.html(roles.map(function(r) {
+            return '<option value="' + r.id + '"' + (String(r.id) === String(selectedId) ? ' selected' : '') + '>' + escapeHtml(r.name) + '</option>';
+        }).join(''));
+        form.render('select');
+    }
+
+    function loadConstraints() {
+        getApi('/admin/api/rbac/constraints/', function(res) {
+            if (res.code !== 200) { layer.msg(res.msg || '加载失败', {icon: 2}); return; }
+            var data = res.data || {};
+            var limits = data.limits || {};
+            $('#limitInfo').text('每个用户最多可分配角色数：' + (limits.max_roles_per_user || '不限')
+                + '；前置策略：' + limits.prerequisite_strategy + '；DSD 策略：' + limits.dsd_strategy);
+
+            $('#mutexList').html((data.mutex || []).map(function(g) {
+                var names = g.role_ids.map(roleName).join('、');
+                var permNames = (g.permission_names || []).join('、');
+                var targets = [names, permNames].filter(Boolean).join('；');
+                return '<div class="constraint-row"><span>'
+                    + escapeHtml(g.name) + '（' + (g.kind === 'dsd' ? 'DSD' : 'SSD') + '）：' + escapeHtml(targets)
+                    + '</span><button class="layui-btn layui-btn-xs layui-btn-danger" data-del-mutex="' + g.id + '">删除</button></div>';
+            }).join('') || '<div class="muted">暂无互斥组</div>');
+
+            $('#prereqList').html((data.prerequisites || []).map(function(p) {
+                return '<div class="constraint-row"><span>' + escapeHtml(p.role_name)
+                    + ' 需要 ' + escapeHtml(p.prerequisite_name)
+                    + '</span><button class="layui-btn layui-btn-xs layui-btn-danger" data-del-prereq="' + p.id + '">删除</button></div>';
+            }).join('') || '<div class="muted">暂无前置角色</div>');
+
+            getApi('/admin/api/rbac/active-roles/', function(activeRes) {
+                if (activeRes.code !== 200) return;
+                var active = {};
+                (activeRes.data.active_ids || []).forEach(function(id) { active[String(id)] = true; });
+                $('#activeRoles').html((activeRes.data.assigned || []).map(function(r) {
+                    return '<label style="margin-right:14px;"><input type="checkbox" name="active_role" value="' + r.id + '"'
+                        + (active[String(r.id)] ? ' checked' : '') + '> ' + escapeHtml(r.name) + '</label>';
+                }).join('') || '<span class="muted">未分配角色</span>');
+                form.render('checkbox');
+            });
+        });
+    }
+
+    form.on('submit(mutexSubmit)', function(data) {
+        var ids = [];
+        $('input[name="mutex_role"]:checked').each(function() { ids.push(parseInt($(this).val(), 10)); });
+        var permIds = [];
+        $('input[name="mutex_permission"]:checked').each(function() { permIds.push(parseInt($(this).val(), 10)); });
+        postApi('/admin/api/rbac/constraints/mutex/', {
+            name: data.field.name, kind: data.field.kind,
+            role_ids: ids, permission_ids: permIds, description: data.field.description
+        }, function(res) {
+            layer.msg(res.msg || (res.code === 200 ? '已创建' : '失败'), {icon: res.code === 200 ? 1 : 2});
+            if (res.code === 200) {
+                data.form.reset();
+                renderRoleCheckboxes('#mutexRoles', []);
+                renderPermissionCheckboxes('#mutexPerms', []);
+                form.render();
+                loadConstraints();
+            }
+        });
+        return false;
+    });
+
+    form.on('submit(prereqSubmit)', function(data) {
+        postApi('/admin/api/rbac/constraints/prerequisite/', {
+            role_id: data.field.role_id, prerequisite_id: data.field.prerequisite_id
+        }, function(res) {
+            layer.msg(res.msg || (res.code === 200 ? '已创建' : '失败'), {icon: res.code === 200 ? 1 : 2});
+            if (res.code === 200) loadConstraints();
+        });
+        return false;
+    });
+
+    $(document).on('click', '[data-del-mutex]', function() {
+        var id = $(this).data('del-mutex');
+        deleteApi('/admin/api/rbac/constraints/mutex/' + id + '/', function(res) {
+            layer.msg(res.msg || '已删除', {icon: res.code === 200 ? 1 : 2});
+            if (res.code === 200) loadConstraints();
+        });
+    });
+
+    $(document).on('click', '[data-del-prereq]', function() {
+        var id = $(this).data('del-prereq');
+        deleteApi('/admin/api/rbac/constraints/prerequisite/' + id + '/', function(res) {
+            layer.msg(res.msg || '已删除', {icon: res.code === 200 ? 1 : 2});
+            if (res.code === 200) loadConstraints();
+        });
+    });
+
+    $('#saveActiveRoles').on('click', function() {
+        var ids = [];
+        $('input[name="active_role"]:checked').each(function() { ids.push(parseInt($(this).val(), 10)); });
+        postApi('/admin/api/rbac/active-roles/', {role_ids: ids}, function(res) {
+            layer.msg(res.msg || (res.code === 200 ? '已保存' : '失败'), {icon: res.code === 200 ? 1 : 2});
+            if (res.code === 200) loadConstraints();
+        });
+    });
+
+    loadRoles(function() {
+        renderRoleCheckboxes('#mutexRoles', []);
+        renderRoleSelect($('#prereqRole'));
+        renderRoleSelect($('#prereqTarget'));
+        loadPermissions(function() {
+            renderPermissionCheckboxes('#mutexPerms', []);
+            loadConstraints();
+        });
+    });
+});
+</script>
+</body>
+</html>

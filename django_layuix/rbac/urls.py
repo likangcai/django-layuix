@@ -58,6 +58,18 @@ urlpatterns = [
     path('users/<int:pk>/reset-password/', views.user_reset_password, name='rbac_user_reset_password'),
     path('users/<int:pk>/status/', views.user_toggle_status, name='rbac_user_toggle_status'),
 
+    # Plugin registry
+    path('plugins/manifest/', views.plugin_manifest, name='rbac_plugin_manifest'),
+    path('plugins/', views.plugin_list, name='rbac_plugin_list'),
+
+    # RBAC3 / RBAC4 constraints & active roles
+    path('constraints/', views.constraint_list, name='rbac_constraint_list'),
+    path('constraints/mutex/', views.mutex_create, name='rbac_mutex_create'),
+    path('constraints/mutex/<int:pk>/', views.mutex_delete, name='rbac_mutex_delete'),
+    path('constraints/prerequisite/', views.prerequisite_create, name='rbac_prerequisite_create'),
+    path('constraints/prerequisite/<int:pk>/', views.prerequisite_delete, name='rbac_prerequisite_delete'),
+    path('active-roles/', views.active_roles, name='rbac_active_roles'),
+
     # Operation Log
     path('logs/', views.log_list, name='rbac_log_list'),
 

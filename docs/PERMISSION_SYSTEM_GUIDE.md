@@ -1,4 +1,4 @@
-# django-layui 权限系统使用指南
+# django-layuix 权限系统使用指南
 
 ## 目录
 
@@ -15,7 +15,7 @@
 
 ## 1. 概述
 
-django-layui 的 RBAC（基于角色的访问控制）系统提供三级权限控制：
+django-layuix 的 RBAC（基于角色的访问控制）系统提供三级权限控制：
 
 | 级别 | 说明 | 示例 |
 |------|------|------|
@@ -35,7 +35,6 @@ class Menu(models.Model):
     name = models.CharField(...)                 # 菜单名称（中文）
     name_en = models.CharField(...)              # 菜单名称（英文）
     name_zh_hans = models.CharField(...)         # 菜单名称（简体中文）
-    name_zh_hant = models.CharField(...)         # 菜单名称（繁体中文）
     icon = models.CharField(...)                 # 图标
     path = models.CharField(...)                 # 路由地址
     component = models.CharField(...)            # 组件路径
@@ -55,13 +54,12 @@ class Menu(models.Model):
 | `name` | CharField(50) | ✅ 是 | 菜单名称（中文，主名称） | `'菜单管理'` |
 | `name_en` | CharField(50) | ❌ 否 | 英文名称（用于国际化） | `'Menu Management'` |
 | `name_zh_hans` | CharField(50) | ❌ 否 | 简体中文名称 | `'菜单管理'` |
-| `name_zh_hant` | CharField(50) | ❌ 否 | 繁体中文名称 | `'選單管理'` |
 
 **多语言优先级**：
 ```
 用户选择 en → 使用 name_en (为空则回退到 name)
 用户选择 zh-hans → 使用 name_zh_hans (为空则回退到 name)
-用户选择 zh-hant → 使用 name_zh_hant (为空则回退到 name)
+其他语言代码 → 回退到 name
 ```
 
 #### 2.2 显示相关字段
@@ -306,7 +304,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 
 **实现原理：**
 
-在 [`admin.py`](file:///D:/chengxu/django_layuix/django_layuix/admin.py) 的 `LayuiAdminSite.each_context()` 方法中：
+在 [`admin.py`](../django_layuix/admin.py) 的 `LayuiAdminSite.each_context()` 方法中：
 
 ```python
 # 1. 从 settings.py 读取默认配置
@@ -457,7 +455,7 @@ $(document).ready(function() {
 
 ### 6.1 当前权限实现方式
 
-django-layui 当前的权限控制是**前端展示层**的权限控制：
+django-layuix 当前的权限控制是**前端展示层**的权限控制：
 
 ```python
 # views.py - 返回用户权限列表
@@ -778,7 +776,6 @@ from django_layuix.rbac.models import Menu
 menu = Menu.objects.get(name='商品管理')
 menu.name_en = 'Product Management'
 menu.name_zh_hans = '商品管理'
-menu.name_zh_hant = '商品管理'
 menu.save()
 ```
 
@@ -929,4 +926,4 @@ def product_list(request):
 
 **文档版本**: v1.0  
 **最后更新**: 2026-05-05  
-**适用版本**: django-layui >= 1.0.0
+**适用版本**: django-layuix >= 1.0.0

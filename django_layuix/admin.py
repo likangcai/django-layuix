@@ -2,6 +2,7 @@
 自定义 Django Admin Site
 用于传递 LAYUI_CONFIG 到模板上下文
 """
+from django.contrib import admin
 from django.contrib.admin import AdminSite, site
 from django.conf import settings
 from .rbac.themes import get_all_themes

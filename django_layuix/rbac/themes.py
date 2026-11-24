@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Django-Layui Theme System
+Django-Layuix Theme System
 Simplified to Dark/Light dual mode only
 """
 
-DJANGO_LAYUI_THEMES = [
+DJANGO_LAYUIX_THEMES = [
     {
         'name': '默认深色',
         'file': 'default-dark.css',
@@ -29,10 +29,13 @@ DJANGO_LAYUI_THEMES = [
     },
 ]
 
+# 兼容旧版本导入名
+DJANGO_LAYUI_THEMES = DJANGO_LAYUIX_THEMES
+
 
 def get_theme_by_name(name):
     """Get theme configuration by display name"""
-    for theme in DJANGO_LAYUI_THEMES:
+    for theme in DJANGO_LAYUIX_THEMES:
         if theme['name'] == name:
             return theme
     return None
@@ -40,12 +43,12 @@ def get_theme_by_name(name):
 
 def get_all_themes():
     """Get all available themes (dark/light only)"""
-    return DJANGO_LAYUI_THEMES
+    return DJANGO_LAYUIX_THEMES
 
 
 def get_theme_names():
     """Get all theme display names"""
-    return [theme['name'] for theme in DJANGO_LAYUI_THEMES]
+    return [theme['name'] for theme in DJANGO_LAYUIX_THEMES]
 
 
 def get_theme_colors(name):

@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
-AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'
+AUTH_USER_MODEL = 'django_layuix_rbac.UserProfile'
 
 # ============================================================
 # ② 中间件：不要加 XFrameOptionsMiddleware（否则 iframe 子页面无法加载）
@@ -100,28 +100,28 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ③ RBAC 自定义用户模型
 #    注意：AUTH_USER_MODEL 必须在项目创建之初就设置好，不可中途修改！
 # ============================================================
-AUTH_USER_MODEL = 'django_layui_rbac.UserProfile'
+AUTH_USER_MODEL = 'django_layuix_rbac.UserProfile'
 
 # ============================================================
 # ④ django-layuix 界面配置（所有配置均有默认值，不填也能正常运行）
 # ============================================================
 LAYUI_CONFIG = {
     'system_name': 'Layui Admin 演示',
-    'system_version': '1.0.7',
+    'system_version': '1.4.0',
     'system_description': 'django-layuix 功能演示项目',
     'logo_icon': 'layui-icon-code-circle',
     # 使用自定义图片
     # 'logo_url': '/static/your-logo.png',
     'login_bg_type': 'gradient',                    # gradient / color / image
     'login_bg_value': 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-    'copyright': 'Yingzi © 2026 Django Layui Admin',
+    'copyright': 'Yingzi © 2026 Django Layuix Admin',
     
     # 首页自定义链接
     'home_quick_links': [
         {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
         {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
-        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layui'},
-        {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django_layui'}
+        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
+        {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django-layuix'}
         # {'name': '自定义页面', 'icon': 'layui-icon-app', 'url': '/custom-page/'},
     ],
     
@@ -154,3 +154,14 @@ LAYUI_CONFIG = {
 # LAYUI_AI_API_KEY = 'sk-xxx'
 # LAYUI_AI_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/'   # 智谱AI 示例
 # LAYUI_AI_MODEL = 'glm-4-flash'
+
+# ============================================================
+# ⑦ 多实例部署：共享缓存（可选，Token 场景 DSD 激活角色需要）
+#    单实例可不配置，默认使用本地内存缓存
+# ============================================================
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#         'LOCATION': 'redis://127.0.0.1:6379/1',
+#     }
+# }

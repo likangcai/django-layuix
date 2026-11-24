@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-layuix"
-version = "1.2.2"
+version = "1.4.0"
 description = "基于 Layui 的 Django Admin 主题，集成 RBAC 权限系统和运维管理"
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.8"
 authors = [
-    {name = "影子", email = "yingzilkq@163.com"},
+    {name = "Yingzi", email = "yingzilkq@163.com"},
 ]
 keywords = ["django", "admin", "layui", "theme", "rbac", "simpleui", "permission"]
 classifiers = [
@@ -49,10 +49,10 @@ all = ["paramiko>=2.0", "webssh>=1.6.0", "openai>=1.0"]
 dev = ["build", "twine", "django-layuix[all]"]
 
 [project.urls]
-Homepage = "https://github.com/likangcai/django-layui"
-Documentation = "https://github.com/likangcai/django-layui#readme"
-Repository = "https://github.com/likangcai/django-layui"
-"Bug Tracker" = "https://github.com/likangcai/django-layui/issues"
+Homepage = "https://github.com/likangcai/django-layuix"
+Documentation = "https://github.com/likangcai/django-layuix#readme"
+Repository = "https://github.com/likangcai/django-layuix"
+"Bug Tracker" = "https://github.com/likangcai/django-layuix/issues"
 
 [tool.setuptools]
 include-package-data = true

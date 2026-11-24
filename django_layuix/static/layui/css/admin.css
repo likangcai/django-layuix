@@ -2122,3 +2122,165 @@ a:hover {
 .object-tools a { display:inline-block;padding:6px 14px;background:var(--primary-color);color:#fff;border-radius:4px;text-decoration:none;font-size:13px }
 .object-tools a:hover { background:var(--primary-hover) }
 .object-tools a.addlink:before { content:"+";margin-right:4px;font-weight:700 }
+
+/* ======= 统一页面骨架：多菜单页面共享 ======= */
+/* 兼容别名：页面历史引用了未定义的变量，统一映射到既有令牌 */
+:root {
+    --hover-bg: var(--bg-hover);
+    --active-bg: var(--sidebar-active-bg);
+    --input-focus-bg: var(--primary-lighter);
+}
+
+.page-container,
+.log-container,
+.dashboard-container,
+.profile-container,
+.frontend-content {
+    box-sizing: border-box;
+    min-height: 100%;
+    padding: 20px 24px;
+    background: var(--bg-body);
+    color: var(--text-primary);
+}
+
+.page-container .page-header,
+.log-container .page-header,
+.dashboard-container .page-header,
+.profile-container .page-header,
+.frontend-content .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.page-container .page-title,
+.log-container .page-title,
+.dashboard-container .page-title,
+.profile-container .page-title,
+.frontend-content .page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.page-container .search-card,
+.page-container .table-card,
+.page-container .search-bar,
+.page-container .layui-card,
+.log-container .search-card,
+.log-container .table-card,
+.dashboard-container .stat-card,
+.profile-container .profile-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--card-shadow);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+}
+
+.page-container .search-btns,
+.log-container .search-btns,
+.page-container .form-actions,
+.layui-layer-page .form-actions,
+.layui-layer-dialog .form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 0;
+    margin: 0;
+}
+
+.page-container .layui-form-label,
+.log-container .layui-form-label,
+.dashboard-container .layui-form-label,
+.profile-container .layui-form-label,
+.layui-layer-page .layui-form-label,
+.layui-layer-dialog .layui-form-label {
+    width: 120px;
+    padding: 9px 12px 9px 0;
+    text-align: right;
+    color: var(--text-primary);
+    font-weight: 500;
+    float: left;
+}
+
+.page-container .layui-input-block,
+.log-container .layui-input-block,
+.dashboard-container .layui-input-block,
+.profile-container .layui-input-block,
+.layui-layer-page .layui-input-block,
+.layui-layer-dialog .layui-input-block {
+    margin-left: 130px;
+    min-height: 36px;
+}
+
+.page-container .layui-input,
+.page-container .layui-select,
+.page-container .layui-textarea {
+    background: var(--input-bg, var(--bg-primary));
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.page-container .stat-card,
+.dashboard-container .stat-card {
+    min-height: 96px;
+}
+
+.page-container .stat-icon,
+.dashboard-container .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #fff;
+    margin-right: 15px;
+}
+
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+
+.error-state i { font-size: 48px; margin-bottom: 15px; opacity: .5; }
+.error-state p { margin: 0; font-size: 14px; }
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.layui-btn:focus-visible,
+.menu-item:focus-visible,
+.tab-item:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .page-container,
+    .log-container,
+    .dashboard-container,
+    .profile-container,
+    .frontend-content { padding: 12px; }
+    .page-container .layui-form-label,
+    .log-container .layui-form-label,
+    .layui-layer-page .layui-form-label,
+    .layui-layer-dialog .layui-form-label { width: 80px; }
+    .page-container .layui-input-block,
+    .log-container .layui-input-block,
+    .layui-layer-page .layui-input-block,
+    .layui-layer-dialog .layui-input-block { margin-left: 90px; }
+}

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-django-layui Ops Models
+django-layuix Ops Models
 Server management for SSH connections
 AI model configuration for intelligent log analysis
 """

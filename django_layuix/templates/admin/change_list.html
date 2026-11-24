@@ -70,6 +70,14 @@
 (function() {
     'use strict';
 
+    // 与静态功能页保持一致：操作列按 Django 对象级权限渲染，文案走前端 i18n
+    var canView = {% if cl.has_view_permission %}true{% else %}false{% endif %};
+    var canChange = {% if cl.has_change_permission %}true{% else %}false{% endif %};
+    var canDelete = {% if cl.has_delete_permission %}true{% else %}false{% endif %};
+    function label(key, fallback) {
+        return (typeof t === 'function' && t(key) !== key) ? t(key) : fallback;
+    }
+
     var AJAX_TIMEOUT = 15000;
 
     var currentUrl = '';
@@ -217,7 +225,7 @@
             e.stopPropagation();
             navigate(href);
         } catch(e) {
-            console.warn('[django-layui] AJAX navigate error:', e);
+            console.warn('[django-layuix] AJAX navigate error:', e);
             window.location.href = e.target.closest('a') ? e.target.closest('a').getAttribute('href') : window.location.href;
         }
     }, true);  // capture phase
@@ -312,7 +320,7 @@
         var th = document.createElement('th');
         th.className = 'ops-header';
         th.style.cssText = 'width:160px;text-align:center;white-space:nowrap;font-weight:600';
-        th.textContent = '操作';
+        th.textContent = label('common.operation', '操作');
         headerRow.appendChild(th);
 
         // 只处理数据行（包含 action-select checkbox 的行）
@@ -327,14 +335,19 @@
             td.style.cssText = 'text-align:center;white-space:nowrap;padding:6px 8px';
 
             if (id) {
-                var viewUrl = basePath + '/' + id + '/change/';
-                var editUrl = basePath + '/' + id + '/change/';
+                var changeUrl = basePath + '/' + id + '/change/';
                 var delUrl = basePath + '/' + id + '/delete/';
-
-                td.innerHTML =
-                    '<a href="' + viewUrl + '" class="layui-btn layui-btn-xs layui-btn-primary" title="查看" style="margin:0 2px"><i class="layui-icon layui-icon-about"></i></a>' +
-                    '<a href="' + editUrl + '" class="layui-btn layui-btn-xs" title="编辑" style="margin:0 2px"><i class="layui-icon layui-icon-edit"></i></a>' +
-                    '<a href="' + delUrl + '" class="layui-btn layui-btn-xs layui-btn-danger" title="删除" style="margin:0 2px"><i class="layui-icon layui-icon-delete"></i></a>';
+                var buttons = '';
+                if (canView) {
+                    buttons += '<a href="' + changeUrl + '" class="layui-btn layui-btn-xs layui-btn-primary" title="' + label('common.view', '查看') + '" style="margin:0 2px"><i class="layui-icon layui-icon-about"></i></a>';
+                }
+                if (canChange) {
+                    buttons += '<a href="' + changeUrl + '" class="layui-btn layui-btn-xs" title="' + label('common.edit', '编辑') + '" style="margin:0 2px"><i class="layui-icon layui-icon-edit"></i></a>';
+                }
+                if (canDelete) {
+                    buttons += '<a href="' + delUrl + '" class="layui-btn layui-btn-xs layui-btn-danger" title="' + label('common.delete', '删除') + '" style="margin:0 2px"><i class="layui-icon layui-icon-delete"></i></a>';
+                }
+                td.innerHTML = buttons || '--';
             } else {
                 td.innerHTML = '<span style="color:var(--text-muted);font-size:12px">--</span>';
             }
