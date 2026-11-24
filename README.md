@@ -922,6 +922,7 @@ django-layuix 内置深色/浅色双模式切换功能：
 - **Python**：3.8–3.13（CI 实际验证 3.10–3.13；3.8/3.9 已通过语法与 API 审计）
 - **Django**：3.2–6.0，需按 Python 版本选择兼容组合
 - 推荐组合：Python 3.12 + Django 5.2/6.0；旧环境建议 Python 3.8/3.9 + Django 4.2 LTS
+- 核心依赖：`Django>=3.2`、`psutil>=5.9.0`、`Pillow>=9.0.0`（头像 `ImageField` 需要）
 
 完整矩阵与兼容处理见 [COMPATIBILITY.md](docs/COMPATIBILITY.md)。
 

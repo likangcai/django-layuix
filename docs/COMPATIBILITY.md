@@ -43,6 +43,7 @@
 |---|---|---|
 | `Django>=3.2` | 支持，pip 自动解析到兼容版本 | 新项目建议 Django 4.2 LTS |
 | `psutil>=5.9.0` | 支持 | 核心依赖，Dashboard 使用 |
+| `Pillow>=9.0.0` | 支持，pip 自动解析到兼容版本 | 核心依赖，`UserProfile.avatar` 的 `ImageField` 需要 |
 | `paramiko>=2.0` | 支持 | `ops` extra |
 | `webssh>=1.6.0` | 需按实际版本确认 | 新版可能要求 Python >=3.10 |
 | `openai>=1.0` | 需按实际版本确认 | `ai` extra，建议 Python >=3.10 |

@@ -26,6 +26,7 @@
 - ✅ **Django Ninja 可选适配器** — 提供 `LayuiNinjaAuth` 与 `ninja_permission_required`，核心不引入 Ninja 依赖
 - 🐛 **插件启停与状态修复** — Admin 切换触发钩子、停用状态跨重启保持、清单不再返回陈旧启用项、entry_point 插件自动注册菜单
 - ✅ **版本升级至 1.4.0** — 统一 `pyproject.toml`、包内 `__version__`、锁文件与文档适用版本
+- 🐛 **补登 Pillow 核心依赖** — 修复新虚拟环境执行 `makemigrations` 时 `ImageField` 检查失败的问题
 
 ### 🔧 示例 App 全面重构 (2026-06-09)
 
