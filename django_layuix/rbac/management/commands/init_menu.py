@@ -9,7 +9,7 @@
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-import django_layuix
+from django_layuix.rbac.defaults import get_default_configs
 from django_layuix.rbac.models import Menu, Role, SystemConfig
 
 
@@ -492,21 +492,8 @@ class Command(BaseCommand):
         """初始化默认系统配置项"""
         self.stdout.write(self.style.MIGRATE_HEADING('\n  初始化系统配置:'))
         configs = [
-            ('system_name', 'Django Layuix Admin', '系统名称，显示在浏览器标题栏和侧边栏', 'string', 1),
-            ('system_version', django_layuix.__version__, '系统版本号', 'string', 2),
-            ('system_description', '', '系统描述信息（显示在管理后台底部）', 'text', 3),
-            ('logo_icon', 'layui-icon-code-circle', 'Logo图标（layui图标类名）', 'string', 4),
-            ('logo_url', '', 'Logo图片URL（设置后替换图标，支持本地上传）', 'image', 5),
-            ('favicon_url', '', '浏览器标签页图标URL（支持ICO/PNG/SVG，支持本地上传）', 'image', 6),
-            ('copyright', '', '版权信息（显示在登录页和管理后台底部）', 'string', 7),
-            ('frontend_url', '', '前端页面地址（顶部"查看站点"按钮跳转地址）', 'url', 8),
-            ('webssh_url', '/webssh/', 'WebSSH 服务地址（用于服务器终端功能，默认 /webssh/）', 'url', 9),
-            ('login_bg_type', 'gradient', '登录页背景类型：gradient(渐变)/color(纯色)/image(图片)', 'string', 10),
-            ('login_bg_value', 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)', '登录页背景渐变/颜色值（当type为gradient或color时生效）', 'color', 11),
-            ('login_bg_image', '', '登录页背景图片URL（当type为image时生效，支持本地上传）', 'image', 12),
-            # 以下配置不会在 ready() 中提前创建，只在 init_menu 中创建
-            ('home_stats_cards', '[{"title":"系统用户","icon":"layui-icon-user","color":"#1E9FFF","api_field":"user_count"},{"title":"系统角色","icon":"layui-icon-template-1","color":"#5FB878","api_field":"role_count"},{"title":"菜单数量","icon":"layui-icon-app","color":"#FFB800","api_field":"menu_count"},{"title":"操作日志","icon":"layui-icon-log","color":"#FF5722","api_field":"log_count"}]', '首页统计卡片配置（JSON 格式）', 'json', 13),
-            ('home_quick_links', '[{"name":"Django官网","icon":"layui-icon-website","url":"https://www.djangoproject.com/"},{"name":"Layui文档","icon":"layui-icon-template","url":"https://www.layui.dev/"},{"name":"GitHub","icon":"layui-icon-github","url":"https://github.com/likangcai/django-layuix"},{"name":"Gitee","icon":"layui-icon-gitee","url":"https://gitee.com/yingzi_shadow/django-layuix"}]', '首页快速链接配置（JSON 格式）', 'json', 14),
+            (cfg['key'], cfg['value'], cfg['description'], cfg['config_type'], cfg['sort'])
+            for cfg in get_default_configs()
         ]
         created_count = 0
         updated_count = 0

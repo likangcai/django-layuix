@@ -154,7 +154,7 @@ LAYUI_CONFIG = {
 # ============================================================
 # LAYUI_AI_API_KEY = 'sk-xxx'
 # LAYUI_AI_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/'   # 智谱AI 示例
-# LAYUI_AI_MODEL = 'glm-4-flash'
+# LAYUI_AI_MODEL = 'gpt-4o-mini'   # 代码默认值；可改为 glm-4-flash 等兼容模型
 
 # ============================================================
 # ⑦ 多实例部署：共享缓存（可选，Token 场景 DSD 激活角色需要）
@@ -169,6 +169,7 @@ LAYUI_CONFIG = {
 
 # ============================================================
 # ⑧ 数据权限（1.4.2 可选，不配置时行为与旧版本一致）
+#    取消下面注释并配合角色 scope_node/scope_depth 即可启用层级展开
 # ============================================================
 # LAYUIX_SCOPE_HIERARCHY = ['global', 'region', 'team']
 # LAYUIX_SCOPE_TREE = {

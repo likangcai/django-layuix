@@ -1,6 +1,8 @@
 import os
 from django.apps import AppConfig
 
+from .defaults import get_default_configs
+
 
 _REGISTERED = False
 
@@ -189,22 +191,7 @@ class RbacConfig(AppConfig):
             if not table_exists:
                 return
             
-            default_configs = [
-                {'key': 'system_name', 'value': 'Django Layuix Admin', 'description': '系统名称', 'config_type': 'string', 'sort': 1},
-                {'key': 'system_version', 'value': '1.4.2', 'description': '系统版本号', 'config_type': 'string', 'sort': 2},
-                {'key': 'system_description', 'value': '', 'description': '系统描述（显示在管理后台底部）', 'config_type': 'text', 'sort': 3},
-                {'key': 'logo_icon', 'value': 'layui-icon-code-circle', 'description': 'Logo图标（layui-icon类名）', 'config_type': 'string', 'sort': 4},
-                {'key': 'logo_url', 'value': '', 'description': 'Logo图片URL（优先于图标）', 'config_type': 'image', 'sort': 5},
-                {'key': 'favicon_url', 'value': '', 'description': '网站图标URL', 'config_type': 'image', 'sort': 6},
-                {'key': 'copyright', 'value': 'Yingzi © 2026 Django Layuix Admin', 'description': '版权信息', 'config_type': 'string', 'sort': 7},
-                {'key': 'frontend_url', 'value': '', 'description': '前端项目地址', 'config_type': 'string', 'sort': 8},
-                {'key': 'login_bg_type', 'value': 'gradient', 'description': '登录页背景类型：gradient(渐变)/color(纯色)/image(图片)', 'config_type': 'string', 'sort': 9},
-                {'key': 'login_bg_value', 'value': 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)', 'description': '登录页背景渐变/颜色值', 'config_type': 'color', 'sort': 10},
-                {'key': 'login_bg_image', 'value': '', 'description': '登录页背景图片URL（当login_bg_type为image时生效）', 'config_type': 'image', 'sort': 11},
-                {'key': 'rbac_max_roles_per_user', 'value': '0', 'description': 'RBAC2：每个用户最多可分配角色数，0表示不限', 'config_type': 'integer', 'sort': 12},
-                {'key': 'rbac_prerequisite_strategy', 'value': 'auto_grant', 'description': 'RBAC4：前置角色策略 auto_grant/reject', 'config_type': 'string', 'sort': 13},
-                {'key': 'rbac_dsd_strategy', 'value': 'greedy', 'description': 'RBAC4：DSD 激活策略 greedy/explicit', 'config_type': 'string', 'sort': 14},
-            ]
+            default_configs = get_default_configs()
             existing_keys = set(SystemConfig.objects.values_list('key', flat=True))
             for cfg in default_configs:
                 if cfg['key'] not in existing_keys:

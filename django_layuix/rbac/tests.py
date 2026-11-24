@@ -685,3 +685,25 @@ class Rbac142EnhancementTests(TestCase):
         data = response.json()['data']
         for key in ('user', 'permissions', 'roles', 'menus', 'plugins', 'scope_nodes', 'abac_policies'):
             self.assertIn(key, data)
+
+    def test_system_config_defaults_are_complete(self):
+        from django.core.management import call_command
+
+        from .defaults import get_default_configs
+        from .models import SystemConfig
+
+        rows = get_default_configs()
+        keys = [row['key'] for row in rows]
+        self.assertEqual(len(keys), len(set(keys)))
+        self.assertEqual(len(keys), 17)
+        for row in rows:
+            self.assertTrue(all(field in row for field in ('value', 'description', 'config_type', 'sort')))
+        for required in (
+            'webssh_url', 'home_stats_cards', 'home_quick_links',
+            'rbac_max_roles_per_user', 'rbac_prerequisite_strategy', 'rbac_dsd_strategy',
+        ):
+            self.assertIn(required, keys)
+
+        call_command('init_menu', verbosity=0)
+        stored = set(SystemConfig.objects.values_list('key', flat=True))
+        self.assertTrue(set(keys).issubset(stored))

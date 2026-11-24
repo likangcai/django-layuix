@@ -32,7 +32,7 @@ def layui_config(key, default=''):
 @register.simple_tag
 def layui_version():
     """Return layui version"""
-    return getattr(settings, 'LAYUI_VERSION', '2.13.5')
+    return getattr(settings, 'LAYUI_VERSION', '2.13.9')
 
 
 @register.simple_tag

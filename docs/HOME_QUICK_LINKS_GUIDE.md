@@ -28,7 +28,7 @@ LAYUI_CONFIG = {
 }
 ```
 
-**注意**：如果不配置 `home_quick_links`，首页将不显示任何快速链接区域。
+**注意**：执行 `init_menu` 后，`sys_config` 会写入默认 4 项快捷链接（Django/Layui/GitHub/Gitee）；数据库配置优先于 settings。只有清空数据库中的 `home_quick_links` 且 settings 未配置时，首页才不显示快捷链接区域。
 
 ## 🔗 支持的 URL 类型
 
@@ -171,7 +171,7 @@ LAYUI_CONFIG = {
 1. **配置位置**：必须在 `settings.py` 的 `LAYUI_CONFIG` 字典中配置
 2. **格式要求**：每个链接必须包含 `name`、`icon`、`url` 三个字段
 3. **动态生效**：修改配置后需要重启 Django 服务才能生效
-4. **默认值**：如果不配置，首页将不显示任何快速链接区域
+4. **默认值**：`init_menu` 会写入 4 项默认链接；数据库优先于 settings
 5. **权限控制**：快速链接不检查权限，建议只配置当前用户有权限访问的页面
 6. **图标必须存在**：确保使用的图标类名是有效的 Layui 图标
 7. **路径正确性**：内部路径必须以 `/` 开头
@@ -198,7 +198,7 @@ LAYUI_CONFIG = {
 
 ### Q: 如何恢复默认链接？
 
-**A**: 删除 `home_quick_links` 配置项即可，系统不会显示任何快速链接。
+**A**: 执行 `python manage.py init_menu` 会恢复系统配置中的默认 4 项链接；若只想隐藏链接，请将数据库 `home_quick_links` 与 settings 中的值都设为空数组。
 
 ## 🛠️ 技术实现
 

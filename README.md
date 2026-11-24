@@ -129,7 +129,7 @@ python manage.py init_demo_data
 | **按钮权限** | 15 个权限项 | 每个菜单下的增删改查按钮级权限 |
 | **管理员角色** | `管理员` | 绑定所有菜单和按钮权限 |
 | **注册角色** | `注册用户` | 仅个人中心权限（前端注册用户默认绑定） |
-| **系统配置** | 8 个配置项 | system_name, logo_icon, logo_url, favicon_url 等 |
+| **系统配置** | 17 个配置项 | 系统信息、Logo、登录背景、首页卡片/链接、WebSSH、RBAC 策略等 |
 
 #### Step 4: 创建管理员账号
 
@@ -184,23 +184,30 @@ LAYUI_CONFIG = {
 
     # 前端项目
     'frontend_url': '',                # 前端项目 URL（顶部"查看站点"按钮）
+    'webssh_url': '/webssh/',          # WebSSH 服务地址（服务器终端功能）
 
     # 版权信息
     'copyright': '',
-    
-    # 首页自定义快速链接
+
+    # 首页自定义快速链接（与 init_menu 落库默认值一致）
     'home_quick_links': [
-        {'name': '个人中心', 'icon': 'layui-icon-user', 'url': '/static/layui/pages/profile.html'},
-        {'name': '修改密码', 'icon': 'layui-icon-password', 'url': 'javascript:openChangePassword();'},
-        {'name': '操作日志', 'icon': 'layui-icon-log', 'url': '/static/layui/pages/log.html'},
-        {'name': '系统配置', 'icon': 'layui-icon-set', 'url': '/static/layui/pages/config.html'},
-        # 外部链接示例
-        # {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
-        # {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
-        # {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
-        # {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django-layuix'}
-        # {'name': '自定义页面', 'icon': 'layui-icon-app', 'url': '/custom-page/'},
+        {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
+        {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
+        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
+        {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django-layuix'},
     ],
+
+    # 首页统计卡片（与 init_menu 落库默认值一致）
+    'home_stats_cards': [
+        {'title': '系统用户', 'icon': 'layui-icon-user', 'color': '#1E9FFF', 'api_field': 'user_count'},
+        {'title': '系统角色', 'icon': 'layui-icon-template-1', 'color': '#5FB878', 'api_field': 'role_count'},
+        {'title': '菜单数量', 'icon': 'layui-icon-app', 'color': '#FFB800', 'api_field': 'menu_count'},
+        {'title': '操作日志', 'icon': 'layui-icon-log', 'color': '#FF5722', 'api_field': 'log_count'},
+    ],
+
+    # Layui 2.13.9+：是否从表单提交取值中排除 disabled 字段
+    # 默认 false，保持项目历史行为
+    'form_filter_disabled': False,
 }
 
 # 可选：自定义 Layui CDN
@@ -209,11 +216,10 @@ LAYUI_CDN = 'https://cdn.jsdelivr.net/npm/layui@2.13.9/dist/'
 # 可选：自定义 Layui 版本
 LAYUI_VERSION = '2.13.9'
 
-# 可选：Layui 2.13.9+ 是否从表单提交取值中排除 disabled 字段
-# 默认 false，保持本项目历史行为
-LAYUI_CONFIG = {
-    'form_filter_disabled': False,
-}
+# RBAC 策略（可被 SystemConfig 中同名键覆盖）
+LAYUI_RBAC_MAX_ROLES_PER_USER = 0          # 每用户最多角色数，0 不限
+LAYUI_RBAC_PREREQ_STRATEGY = 'auto_grant'  # auto_grant / reject
+LAYUI_RBAC_DSD_STRATEGY = 'greedy'         # greedy / explicit
 ```
 
 #### 4.2 操作日志配置（可选）
@@ -278,12 +284,38 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
 | `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
-| `system_version` | 版本号 | 1.4.2 |
+| `system_version` | 版本号 | 包版本（当前 1.4.2） |
+| `system_description` | 系统描述 | （空） |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |
 | `favicon_url` | 浏览器标签页图标 URL | （空） |
-| `frontend_url` | "查看站点"按钮跳转地址 | （空） |
 | `copyright` | 版权信息 | （空） |
+| `frontend_url` | "查看站点"按钮跳转地址 | （空） |
+| `webssh_url` | WebSSH 服务地址 | `/webssh/` |
+| `login_bg_type` | 登录背景类型 | gradient |
+| `login_bg_value` | 登录背景渐变/颜色值 | 深色渐变 |
+| `login_bg_image` | 登录背景图片 URL | （空） |
+| `home_stats_cards` | 首页统计卡片（JSON） | 用户/角色/菜单/日志 4 项 |
+| `home_quick_links` | 首页快捷链接（JSON） | Django/Layui/GitHub/Gitee 4 项 |
+| `rbac_max_roles_per_user` | 每用户最多角色数 | 0（不限） |
+| `rbac_prerequisite_strategy` | 前置角色策略 | auto_grant |
+| `rbac_dsd_strategy` | DSD 激活策略 | greedy |
+
+独立的 settings 变量（不写入 `sys_config`）：
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `LAYUI_CDN` | Layui 静态资源路径 | `/static/layui/lib/` |
+| `LAYUI_VERSION` | Layui 版本 | 2.13.9 |
+| `LAYUI_LANGUAGES` | 语言列表 | 简体中文 / English |
+| `TOKEN_EXPIRE_SECONDS` | Token 有效期（秒） | 86400 |
+| `LAYUIX_SCOPE_HIERARCHY` | 数据作用域层级 | `[]` |
+| `LAYUIX_SCOPE_TREE` | 数据作用域节点树 | `{}` |
+| `OPERATION_LOG` | 操作日志前缀/忽略/排除规则 | 见 4.2 节 |
+| `LAYUI_AI_*` | AI 日志分析配置 | 见 4.6 节 |
+| `DJANGO_LAYUIX_THEMES` | 自定义主题定义 | 内置主题 |
+
+ABAC 策略、组织节点、插件状态和前端 SDK 权限数据分别持久化在各自数据库表中，不属于 `sys_config` 项。
 
 支持的配置类型：字符串、整数、布尔、JSON、URL、图片、颜色、文本。
 

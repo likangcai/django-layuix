@@ -32,7 +32,7 @@ def webssh_proxy(request):
     
     # 回退到 settings.py 中的 LAYUI_CONFIG
     if not webssh_url:
-        webssh_url = getattr(settings, 'LAYUI_CONFIG', {}).get('webssh_url', 'http://localhost:8888/')
+        webssh_url = getattr(settings, 'LAYUI_CONFIG', {}).get('webssh_url', '/webssh/')
     
     query_string = request.META.get('QUERY_STRING', '')
     
