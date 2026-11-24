@@ -835,36 +835,34 @@ a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     margin-left: auto;
     flex-shrink: 0;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--bg-tertiary, var(--sidebar-hover-bg));
+    border-radius: 4px;
+    background: transparent;
     color: var(--text-secondary);
-    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    transition: color 0.18s ease, background-color 0.18s ease;
 }
 
 .menu-group-title:hover .menu-arrow,
 .menu-group-title:focus-visible .menu-arrow {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-    color: #ffffff;
+    background: transparent;
+    color: var(--primary-color);
 }
 
 .menu-group-title .menu-arrow::before {
     content: '';
-    width: 7px;
-    height: 7px;
-    border-right: 1.6px solid currentColor;
-    border-bottom: 1.6px solid currentColor;
-    transform: rotate(45deg) translate(-1px, -1px);
+    width: 8px;
+    height: 8px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-135deg) translate(-1px, -1px);
     transition: transform 0.2s ease;
 }
 
 .menu-group-title.collapsed .menu-arrow::before {
-    transform: rotate(-45deg) translate(1px, 1px);
+    transform: rotate(45deg) translate(-1px, -1px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1543,16 +1541,14 @@ a:hover {
 }
 
 [data-theme-mode="dark"] .sidebar-menu .menu-arrow {
-    background: #24262c !important;
-    border-color: #363840 !important;
+    background: transparent !important;
     color: #a6adb6 !important;
 }
 
 [data-theme-mode="dark"] .sidebar-menu .menu-group-title:hover .menu-arrow,
 [data-theme-mode="dark"] .sidebar-menu .menu-group-title:focus-visible .menu-arrow {
-    background: #1e9fff !important;
-    border-color: #1e9fff !important;
-    color: #ffffff !important;
+    background: transparent !important;
+    color: #4db2ff !important;
 }
 
 [data-theme-mode="dark"] .sidebar-menu .menu-item:hover,
@@ -2059,16 +2055,14 @@ a:hover {
 }
 
 [data-theme-mode="light"] .sidebar-menu .menu-arrow {
-    background: #f5f6f7 !important;
-    border-color: #e2e4e8 !important;
+    background: transparent !important;
     color: #646a73 !important;
 }
 
 [data-theme-mode="light"] .sidebar-menu .menu-group-title:hover .menu-arrow,
 [data-theme-mode="light"] .sidebar-menu .menu-group-title:focus-visible .menu-arrow {
-    background: #1e9fff !important;
-    border-color: #1e9fff !important;
-    color: #ffffff !important;
+    background: transparent !important;
+    color: #1e9fff !important;
 }
 
 [data-theme-mode="light"] .sidebar-menu .menu-item:hover,
