@@ -3,12 +3,13 @@
 版本：v1.0　适用版本：django-layuix 1.4.2+
 
 ## 结论（TL;DR）
-【事实】1.4.2 提供框架无关的 `permission-client.js`，并分别提供 Vue 3 与 React 适配层。
+【事实】1.4.2 提供框架无关的 `permission-client.js`，并提供 Vue 3、React、Svelte 与 Angular 适配层。
 【判断】前端只负责展示控制，最终安全边界仍是后端 `has_permission()` / `api_permission_required()` / ABAC 策略。
-【事实】当前 SDK 随 Django 静态文件分发，示例中的 `/static/sdk/...` 为可直接复制的 ES Module 路径，不是已发布的 npm 包。
-【待确认】是否后续补充 Svelte 与 Angular 适配器。
-【待确认】是否把动态路由组件映射也纳入 SDK。
+【事实】当前 SDK 随 Django 静态文件分发，示例中的 `/static/sdk/...` 为可直接复制的模块路径，不是已发布的 npm 包。
+【本期不做】自动把动态路由组件映射纳入 SDK。
 【待确认】是否发布独立 npm 包。
+【待确认】是否提供 Angular standalone bootstrap 示例。
+【待确认】是否提供 SvelteKit SSR 适配。
 
 ---
 
@@ -136,7 +137,70 @@ const { ready, can, canAny } = usePermission();
 const GuardedUsers = withPermission(UsersPage, 'user:view');
 ```
 
-## 5. 后端仍必须校验
+## 5. Svelte
+
+文件：
+
+```text
+/static/sdk/svelte/permission.js
+/static/sdk/svelte/Can.svelte
+```
+
+在根组件提供权限 store：
+
+```svelte
+<script>
+  import { createPermissionStore, providePermission, createPermissionAction } from '/static/sdk/svelte/permission.js';
+  const permission = createPermissionStore();
+  providePermission(permission);
+  const permissionAction = createPermissionAction(permission);
+</script>
+
+<button use:permissionAction={'user:add'}>新增用户</button>
+```
+
+条件组件：
+
+```svelte
+<script>
+  import Can from '/static/sdk/svelte/Can.svelte';
+</script>
+
+<Can perm="user:view">
+  <UserList />
+</Can>
+```
+
+## 6. Angular
+
+文件：
+
+```text
+/static/sdk/angular/permission.ts
+```
+
+模块或根组件中配置 endpoint：
+
+```ts
+import { PermissionService } from '/static/sdk/angular/permission.ts';
+
+permissionService.configure({
+  endpoint: '/admin/api/rbac/frontend/permissions/',
+  credentials: 'include',
+});
+```
+
+模板指令：
+
+```html
+<button [layuiPermission]="'user:add'">新增用户</button>
+<button [layuiPermission]="['user:edit', 'role:edit']">编辑</button>
+<button [layuiPermission]="['user:add', 'role:add']" [requireAll]="true">全部满足</button>
+```
+
+`PermissionService` 同时提供 `can / canAny / canAll / hasRole / menus / plugins`。
+
+## 7. 后端仍必须校验
 
 SDK 只隐藏按钮、控制路由，不能阻止用户直接调用 API。所有业务接口仍需：
 

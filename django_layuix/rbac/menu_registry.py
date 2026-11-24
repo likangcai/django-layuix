@@ -219,20 +219,26 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
                 # 如果父菜单在当前批次中已创建
                 parent = created.get(parent_name)
         
-        menu, is_new = Menu.objects.get_or_create(
-            name=name,
-            defaults={
-                'icon': icon,
-                'path': path,
-                'menu_type': menu_type,
-                'sort': sort,
-                'parent': parent,
-                'status': True,
-                'visible': True,
-                'plugin_key': plugin_key,
-            }
-        )
-        if plugin_key and menu.plugin_key != plugin_key:
+        defaults = {
+            'icon': icon,
+            'path': path,
+            'menu_type': menu_type,
+            'sort': sort,
+            'parent': parent,
+            'status': True,
+            'visible': True,
+            'plugin_key': plugin_key,
+        }
+        menu, is_new = Menu.objects.get_or_create(name=name, defaults=defaults)
+        if not is_new and not skip_existing:
+            changed = False
+            for field, value in defaults.items():
+                if getattr(menu, field) != value:
+                    setattr(menu, field, value)
+                    changed = True
+            if changed:
+                menu.save()
+        elif plugin_key and menu.plugin_key != plugin_key:
             menu.plugin_key = plugin_key
             menu.save(update_fields=['plugin_key'])
         created[name] = menu
@@ -261,22 +267,28 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
             if not parent_menu:
                 continue
             
-            btn, is_new = Menu.objects.get_or_create(
-                name=btn_name,
-                defaults={
-                    'parent': parent_menu,
-                    'icon': '',
-                    'path': '',
-                    'component': '',
-                    'menu_type': 3,
-                    'permission': permission,
-                    'sort': sort,
-                    'status': True,
-                    'visible': True,
-                    'plugin_key': plugin_key,
-                }
-            )
-            if plugin_key and btn.plugin_key != plugin_key:
+            defaults = {
+                'parent': parent_menu,
+                'icon': '',
+                'path': '',
+                'component': '',
+                'menu_type': 3,
+                'permission': permission,
+                'sort': sort,
+                'status': True,
+                'visible': True,
+                'plugin_key': plugin_key,
+            }
+            btn, is_new = Menu.objects.get_or_create(name=btn_name, defaults=defaults)
+            if not is_new and not skip_existing:
+                changed = False
+                for field, value in defaults.items():
+                    if getattr(btn, field) != value:
+                        setattr(btn, field, value)
+                        changed = True
+                if changed:
+                    btn.save()
+            elif plugin_key and btn.plugin_key != plugin_key:
                 btn.plugin_key = plugin_key
                 btn.save(update_fields=['plugin_key'])
 
@@ -285,6 +297,25 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
                 admin_role = Role.objects.filter(code='admin').first()
                 if admin_role:
                     admin_role.menus.add(btn)
+
+
+def unregister_plugin_menus(plugin_key):
+    """Delete all menus and buttons declared by a plugin."""
+    if not plugin_key:
+        return
+    from django_layuix.rbac.models import Menu
+
+    roots = list(Menu.objects.filter(plugin_key=plugin_key))
+    ids = set()
+    for menu in roots:
+        ids.add(menu.id)
+        descendants = Menu.objects.filter(parent=menu)
+        while descendants.exists():
+            current = list(descendants)
+            for child in current:
+                ids.add(child.id)
+            descendants = Menu.objects.filter(parent__in=current)
+    Menu.objects.filter(id__in=ids).delete()
 
 
 def unregister_menus(menu_names):

@@ -318,6 +318,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | `LAYUI_RBAC_PREREQ_STRATEGY` | 前置角色策略（无 DB 配置时生效） | auto_grant |
 | `LAYUI_RBAC_DSD_STRATEGY` | DSD 激活策略（无 DB 配置时生效） | greedy |
 | `LAYUI_RBAC_AUTHENTICATORS` | 自定义认证器导入路径 | `[]` |
+| `LAYUI_ALLOW_REGISTRATION` | 是否开放匿名注册接口 | False |
 | `LAYUIX_DISABLE_API_ORIGIN_GUARD` | 禁用管理 API 跨站来源防护（不推荐） | False |
 | `LAYUIX_API_ALLOWED_ORIGINS` | 管理 API 允许的来源主机白名单 | 未设置（使用 `ALLOWED_HOSTS`） |
 | `LAYUIX_API_PREFIXES` | 应用来源防护的管理 API 路径前缀 | `['/admin/api/']` |

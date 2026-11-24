@@ -466,9 +466,95 @@ function openStandardDialog(options) {
     return index;
 }
 
+/**
+ * 虚拟滚动表格：只渲染可视区域行，适合大数据量只读列表。
+ * cols 使用与 Layui table 相同的 {field,title,width,templet} 结构。
+ */
+function renderVirtualTable(options) {
+    var api = _getLayui();
+    var $ = api ? api.$ : (window.jQuery || window.$);
+    if (!$ || !options || !options.elem) return null;
+
+    var settings = Object.assign({
+        rowHeight: 38,
+        buffer: 8,
+        height: 420,
+        data: [],
+        cols: []
+    }, options);
+    var columns = settings.cols && settings.cols[0] ? settings.cols[0] : (settings.cols || []);
+    var rows = settings.data || [];
+    var root = $('<div class="layuix-virtual-table"></div>');
+    var head = $('<div class="layuix-virtual-head"></div>');
+    var body = $('<div class="layuix-virtual-body"></div>');
+    var topSpacer = $('<div class="layuix-virtual-spacer"></div>');
+    var list = $('<div class="layuix-virtual-rows"></div>');
+    var bottomSpacer = $('<div class="layuix-virtual-spacer"></div>');
+
+    body.css('height', typeof settings.height === 'number' ? settings.height + 'px' : settings.height);
+    head.append(columns.map(function(col) {
+        var width = col.width ? 'width:' + (typeof col.width === 'number' ? col.width + 'px' : col.width) + ';' : 'flex:1;';
+        return '<div class="layuix-virtual-cell" style="' + width + '">' + escapeHtml(col.title || '') + '</div>';
+    }).join(''));
+    body.append(topSpacer).append(list).append(bottomSpacer);
+    root.append(head).append(body);
+    $(settings.elem).html(root);
+
+    function cellHtml(row, col, index) {
+        if (typeof col.templet === 'function') {
+            return col.templet(row[col.field], row, index);
+        }
+        var value = row[col.field];
+        return escapeHtml(value === null || value === undefined ? '' : value);
+    }
+
+    function renderWindow() {
+        var rowHeight = Math.max(1, parseInt(settings.rowHeight, 10) || 38);
+        var viewport = body.innerHeight() || rowHeight * 10;
+        var scrollTop = body.scrollTop();
+        var start = Math.max(0, Math.floor(scrollTop / rowHeight) - (settings.buffer || 0));
+        var end = Math.min(
+            rows.length,
+            Math.ceil((scrollTop + viewport) / rowHeight) + (settings.buffer || 0)
+        );
+        topSpacer.css('height', (start * rowHeight) + 'px');
+        bottomSpacer.css('height', ((rows.length - end) * rowHeight) + 'px');
+        var html = [];
+        for (var i = start; i < end; i++) {
+            var cells = columns.map(function(col) {
+                var width = col.width ? 'width:' + (typeof col.width === 'number' ? col.width + 'px' : col.width) + ';' : 'flex:1;';
+                return '<div class="layuix-virtual-cell" style="' + width + '">' + cellHtml(rows[i], col, i) + '</div>';
+            }).join('');
+            html.push('<div class="layuix-virtual-row" style="height:' + rowHeight + 'px">' + cells + '</div>');
+        }
+        list.html(html.join(''));
+    }
+
+    body.off('scroll.layuixVirtual').on('scroll.layuixVirtual', renderWindow);
+    renderWindow();
+
+    var instance = {
+        elem: root,
+        rows: function() { return rows; },
+        refresh: renderWindow,
+        setData: function(data) { rows = data || []; body.scrollTop(0); renderWindow(); }
+    };
+    if (settings.url && typeof fetch === 'function') {
+        fetch(settings.url, {credentials: 'include'})
+            .then(function(response) { return response.json(); })
+            .then(function(payload) {
+                var parsed = typeof settings.parseData === 'function'
+                    ? settings.parseData(payload) : payload;
+                instance.setData((parsed && parsed.data) || []);
+            });
+    }
+    return instance;
+}
+
 window.LayuiUI = {
     standardPage: getStandardTablePage,
     table: renderStandardTable,
+    virtualTable: renderVirtualTable,
     dialog: openStandardDialog
 };
 

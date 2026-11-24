@@ -211,6 +211,7 @@ def _get_user_permissions(user):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:view')
 def system_info(request):
     """Get system information including CPU, memory, disk, network"""
     import psutil
@@ -356,7 +357,10 @@ def system_info_stream(request):
     
     if not user or not user.is_authenticated:
         return error_response('未登录', 401)
-    
+    from .permissions import has_permission
+    if not has_permission(user, 'config:view', request):
+        return error_response('无权限', 403)
+
     def event_stream():
         """生成SSE事件流"""
         try:
@@ -752,9 +756,11 @@ def set_language(request):
 
 @csrf_exempt
 def register(request):
-    """POST /api/rbac/register/ - 用户注册"""
+    """POST /api/rbac/register/ - 用户注册（默认关闭）"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
+    if not getattr(settings, 'LAYUI_ALLOW_REGISTRATION', False):
+        return error_response('注册功能未开放', 403)
 
     User = _get_user_model()
     body = get_request_body(request)
@@ -765,6 +771,8 @@ def register(request):
 
     if not username:
         return error_response('用户名不能为空', 400)
+    if username.lower() in {'admin', 'root', 'superuser'}:
+        return error_response('该用户名为系统保留名称', 400)
     if not password:
         return error_response('密码不能为空', 400)
     if len(password) < 6:
@@ -844,6 +852,7 @@ def logout(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('dashboard:view')
 def stats_data(request):
     """Get statistics data for dashboard"""
     from .models import Menu, Role, OperationLog
@@ -864,6 +873,7 @@ def stats_data(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('menu:view')
 def menu_tree(request):
     """GET /api/rbac/menus/tree/ - 获取所有菜单树（管理用，包含所有菜单）"""
     from .models import Menu
@@ -906,6 +916,7 @@ def frontend_menu_tree(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('menu:view')
 def menu_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/menus/<id>/ - 菜单详情/更新/删除"""
     from .models import Menu
@@ -1050,6 +1061,7 @@ def _role_payload(role):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('role:view')
 def role_list(request):
     """GET /api/rbac/roles/ - 角色列表"""
     from .models import Role
@@ -1060,6 +1072,7 @@ def role_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('role:view')
 def role_effective_permissions(request, pk):
     """GET /api/rbac/roles/<id>/effective_permissions/ - 自有与继承权限来源"""
     from .engine import effective_permissions_for_role
@@ -1071,6 +1084,7 @@ def role_effective_permissions(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('role:view')
 def role_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/roles/<id>/ - 角色详情/更新/删除"""
     from .models import Role
@@ -1275,6 +1289,7 @@ def role_copy(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:view')
 def user_list(request):
     """GET /api/rbac/users/ - 用户列表"""
     from django.db.models import Q
@@ -1449,6 +1464,7 @@ def user_update(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:delete')
 def user_delete(request, pk):
     """DELETE /api/rbac/users/<id>/delete/ - 删除用户"""
     if request.method != 'DELETE':
@@ -1463,6 +1479,9 @@ def user_delete(request, pk):
 
     if user.pk == request.user.pk:
         return error_response('不能删除当前登录用户', 400)
+    from .engine import is_full_access
+    if is_full_access(user):
+        return error_response('不能删除超级管理员或内置管理员', 403)
 
     user.delete()
     return success_response(msg='删除成功')
@@ -1470,6 +1489,7 @@ def user_delete(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:reset_password')
 def user_reset_password(request, pk):
     """PUT /api/rbac/users/<id>/reset-password/ - 重置用户密码"""
     if request.method != 'PUT':
@@ -1481,6 +1501,10 @@ def user_reset_password(request, pk):
         user = User.objects.get(pk=pk)
     except User.DoesNotExist:
         return error_response('用户不存在', 404)
+
+    from .engine import is_full_access
+    if is_full_access(user):
+        return error_response('不能重置超级管理员或内置管理员密码', 403)
 
     body = get_request_body(request)
     new_password = body.get('new_password', '')
@@ -1496,6 +1520,7 @@ def user_reset_password(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:toggle_status')
 def user_toggle_status(request, pk):
     """PUT /api/rbac/users/<id>/status/ - 切换用户状态"""
     if request.method != 'PUT':
@@ -1510,6 +1535,9 @@ def user_toggle_status(request, pk):
 
     if user.pk == request.user.pk:
         return error_response('不能禁用当前登录用户', 400)
+    from .engine import is_full_access
+    if is_full_access(user):
+        return error_response('不能禁用超级管理员或内置管理员', 403)
 
     user.is_active = not user.is_active
     user.save(update_fields=['is_active'])
@@ -1520,6 +1548,7 @@ def user_toggle_status(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('log:view')
 def log_list(request):
     """GET /api/rbac/logs/ - 操作日志列表（支持搜索和分页）"""
     from .models import OperationLog
@@ -1582,6 +1611,7 @@ def log_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:view')
 def config_list(request):
     """GET /api/rbac/configs/ - 系统配置列表"""
     from .models import SystemConfig
@@ -1604,6 +1634,7 @@ def config_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:add')
 def config_create(request):
     """POST /api/rbac/configs/create/ - 创建系统配置"""
     if request.method != 'POST':
@@ -1645,6 +1676,7 @@ def config_create(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:edit')
 def config_update(request, pk):
     """PUT /api/rbac/configs/<id>/update/ - 更新系统配置"""
     if request.method != 'PUT':
@@ -1694,17 +1726,23 @@ def config_update(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:delete')
 def config_delete(request, pk):
     """DELETE /api/rbac/configs/<id>/delete/ - 删除系统配置"""
     if request.method != 'DELETE':
         return error_response('Method not allowed', 405)
 
+    from .defaults import get_default_configs
     from .models import SystemConfig
 
     try:
         config = SystemConfig.objects.get(pk=pk)
     except SystemConfig.DoesNotExist:
         return error_response('配置不存在', 404)
+
+    protected = {row['key'] for row in get_default_configs()}
+    if config.key in protected:
+        return error_response('内置系统配置不能删除', 403)
 
     config.delete()
     return success_response(msg='删除成功')
@@ -1750,6 +1788,7 @@ def profile_avatar(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:edit')
 def upload_image(request):
     """POST /api/rbac/upload/image/ - 通用图片上传（用于 Logo、Favicon 等配置）"""
     if request.method != 'POST':
@@ -1785,6 +1824,7 @@ def upload_image(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:view')
 def plugin_list(request):
     """GET /api/rbac/plugins/ - 已安装插件列表"""
     from .plugins import list_plugins
@@ -1793,6 +1833,7 @@ def plugin_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:view')
 def plugin_manifest(request):
     """GET /api/rbac/plugins/manifest/ - 分离前端插件清单"""
     from .models import Menu

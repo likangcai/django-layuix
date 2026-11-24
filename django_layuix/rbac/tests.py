@@ -996,6 +996,127 @@ class RbacFinalAuditTests(TestCase):
             {'audit_global', 'audit_child'},
         )
 
+    def test_low_privilege_user_cannot_use_management_write_apis(self):
+        from django.test import Client
+
+        low = get_user_model().objects.create_user(username='audit_low', password='pass12345')
+        client = Client()
+        client.force_login(low)
+        cases = [
+            ('delete', '/admin/api/rbac/users/%s/delete/' % self.admin.pk),
+            ('put', '/admin/api/rbac/users/%s/reset-password/' % self.admin.pk),
+            ('put', '/admin/api/rbac/users/%s/status/' % self.admin.pk),
+            ('post', '/admin/api/rbac/configs/create/'),
+        ]
+        for method, url in cases:
+            with self.subTest(method=method, url=url):
+                response = getattr(client, method)(url, {}, content_type='application/json')
+                self.assertEqual(response.status_code, 403)
+
+    def test_low_privilege_user_cannot_read_management_apis(self):
+        from django.test import Client
+
+        low = get_user_model().objects.create_user(username='audit_reader', password='pass12345')
+        client = Client()
+        client.force_login(low)
+        urls = [
+            '/admin/api/rbac/users/',
+            '/admin/api/rbac/roles/',
+            '/admin/api/rbac/logs/',
+            '/admin/api/rbac/configs/',
+            '/admin/api/rbac/stats/',
+            '/admin/api/rbac/system/info/',
+            '/admin/api/rbac/plugins/',
+            '/admin/api/rbac/menus/tree/',
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                self.assertEqual(client.get(url).status_code, 403)
+
+    def test_registration_is_disabled_and_reserves_admin_name(self):
+        response = self.client.post('/admin/api/rbac/register/', {
+            'username': 'new_user', 'password': 'pass12345',
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+
+        with override_settings(LAYUI_ALLOW_REGISTRATION=True):
+            reserved = self.client.post('/admin/api/rbac/register/', {
+                'username': 'admin', 'password': 'pass12345',
+            }, content_type='application/json')
+            self.assertEqual(reserved.status_code, 400)
+            created = self.client.post('/admin/api/rbac/register/', {
+                'username': 'allowed_user', 'password': 'pass12345',
+            }, content_type='application/json')
+            self.assertEqual(created.status_code, 200)
+
+    def test_admin_username_alone_is_not_full_access(self):
+        from .engine import is_full_access
+
+        fake = get_user_model().objects.create_user(username='admin', password='pass12345')
+        self.assertFalse(is_full_access(fake))
+
+    def test_plugin_validation_failure_recovers_when_dependencies_fixed(self):
+        self.addCleanup(unregister_plugin, 'audit_recover')
+        register_plugin(
+            key='audit_recover', name='Recover',
+            validation_errors=['missing dependency'],
+        )
+        record = PluginRegistry.objects.get(key='audit_recover')
+        self.assertFalse(record.is_active)
+        self.assertTrue(record.desired_active)
+
+        register_plugin(key='audit_recover', name='Recover', validation_errors=[])
+        record.refresh_from_db()
+        self.assertTrue(record.is_active)
+
+    def test_plugin_state_failure_does_not_call_hooks(self):
+        self.addCleanup(unregister_plugin, 'audit_db_fail')
+        register_plugin(key='audit_db_fail', name='DB Fail')
+        original = bool(PluginRegistry.objects.get(key='audit_db_fail').is_active)
+        with mock.patch('django_layuix.rbac.plugins._db', side_effect=RuntimeError('db down')):
+            result = set_plugin_active('audit_db_fail', not original)
+        self.assertFalse(result)
+        self.assertEqual(
+            bool(PluginRegistry.objects.get(key='audit_db_fail').is_active), original
+        )
+
+    def test_unregister_plugin_removes_its_menus(self):
+        from .menu_registry import register_menus
+
+        self.addCleanup(unregister_plugin, 'audit_cleanup')
+        register_plugin(key='audit_cleanup', name='Cleanup')
+        Menu.objects.filter(plugin_key='audit_cleanup').delete()
+        register_menus(
+            menus_data=[('审计插件菜单', 'layui-icon-app', '/audit', 2, 1, None)],
+            skip_existing=True,
+            plugin_key='audit_cleanup',
+        )
+        self.assertTrue(Menu.objects.filter(plugin_key='audit_cleanup').exists())
+        unregister_plugin('audit_cleanup')
+        self.assertFalse(Menu.objects.filter(plugin_key='audit_cleanup').exists())
+
+    def test_register_menus_skip_existing(self):
+        from .menu_registry import register_menus
+
+        self.addCleanup(Menu.objects.filter(name='审计跳过菜单').delete)
+        spec = [('审计跳过菜单', 'layui-icon-app', '/audit/skip', 2, 1, None)]
+        register_menus(menus_data=spec, skip_existing=True)
+        Menu.objects.filter(name='审计跳过菜单').update(icon='changed')
+        register_menus(
+            menus_data=[('审计跳过菜单', 'layui-icon-user', '/audit/new', 2, 2, None)],
+            skip_existing=True,
+        )
+        menu = Menu.objects.get(name='审计跳过菜单')
+        self.assertEqual(menu.icon, 'changed')
+        self.assertEqual(menu.path, '/audit/skip')
+        register_menus(
+            menus_data=[('审计跳过菜单', 'layui-icon-user', '/audit/new', 2, 2, None)],
+            skip_existing=False,
+        )
+        menu.refresh_from_db()
+        self.assertEqual(menu.icon, 'layui-icon-user')
+        self.assertEqual(menu.path, '/audit/new')
+
 
 class I18nCoverageTests(SimpleTestCase):
 

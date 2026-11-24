@@ -102,6 +102,9 @@ export function createPermissionClient(options = {}) {
     scopeNodes,
     abacPolicies,
     get snapshot() { return snapshot; },
+    configure(nextOptions) {
+      Object.assign(settings, nextOptions || {});
+    },
     setToken(token) { settings.token = token || ''; },
   };
 }

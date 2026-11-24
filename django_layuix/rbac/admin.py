@@ -71,10 +71,11 @@ class RolePrerequisiteAdmin(admin.ModelAdmin):
 
 
 class PluginRegistryAdmin(admin.ModelAdmin):
-    list_display = ['id', 'key', 'name', 'version', 'source', 'is_active', 'validation_error']
+    list_display = ['id', 'key', 'name', 'version', 'source', 'is_active', 'desired_active', 'validation_error']
     list_filter = ['source', 'is_active']
     search_fields = ['key', 'name', 'app_label']
     readonly_fields = ['create_time', 'update_time', 'validation_error']
+    exclude = ['desired_active']
 
     def save_model(self, request, obj, form, change):
         from .plugins import set_plugin_active
@@ -84,8 +85,13 @@ class PluginRegistryAdmin(admin.ModelAdmin):
             was_active = bool(
                 PluginRegistry.objects.filter(pk=obj.pk).values_list('is_active', flat=True).first()
             )
-        if was_active != obj.is_active and not set_plugin_active(obj.key, obj.is_active):
-            obj.is_active = was_active
+        if was_active != obj.is_active:
+            if not set_plugin_active(obj.key, obj.is_active):
+                obj.is_active = was_active
+            else:
+                obj.desired_active = PluginRegistry.objects.filter(pk=obj.pk).values_list(
+                    'desired_active', flat=True
+                ).first()
         super().save_model(request, obj, form, change)
 
 

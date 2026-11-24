@@ -237,6 +237,13 @@ class Command(BaseCommand):
             elif not updated:
                 self.stdout.write(f'  菜单已存在: {name}')
 
+        from django_layuix.rbac.menu_permissions import MENU_VIEW_PERMISSIONS
+        for menu_name, permission in MENU_VIEW_PERMISSIONS.items():
+            menu = Menu.objects.filter(name=menu_name).first()
+            if menu and menu.permission != permission:
+                menu.permission = permission
+                menu.save(update_fields=['permission'])
+
         # 创建按钮级权限（menu_type=3）
         # (name, name_en, name_zh_hans, parent_menu, permission, sort)
         buttons_data = [

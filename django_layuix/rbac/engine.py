@@ -170,7 +170,7 @@ def is_full_access(user):
     Role, *_ = _models()
     if not getattr(user, 'is_authenticated', False):
         return False
-    if getattr(user, 'is_superuser', False) or getattr(user, 'username', '') == 'admin':
+    if getattr(user, 'is_superuser', False):
         return True
     return Role.objects.filter(
         id__in=get_effective_role_ids(user), code='admin', status=True

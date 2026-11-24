@@ -3,12 +3,13 @@
 版本：v1.0　适用版本：django-layuix 1.4.2+
 
 ## 结论（TL;DR）
-【事实】后台统一使用 `admin.css` 中的设计 token 与 `common.js` 暴露的 `LayuiUI.table/dialog` 组件。
+【事实】后台统一使用 `admin.css` 中的设计 token 与 `common.js` 暴露的 `LayuiUI.table/dialog/virtualTable` 组件。
 【判断】通用列表和表单弹窗应复用组件，树、卡片、图表、详情内嵌表格等特殊情况保留独立实现。
-【本期不做】强制重写所有历史页面为单文件组件；不引入新的前端框架。
-【待确认】是否补充 Svelte / Angular 组件封装。
-【待确认】是否将列表组件升级为虚拟滚动表格。
+【事实】大数据量只读列表可改用 `LayuiUI.virtualTable()`，只渲染可视行。
+【本期不做】强制重写所有历史页面为虚拟滚动表格；不引入新的前端框架。
 【待确认】是否发布独立 npm 包。
+【待确认】是否为虚拟滚动表格增加列宽拖拽与列配置持久化。
+【待确认】是否提供虚拟滚动表格的服务端分页混合模式。
 
 ---
 
@@ -113,6 +114,32 @@ LayuiUI.table({elem: '#treeTable', data: rows, page: false, cols: [cols]});
 - 明确要求一次展示全部数据的页面
 
 除上述例外外，所有列表默认必须有分页。
+
+### 4.1 虚拟滚动表格
+
+大数据量只读列表使用：
+
+```js
+LayuiUI.virtualTable({
+    elem: '#bigTable',
+    height: 520,
+    rowHeight: 38,
+    buffer: 8,
+    data: rows,
+    cols: [[
+        {field: 'id', title: 'ID', width: 80},
+        {field: 'name', title: '名称', minWidth: 180}
+    ]]
+});
+```
+
+规则：
+
+- 只渲染可视区域加上下缓冲行。
+- `rowHeight` 必须与实际行高一致。
+- 支持 `url + parseData` 一次性加载数据源。
+- 返回实例提供 `setData()` / `refresh()` / `rows()`。
+- 需要编辑、排序、分页的列表仍使用 `LayuiUI.table()`。
 
 ## 5. 弹窗组件
 

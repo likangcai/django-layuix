@@ -804,6 +804,51 @@ a:hover {
     margin-bottom: 10px;
 }
 
+/* 1.4.2 虚拟滚动表格 */
+.layuix-virtual-table {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--card-bg, var(--bg-primary));
+    overflow: hidden;
+}
+
+.layuix-virtual-head,
+.layuix-virtual-row {
+    display: flex;
+    align-items: stretch;
+    min-width: 100%;
+}
+
+.layuix-virtual-head {
+    height: 38px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.layuix-virtual-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.layuix-virtual-cell {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0 12px;
+    border-right: 1px solid var(--border-light);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.layuix-virtual-cell:last-child { border-right: 0; }
+.layuix-virtual-row { border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
+.layuix-virtual-row:hover { background: var(--bg-secondary); }
+.layuix-virtual-rows { will-change: transform; }
+
 /* 1.4.2 表单操作区 */
 .form-actions {
     display: flex;

@@ -77,5 +77,6 @@
 - 【判断】ABAC 未配置时全部放行，组织节点为空时回退 settings 层级配置，前端 SDK 只做展示控制。
 - 【事实】当前 SDK 以 `/static/sdk/` 静态 ES Module 分发，不依赖外部 npm 包。
 - 【待确认】是否发布独立 npm 包。
-- 【待确认】是否补充 Svelte / Angular 适配器。
+- 【事实】已补充 Svelte store/action/Can 组件与 Angular service/directive，详见 `FRONTEND_SDK_GUIDE.md`。
 - 【待确认】是否把 ABAC 表达式下推为 ORM Q 对象以提升大数据量过滤性能。
+- 【待确认】是否提供 SvelteKit SSR 场景的服务端权限预取示例。

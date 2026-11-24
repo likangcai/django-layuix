@@ -16,7 +16,7 @@ _PLUGIN_CLASSES = {}
 _FIELDS = (
     'key', 'name', 'version', 'description',
     'api_prefix', 'menu_path', 'app_label',
-    'dependencies', 'source', 'validation_error', 'is_active',
+    'dependencies', 'source', 'validation_error', 'desired_active', 'is_active',
 )
 
 _SPEC_RE = re.compile(r'^([A-Za-z0-9_.-]+)\s*(>=|==|<=|>|<)?\s*([0-9][0-9A-Za-z.\-]*)?$')
@@ -25,6 +25,12 @@ _SPEC_RE = re.compile(r'^([A-Za-z0-9_.-]+)\s*(>=|==|<=|>|<)?\s*([0-9][0-9A-Za-z.
 def _db():
     from .models import PluginRegistry
     return PluginRegistry.objects
+
+
+def _supports_desired_active():
+    """Avoid querying a column that does not exist before migrations run."""
+    from .models import PluginRegistry
+    return any(field.name == 'desired_active' for field in PluginRegistry._meta.get_fields())
 
 
 def _version_tuple(value):
@@ -149,9 +155,10 @@ def register_plugin(key, name, version='1.0.0', description='',
     except Exception:
         pass
     previous_active = bool(getattr(existing, 'is_active', False))
-
-    # A persisted deactivation must survive restarts; validation failures always disable.
-    desired_active = (previous_active if existing else bool(is_active)) and not errors
+    desired_active = (
+        bool(getattr(existing, 'desired_active', True)) if existing else bool(is_active)
+    )
+    effective_active = desired_active and not errors
 
     data = {
         'key': key,
@@ -164,50 +171,74 @@ def register_plugin(key, name, version='1.0.0', description='',
         'dependencies': _as_lines(dependencies),
         'source': source,
         'validation_error': error_text,
-        'is_active': desired_active,
+        'desired_active': desired_active,
+        'is_active': effective_active,
     }
     _PLUGINS[key] = data
 
+    persisted_fields = [f for f in _FIELDS if f != 'key']
+    if not _supports_desired_active():
+        persisted_fields = [f for f in persisted_fields if f != 'desired_active']
     try:
         obj, _ = _db().update_or_create(
             key=key,
-            defaults={field: data[field] for field in _FIELDS if field != 'key'},
+            defaults={field: data[field] for field in persisted_fields},
         )
         data['id'] = obj.id
     except Exception:
         logger.exception('Failed to persist plugin metadata for %s', key)
 
-    if desired_active and not previous_active:
+    if effective_active and not previous_active:
         _call_hook(key, 'on_enable')
-    elif previous_active and not desired_active:
+    elif previous_active and not effective_active:
         _call_hook(key, 'on_disable')
     return data
 
 
 def unregister_plugin(key):
     data = _PLUGINS.pop(key, None)
-    if data and data.get('is_active', True):
+    was_active = bool(data and data.get('is_active')) or _was_active(key)
+    if was_active:
         _call_hook(key, 'on_disable')
     try:
+        from .menu_registry import unregister_plugin_menus
+        unregister_plugin_menus(key)
         _db().filter(key=key).delete()
     except Exception:
-        pass
+        logger.exception('Failed to unregister plugin %s', key)
 
 
 def set_plugin_active(key, active):
-    """Enable/disable a plugin and invoke its lifecycle hook on transition."""
-    previous = _was_active(key)
-    if previous == bool(active):
-        return False
+    """Persist user intent, then invoke lifecycle hook only on a successful transition."""
+    active = bool(active)
+    supports_desired = _supports_desired_active()
     try:
         record = _db().filter(key=key).first()
-        if active and record and record.validation_error:
+        if record is None:
             return False
-        _db().filter(key=key).update(is_active=bool(active))
+        desired = bool(getattr(record, 'desired_active', True)) if supports_desired else True
+        if active and record.validation_error:
+            if supports_desired:
+                _db().filter(key=key).update(desired_active=True)
+            if key in _PLUGINS:
+                _PLUGINS[key]['desired_active'] = True
+            return False
+        previous = bool(record.is_active)
+        if previous == active and desired == active:
+            return False
+        values = {'is_active': active}
+        if supports_desired:
+            values['desired_active'] = active
+        updated = _db().filter(key=key).update(**values)
+        if not updated:
+            return False
     except Exception:
         logger.exception('Failed to update active state for plugin %s', key)
+        return False
+
     if key in _PLUGINS:
-        _PLUGINS[key]['is_active'] = bool(active)
+        _PLUGINS[key]['is_active'] = active
+        _PLUGINS[key]['desired_active'] = active
     _call_hook(key, 'on_enable' if active else 'on_disable')
     return True
 

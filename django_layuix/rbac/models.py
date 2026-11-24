@@ -194,6 +194,7 @@ class PluginRegistry(models.Model):
     dependencies = models.TextField(blank=True, default='', verbose_name='依赖声明')
     source = models.CharField(max_length=20, default='app', verbose_name='来源')
     validation_error = models.TextField(blank=True, default='', verbose_name='校验错误')
+    desired_active = models.BooleanField(default=True, verbose_name='用户期望启用')
     is_active = models.BooleanField(default=True, verbose_name='是否启用')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
