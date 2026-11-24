@@ -216,6 +216,11 @@ class Rbac4ExtensionTests(TestCase):
         self.cashier = Role.objects.create(name='出纳4', code='rbac4_cashier')
         self.accountant = Role.objects.create(name='会计4', code='rbac4_accountant')
 
+        # Plugin state is persisted; make tests independent of the development DB.
+        register_plugin(key='ops', name='运维管理')
+        PluginRegistry.objects.filter(key='ops').update(validation_error='')
+        set_plugin_active('ops', True)
+
     def test_menu_name_localization(self):
         menu = Menu.objects.create(
             name='菜单管理', name_en='Menu Management',

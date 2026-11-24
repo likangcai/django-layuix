@@ -490,8 +490,8 @@ layui.use(['table', 'form', 'layer'], function(){
                 });
 
                 // 取消按钮
-                layero.find('#cancelConfigForm').on('click', function() {
-                    layer.close(layerIndex);
+                layero.find('#cancelConfigForm').off('click.configForm').on('click.configForm', function() {
+                    layer.close(index);
                 });
             }
         });

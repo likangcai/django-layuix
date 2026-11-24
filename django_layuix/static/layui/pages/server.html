@@ -496,8 +496,8 @@ layui.use(['table', 'form', 'layer'], function(){
                     testConnection(originalData);
                 });
 
-                layero.find('#cancelServerForm').on('click', function() {
-                    layer.close(layerIndex);
+                layero.find('#cancelServerForm').off('click.serverForm').on('click.serverForm', function() {
+                    layer.close(index);
                 });
 
                 form.off('submit(serverSubmit)').on('submit(serverSubmit)', function(data) {
@@ -536,7 +536,7 @@ layui.use(['table', 'form', 'layer'], function(){
                             
                             if (res.code === 200) {
                                 layer.msg(t('common.updateSuccess'), {icon: 1});
-                                layer.close(layerIndex);
+                                layer.close(index);
                                 loadTable();
                             } else {
                                 layer.msg(res.msg || t('common.fail'), {icon: 2});
@@ -549,7 +549,7 @@ layui.use(['table', 'form', 'layer'], function(){
                             
                             if (res.code === 200) {
                                 layer.msg(t('common.addSuccess'), {icon: 1});
-                                layer.close(layerIndex);
+                                layer.close(index);
                                 loadTable();
                             } else {
                                 layer.msg(res.msg || t('common.fail'), {icon: 2});

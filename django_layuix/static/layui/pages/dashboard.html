@@ -296,7 +296,7 @@
                         '</form>',
                     success: function(layero, index) {
                         layui.form.render(null, 'changePwdForm');
-                        layero.find('#btnCancelPwd').on('click', function() { layer.close(index); });
+                        layero.find('#btnCancelPwd').off('click.changePwd').on('click.changePwd', function() { layer.close(index); });
                         layero.find('#btnSubmitPwd').on('click', function() {
                             var $btn = $(this);
                             var oldPwd = layero.find('input[name="old_password"]').val().trim();

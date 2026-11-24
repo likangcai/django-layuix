@@ -44,6 +44,49 @@ function _getLayui() {
     return null;
 }
 
+// 统一弹窗关闭行为：确保 X、底部取消按钮以及只有单个取消按钮的场景都能关闭。
+// layui 模块可能在 common.js 之后异步加载，因此这里做有限次探测。
+function patchLayerCloseDefaults() {
+    var api = _getLayui();
+    if (!api || !api.layer || api.layer.__layuiCloseDefaultsPatched) return false;
+
+    var layer = api.layer;
+    var originalOpen = layer.open;
+    layer.open = function(options) {
+        options = options || {};
+        if (options.closeBtn === undefined) options.closeBtn = 1;
+
+        if (Array.isArray(options.btn) && typeof options.yes !== 'function') {
+            options.yes = function(index) { layer.close(index); };
+        }
+        if (Array.isArray(options.btn) && options.btn.length > 1 && typeof options.btn2 !== 'function') {
+            options.btn2 = function(index) { layer.close(index); };
+        }
+
+        var originalCancel = options.cancel;
+        options.cancel = function(index) {
+            if (typeof originalCancel === 'function' && originalCancel(index) === false) {
+                return false;
+            }
+            layer.close(index);
+        };
+
+        return originalOpen.call(layer, options);
+    };
+    layer.__layuiCloseDefaultsPatched = true;
+    return true;
+}
+
+if (typeof window !== 'undefined') {
+    patchLayerCloseDefaults();
+    var layerPatchAttempts = 0;
+    var layerPatchTimer = setInterval(function() {
+        layerPatchAttempts++;
+        var patched = patchLayerCloseDefaults();
+        if (patched || layerPatchAttempts > 50) clearInterval(layerPatchTimer);
+    }, 100);
+}
+
 /**
  * API请求封装
  * @param {string} method - HTTP方法
@@ -323,45 +366,117 @@ function renderTpl(tplId, data) {
 }
 
 /**
- * 渲染页面中所有 {{ t('key') }} 占位符
- * 解决静态HTML文件中 {{ t('...') }} 不会被模板引擎处理的问题
- * 在子页面加载 i18n.js 后调用即可
- *
- * 支持的语法：
- *   {{ t('key') }}           → 纯文本替换
- *   {{ t('key', [arg1]) }}   → 带参数的翻译
- *   {{ t('key') || '默认' }}  → 带默认值的翻译
+ * 渲染页面中所有 {{ t(...) }} 占位符。
+ * 不使用 eval：仅解析字符串字面量、t() 调用、参数数组、+ 拼接与 || 默认值。
  */
 function renderI18n() {
     if (typeof t !== 'function') return;
 
-    // 匹配 {{ t('key') }}, {{ t("key") }}, {{ t('key', [...]) }}, {{ t('key') || 'default' }}
-    var regex = /\{\{\s*t\(\s*(['"])([^'"]+)\1\s*(?:,\s*\[([^\]]*)\]\s*)?\)\s*(?:\|\|\s*(['"])([^'"]*)\4)?\s*\}\}/g;
-
-    function translate(match, q1, key, args, q2, fallback) {
-        var result;
-        if (args) {
-            var argsArr = [];
-            try {
-                var parsed = JSON.parse('[' + args + ']');
-                if (Array.isArray(parsed)) argsArr = parsed;
-            } catch(e) {
-                argsArr = args.split(',').map(function(v) {
-                    return String(v).trim().replace(/^['"]|['"]$/g, '');
-                });
+    function splitTopLevel(input, delimiter) {
+        var parts = [];
+        var buffer = '';
+        var quote = null;
+        var depth = 0;
+        for (var i = 0; i < input.length; i++) {
+            var ch = input[i];
+            if (quote) {
+                buffer += ch;
+                if (ch === quote && input[i - 1] !== '\\') quote = null;
+                continue;
             }
-            result = t(key, argsArr);
-        } else {
-            result = t(key);
+            if (ch === '"' || ch === "'") {
+                quote = ch;
+                buffer += ch;
+                continue;
+            }
+            if (ch === '(' || ch === '[' || ch === '{') {
+                depth++;
+                buffer += ch;
+                continue;
+            }
+            if (ch === ')' || ch === ']' || ch === '}') {
+                depth--;
+                buffer += ch;
+                continue;
+            }
+            if (depth === 0 && input.substr(i, delimiter.length) === delimiter) {
+                parts.push(buffer);
+                buffer = '';
+                i += delimiter.length - 1;
+                continue;
+            }
+            buffer += ch;
         }
-        // 如果翻译结果等于key（未找到翻译），使用fallback
-        if (result === key && fallback) return fallback;
-        return result;
+        parts.push(buffer);
+        return parts;
+    }
+
+    function parseLiteral(value) {
+        var text = String(value).trim();
+        var match = /^(['"])([\s\S]*)\1$/.exec(text);
+        if (!match) return null;
+        return match[2].replace(/\\(['"\\])/g, '$1');
+    }
+
+    function evaluate(expr) {
+        var text = String(expr).trim();
+        if (!text) return {value: text, key: null};
+
+        var orParts = splitTopLevel(text, '||');
+        if (orParts.length > 1) {
+            var left = evaluate(orParts[0]);
+            if (left.value !== '' && left.value !== left.key) return left;
+            return evaluate(orParts.slice(1).join('||'));
+        }
+
+        var plusParts = splitTopLevel(text, '+');
+        if (plusParts.length > 1) {
+            return {
+                value: plusParts.map(function(part) { return evaluate(part).value; }).join(''),
+                key: null
+            };
+        }
+
+        var callMatch = /^t\s*\(/.exec(text);
+        if (callMatch && text.charAt(text.length - 1) === ')') {
+            var inner = text.slice(callMatch[0].length, -1);
+            var args = [];
+            var callParts = splitTopLevel(inner, ',');
+            var key = parseLiteral(callParts[0]);
+            if (key !== null) {
+                if (callParts.length > 1) {
+                    var rawArgs = callParts.slice(1).join(',').trim();
+                    if (rawArgs.charAt(0) === '[' && rawArgs.charAt(rawArgs.length - 1) === ']') {
+                        var argText = rawArgs.slice(1, -1).trim();
+                        args = argText ? splitTopLevel(argText, ',').map(function(item) {
+                            return evaluate(item).value;
+                        }) : [];
+                    } else {
+                        args = [evaluate(rawArgs).value];
+                    }
+                }
+                return {value: t(key, args), key: key};
+            }
+        }
+
+        var literal = parseLiteral(text);
+        if (literal !== null) return {value: literal, key: null};
+        return {value: text, key: null};
     }
 
     function translateText(value) {
-        return typeof value === 'string' ? value.replace(regex, translate) : value;
+        if (typeof value !== 'string' || value.indexOf('{{') === -1) return value;
+        return value.replace(/\{\{([\s\S]*?)\}\}/g, function(match, expr) {
+            if (!/^\s*t\s*\(/.test(expr)) return match;
+            return evaluate(expr).value;
+        });
     }
+
+    var translatableAttrs = {
+        placeholder: true, title: true, alt: true,
+        'aria-label': true, 'lay-reqtext': true,
+        'data-title': true, 'data-content': true, 'data-tips': true
+    };
 
     // 只替换文本节点和常用属性，不重写 body.innerHTML，避免销毁已绑定的事件与组件状态
     function walk(node) {
@@ -375,8 +490,7 @@ function renderI18n() {
         var attrs = node.attributes;
         for (var i = 0; i < attrs.length; i++) {
             var attr = attrs[i];
-            if (attr.name === 'placeholder' || attr.name === 'title' ||
-                attr.name === 'alt' || attr.name.indexOf('data-i18n') === 0) {
+            if (translatableAttrs[attr.name] || attr.name.indexOf('data-i18n') === 0) {
                 var translated = translateText(attr.value);
                 if (translated !== attr.value) attr.value = translated;
             }
