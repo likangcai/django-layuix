@@ -17,6 +17,20 @@ def order_list(request):
     queryset = filter_queryset(scoped_queryset, user, 'view', resource)
     visible_fields = filter_fields(user, 'view', resource, VIEW_FIELDS)
 
+    try:
+        page = max(1, int(request.GET.get('page') or 1))
+    except (TypeError, ValueError):
+        page = 1
+    try:
+        page_size = int(request.GET.get('page_size') or 10)
+    except (TypeError, ValueError):
+        page_size = 10
+    page_size = min(max(page_size, 1), 100)
+
+    total = queryset.count()
+    start = (page - 1) * page_size
+    queryset = queryset[start:start + page_size]
+
     rows = []
     for order in queryset:
         values = {
@@ -30,4 +44,13 @@ def order_list(request):
         }
         rows.append({key: values[key] for key in visible_fields})
 
-    return JsonResponse({'code': 200, 'data': rows, 'fields': visible_fields, 'count': len(rows)})
+    return JsonResponse({
+        'code': 200,
+        'data': rows,
+        'fields': visible_fields,
+        'count': total,
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+        'total_pages': (total + page_size - 1) // page_size,
+    })

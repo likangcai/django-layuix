@@ -15,6 +15,7 @@ MENU_PATH_MAP = {
     "/permission/user": "/static/layui/pages/user.html",
     "/system/rbac-constraints": "/static/layui/pages/constraints.html",
     "/permission/abac": "/static/layui/pages/abac.html",
+    "/permission/data-scope": "/static/layui/pages/scope.html",
     "/system/scope-nodes": "/static/layui/pages/scope.html",
     "/permission-demo/orders": "/static/permission_demo/pages/order.html",
     "/static/permission_demo/pages/order.html": "/static/permission_demo/pages/order.html",

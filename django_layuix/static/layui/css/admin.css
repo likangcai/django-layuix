@@ -25,6 +25,24 @@
     --transition-fast: 0.15s ease;
     --transition-normal: 0.25s ease;
     --transition-slow: 0.35s ease;
+    /* 组件规范 token */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --control-height-sm: 30px;
+    --control-height-md: 36px;
+    --control-height-lg: 38px;
+    --button-height-xs: 24px;
+    --button-height-sm: 30px;
+    --button-height-md: 38px;
+    --button-radius: var(--radius-md);
+    --form-label-width: 120px;
+    --form-gap: 16px;
+    --search-input-width: 200px;
+    --search-select-width: 160px;
     /* 卡片相关变量 - 默认浅色主题 */
     --bg-body: #f0f2f5;
     --bg-primary: #ffffff;
@@ -808,9 +826,11 @@ a:hover {
 }
 
 .abac-policy-list {
+    box-sizing: border-box;
+    height: 720px;
     padding: 12px 16px;
-    max-height: calc(100vh - 300px);
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .abac-policy-card {
@@ -1236,11 +1256,34 @@ a:hover {
 /* ---- Buttons ---- */
 .layui-btn {
     display: inline-block;
+    height: var(--button-height-md);
+    line-height: var(--button-height-md);
+    padding: 0 var(--space-4);
+    border-radius: var(--button-radius);
     vertical-align: middle;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     outline: none;
     white-space: nowrap;
+}
+
+.layui-btn.layui-btn-sm {
+    height: var(--button-height-sm);
+    line-height: var(--button-height-sm);
+    padding: 0 var(--space-3);
+    font-size: 12px;
+}
+
+.layui-btn.layui-btn-xs {
+    height: var(--button-height-xs);
+    line-height: calc(var(--button-height-xs) - 2px);
+    padding: 0 var(--space-2);
+    font-size: 12px;
+}
+
+.layui-btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .layui-btn-primary {
@@ -1366,13 +1409,13 @@ a:hover {
 
 /* ---- Forms ---- */
 .layui-form-item {
-    margin-bottom: 15px;
+    margin-bottom: var(--space-4);
 }
 
 .layui-form-label {
     display: block;
-    width: 100px;
-    padding: 9px 15px 9px 0;
+    width: var(--form-label-width);
+    padding: 9px var(--space-3) 9px 0;
     text-align: right;
     font-size: 13px;
     color: var(--text-primary);
@@ -1381,8 +1424,8 @@ a:hover {
 }
 
 .layui-input-block {
-    margin-left: 110px;
-    min-height: 36px;
+    margin-left: calc(var(--form-label-width) + var(--space-2));
+    min-height: var(--control-height-md);
 }
 
 /* 弹窗中的表单样式 */
@@ -1402,19 +1445,20 @@ a:hover {
 }
 
 .layui-input {
-    height: 36px;
-    padding: 0 12px;
+    height: var(--control-height-md);
+    padding: 0 var(--space-3);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     background: var(--input-bg);
     color: var(--text-primary);
     font-size: 13px;
-    transition: border-color 0.2s ease;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     outline: none;
 }
 
 .layui-input:focus {
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(30, 159, 255, 0.12);
 }
 
 .layui-input::placeholder {
@@ -1422,10 +1466,10 @@ a:hover {
 }
 
 .layui-select {
-    height: 36px;
-    padding: 0 12px;
+    height: var(--control-height-md);
+    padding: 0 var(--space-3);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     background: var(--input-bg);
     color: var(--text-primary);
     font-size: 13px;
@@ -1436,9 +1480,9 @@ a:hover {
 
 .layui-textarea {
     min-height: 80px;
-    padding: 10px 12px;
+    padding: var(--space-3);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     background: var(--input-bg);
     color: var(--text-primary);
     font-size: 13px;
@@ -2447,8 +2491,31 @@ a:hover {
     border: 1px solid var(--card-border);
     border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
-    padding: 16px 20px;
-    margin-bottom: 16px;
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-4);
+}
+
+.page-container .search-bar .layui-form-item,
+.log-container .search-card .layui-form-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--form-gap);
+    margin-bottom: 0;
+}
+
+.page-container .search-bar .layui-inline,
+.log-container .search-card .layui-inline {
+    margin-right: 0;
+    margin-bottom: var(--space-2);
+}
+
+.page-container .search-bar .layui-input-inline {
+    width: var(--search-input-width);
+}
+
+.page-container .search-bar .layui-input-inline select {
+    width: var(--search-select-width);
 }
 
 .page-container .search-btns,

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -295,7 +295,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-<script src="/static/layui/js/common.js?v=20261124b"></script>
+<script src="/static/layui/js/common.js?v=20261124g"></script>
 <script src="/static/layui/js/i18n.js"></script>
 <script>
 inheritTheme();
@@ -325,7 +325,7 @@ layui.use(['table', 'form', 'layer'], function(){
 
     // ==================== 服务器列表 ====================
     function loadTable() {
-        table.render({
+        LayuiUI.table({
             elem: '#serverTable',
             url: '/admin/api/ops/servers/',
             method: 'get',

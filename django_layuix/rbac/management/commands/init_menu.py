@@ -91,12 +91,33 @@ class Command(BaseCommand):
                 admin_role.menus.add(menu)
             self.stdout.write(self.style.SUCCESS('  创建菜单: 约束管理 (RBAC3)'))
 
+    def _migrate_scope_menu(self):
+        """Move legacy 组织节点 menu to 权限管理 → 数据范围."""
+        parent = Menu.objects.filter(name='权限管理').first()
+        if not parent:
+            return
+        legacy = list(Menu.objects.filter(name__in=['组织节点', '数据范围']).order_by('id'))
+        if not legacy:
+            return
+        menu = legacy[0]
+        menu.name = '数据范围'
+        menu.name_en = 'Data Scope'
+        menu.name_zh_hans = '数据范围'
+        menu.icon = 'layui-icon-tree'
+        menu.path = '/permission/data-scope'
+        menu.parent = parent
+        menu.sort = 6
+        menu.save()
+        for duplicate in legacy[1:]:
+            duplicate.delete()
+
     def _ensure_142_menus(self):
-        """Add ABAC policy and scope node menus to pre-1.4.2 installations."""
+        """Add ABAC policy and data scope menus to pre-1.4.2 installations."""
         specs = [
             ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 5, '权限管理'),
-            ('组织节点', 'Scope Nodes', '组织节点', 'layui-icon-tree', '/system/scope-nodes', 5, '系统管理'),
+            ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 6, '权限管理'),
         ]
+        self._migrate_scope_menu()
         for name, name_en, name_zh, icon, path, sort, parent_name in specs:
             parent = Menu.objects.filter(name=parent_name).first()
             if not parent:
@@ -137,7 +158,7 @@ class Command(BaseCommand):
             ('个人中心', 'Profile', '个人中心', 'layui-icon-user', '/static/layui/pages/profile.html', 2, 1, '系统管理'),
             ('操作日志', 'Log', '操作日志', 'layui-icon-log', '/system/log', 2, 2, '系统管理'),
             ('系统配置', 'Config', '系统配置', 'layui-icon-set-sm', '/system/config', 2, 3, '系统管理'),
-            ('组织节点', 'Scope Nodes', '组织节点', 'layui-icon-tree', '/system/scope-nodes', 2, 5, '系统管理'),
+            ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 2, 6, '权限管理'),
 
             # ---- 运维管理 ----
             ('运维管理', 'Operations', '运维管理', 'layui-icon-console', '', 1, 3, None),

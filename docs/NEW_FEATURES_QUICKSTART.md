@@ -224,7 +224,7 @@ orders = Order.objects.for_user(request.user)
 
 ### UI 操作
 
-进入「系统管理 → 组织节点」：
+进入「权限管理 → 数据范围」：
 
 1. 新建根节点：`global / 全局`
 2. 新建子节点：`east_region / 华东区域`，上级选择 `global`

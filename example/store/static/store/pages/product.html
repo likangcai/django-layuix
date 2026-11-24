@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -242,7 +242,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-<script src="/static/layui/js/common.js?v=20261124b"></script>
+<script src="/static/layui/js/common.js?v=20261124g"></script>
 <script>
 inheritTheme();
 
@@ -302,7 +302,7 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 加载列表（使用 url 服务端分页）
     function loadTable() {
-        tableIns = table.render({
+        tableIns = LayuiUI.table({
             elem: '#productTable',
             url: '/admin/api/store/products/',
             toolbar: '#toolbarTpl',

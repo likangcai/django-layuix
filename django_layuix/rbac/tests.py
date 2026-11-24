@@ -773,6 +773,26 @@ class Rbac142EnhancementTests(TestCase):
             self.assertEqual(data['count'], count)
             self.assertEqual('cost' in data['fields'], sees_cost)
 
+    def test_permission_demo_api_paginates_orders(self):
+        from django.contrib.auth import get_user_model
+        from django.core.management import call_command
+        from django.test import Client
+
+        call_command('init_permission_demo', verbosity=0)
+        client = Client()
+        client.force_login(get_user_model().objects.get(username=self.admin.username))
+
+        first = client.get('/admin/api/permission-demo/orders/?page=1&page_size=1').json()
+        second = client.get('/admin/api/permission-demo/orders/?page=2&page_size=1').json()
+
+        self.assertEqual(len(first['data']), 1)
+        self.assertEqual(first['count'], 3)
+        self.assertEqual(first['page'], 1)
+        self.assertEqual(first['page_size'], 1)
+        self.assertEqual(first['total_pages'], 3)
+        self.assertEqual(len(second['data']), 1)
+        self.assertNotEqual(first['data'][0]['id'], second['data'][0]['id'])
+
 
 class RbacFinalAuditTests(TestCase):
 

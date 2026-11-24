@@ -388,6 +388,90 @@ function renderTpl(tplId, data) {
     return render.render(tplData);
 }
 
+// ==================== 通用列表 / 弹窗组件 ====================
+
+var STANDARD_TABLE_PAGE = {
+    limit: 10,
+    limits: [10, 30, 50, 100],
+    groups: 5,
+    layout: ['count', 'prev', 'page', 'next', 'skip', 'limit']
+};
+
+function getStandardTablePage(overrides) {
+    if (overrides === false) return false;
+    return Object.assign({}, STANDARD_TABLE_PAGE, overrides === true ? {} : (overrides || {}));
+}
+
+/**
+ * 统一表格渲染：默认高度、斑马纹、无内置工具栏、统一分页配置。
+ * 特殊页面可传 page:false 或覆盖任意 table 配置。
+ */
+function renderStandardTable(options) {
+    var api = _getLayui();
+    if (!api || !api.table) return null;
+    var settings = Object.assign({}, options || {});
+    var page = settings.page;
+    delete settings.page;
+    settings.defaultToolbar = settings.defaultToolbar || [];
+    settings.height = settings.height || 'full-220';
+    settings.even = settings.even !== false;
+    settings.page = getStandardTablePage(page === undefined ? true : page);
+    return api.table.render(settings);
+}
+
+/**
+ * 统一表单弹窗：模板、表单回填、render、保存/取消按钮与精确关闭。
+ */
+function openStandardDialog(options) {
+    var api = _getLayui();
+    if (!api || !api.layer) return null;
+    var layer = api.layer;
+    var form = api.form;
+    var settings = options || {};
+    var content = settings.content || '';
+    if (settings.tplId) {
+        content = renderTpl(settings.tplId, settings.tplData);
+    }
+    var index = layer.open({
+        type: 1,
+        title: settings.title || '',
+        area: settings.area || ['620px', '520px'],
+        maxHeight: settings.maxHeight || '80vh',
+        btn: settings.btn || [t('common.save'), t('common.cancel')],
+        btnAlign: settings.btnAlign || 'r',
+        closeBtn: 1,
+        content: content,
+        success: function(layero, idx) {
+            if (form && settings.filter && settings.data) {
+                form.val(settings.filter, settings.data);
+            }
+            if (form && settings.filter) {
+                form.render(null, settings.filter);
+            }
+            if (typeof renderI18n === 'function') renderI18n();
+            if (typeof settings.success === 'function') settings.success(layero, idx);
+        },
+        yes: function(idx, layero) {
+            if (typeof settings.onSubmit === 'function' && settings.onSubmit(layero, idx) === false) return;
+            layer.close(idx);
+        },
+        btn2: function(idx, layero) {
+            if (typeof settings.onCancel === 'function' && settings.onCancel(layero, idx) === false) return false;
+        },
+        cancel: function(idx) {
+            if (typeof settings.onCancel === 'function' && settings.onCancel(null, idx) === false) return false;
+        },
+        end: settings.end
+    });
+    return index;
+}
+
+window.LayuiUI = {
+    standardPage: getStandardTablePage,
+    table: renderStandardTable,
+    dialog: openStandardDialog
+};
+
 /**
  * 渲染页面中所有 {{ t(...) }} 占位符。
  * 不使用 eval：仅解析字符串字面量、t() 调用、参数数组、+ 拼接与 || 默认值。
