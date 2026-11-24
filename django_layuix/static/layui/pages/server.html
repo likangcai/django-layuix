@@ -450,7 +450,7 @@ layui.use(['table', 'form', 'layer'], function(){
                 }
                 form.render(null, formFilter);
 
-                form.off('radio(authType)').on('radio(authType)', function(data) {
+                bindFormOnce('radio(authType)', function(data) {
                     if (data.value === 'password') {
                         layero.find('#passwordField').show();
                         layero.find('#privateKeyField').hide();
@@ -500,7 +500,7 @@ layui.use(['table', 'form', 'layer'], function(){
                     layer.close(index);
                 });
 
-                form.off('submit(serverSubmit)').on('submit(serverSubmit)', function(data) {
+                bindFormOnce('submit(serverSubmit)', function(data) {
                     var field = data.field;
                     var submitData = {
                         name: field.name,

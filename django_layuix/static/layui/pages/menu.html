@@ -475,7 +475,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     form.render(null, 'menuForm');
 
                     // ===== 联动逻辑：visible 总开关控制 =====
-                    form.off('switch(visibleSwitch)').on('switch(visibleSwitch)', function(data) {
+                    bindFormOnce('switch(visibleSwitch)', function(data) {
                         var isVisible = data.elem.checked;
                         var $layero = $(layero);
                         
@@ -507,7 +507,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     });
 
                     // 菜单类型切换
-                    form.off('radio(menu_type)').on('radio(menu_type)', function(data) {
+                    bindFormOnce('radio(menu_type)', function(data) {
                         toggleMenuFields(layero, data.value);
                     });
 

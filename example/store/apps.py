@@ -54,6 +54,18 @@ class StoreConfig(AppConfig):
                     ('删除订单', '订单管理', 'order:delete', 6),
                 ]
             )
+            # 补齐演示菜单的多语言字段，配合后台语言切换验证菜单本地化。
+            translations = {
+                '演示应用': ('Demo App', '演示应用'),
+                '商品分类': ('Categories', '商品分类'),
+                '商品管理': ('Products', '商品管理'),
+                '订单管理': ('Orders', '订单管理'),
+            }
+            for menu_name, (name_en, name_zh_hans) in translations.items():
+                Menu.objects.filter(name=menu_name).update(
+                    name_en=name_en, name_zh_hans=name_zh_hans
+                )
+
             print(f"[StoreConfig.ready] Menu registration completed successfully.")
 
             # 注册 store API 路由到 admin site 内部（与 rbac 方式一致）
