@@ -978,6 +978,11 @@ class RbacFinalAuditTests(TestCase):
 
 class I18nCoverageTests(SimpleTestCase):
 
+    def test_layui_switch_text_is_translated(self):
+        root = Path(__file__).resolve().parents[2]
+        source = (root / 'django_layuix/static/layui/js/common.js').read_text(encoding='utf-8')
+        self.assertIn("'lay-text': true", source)
+
     def test_template_keys_exist_in_both_languages(self):
         root = Path(__file__).resolve().parents[2]
         i18n_path = root / 'django_layuix/static/layui/js/i18n.js'

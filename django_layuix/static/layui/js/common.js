@@ -500,7 +500,7 @@ function renderI18n() {
 
     var translatableAttrs = {
         placeholder: true, title: true, alt: true,
-        'aria-label': true, 'lay-reqtext': true,
+        'aria-label': true, 'lay-reqtext': true, 'lay-text': true,
         'data-title': true, 'data-content': true, 'data-tips': true
     };
 
