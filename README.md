@@ -807,7 +807,7 @@ python manage.py collectstatic --noinput
 
 | 命令 | 说明 |
 |------|------|
-| `python manage.py init_menu` | 初始化默认菜单、角色和系统配置 |
+| `python manage.py init_menu` | 初始化默认菜单、角色和系统配置，并自动同步系统版本号 |
 | `python manage.py init_data` | 快速初始化：创建超级管理员、内置角色、完整菜单树（含运维管理） |
 | `python manage.py init_demo_data` | 初始化演示应用的分类/商品/订单示例数据 |
 | `python manage.py rename_app_labels` | 升级旧库：把 `django_layui_rbac/ops` 应用标签迁移为 `django_layuix_rbac/ops` |

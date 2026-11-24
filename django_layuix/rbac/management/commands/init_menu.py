@@ -9,6 +9,7 @@
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+import django_layuix
 from django_layuix.rbac.models import Menu, Role, SystemConfig
 
 
@@ -465,7 +466,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.MIGRATE_HEADING('\n  初始化系统配置:'))
         configs = [
             ('system_name', 'Django Layuix Admin', '系统名称，显示在浏览器标题栏和侧边栏', 'string', 1),
-            ('system_version', '1.4.0', '系统版本号', 'string', 2),
+            ('system_version', django_layuix.__version__, '系统版本号', 'string', 2),
             ('system_description', '', '系统描述信息（显示在管理后台底部）', 'text', 3),
             ('logo_icon', 'layui-icon-code-circle', 'Logo图标（layui图标类名）', 'string', 4),
             ('logo_url', '', 'Logo图片URL（设置后替换图标，支持本地上传）', 'image', 5),
@@ -486,6 +487,10 @@ class Command(BaseCommand):
         for key, value, desc, config_type, sort in configs:
             try:
                 cfg = SystemConfig.objects.get(key=key)
+                if key == 'system_version' and cfg.value != value:
+                    cfg.value = value
+                    cfg.save(update_fields=['value'])
+                    self.stdout.write(self.style.SUCCESS(f'  同步配置: {key} -> {value}'))
                 if force:
                     # --force 模式：更新为默认值
                     cfg.value = value
