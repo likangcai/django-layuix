@@ -9,7 +9,7 @@ var I18N = {
         'zh-hans': {
             // 通用
             'app.name': 'Django Layuix Admin',
-            'app.version': 'V1.4.2',
+            'app.version': 'V1.4.3',
             'common.language': '中文',
             'frontend.title': '前台首页',
             'frontend.brand': '前台系统',
@@ -581,7 +581,7 @@ var I18N = {
         'en': {
             // 通用
             'app.name': 'Django Layuix Admin',
-            'app.version': 'V1.4.2',
+            'app.version': 'V1.4.3',
             'common.language': 'English',
             'frontend.title': 'Frontend Home',
             'frontend.brand': 'Frontend',

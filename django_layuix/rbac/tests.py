@@ -1117,6 +1117,115 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(menu.icon, 'layui-icon-user')
         self.assertEqual(menu.path, '/audit/new')
 
+    def test_ops_apis_require_rbac_permissions(self):
+        from django.test import Client
+
+        low = get_user_model().objects.create_user(username='audit_ops_low', password='pass12345')
+        client = Client()
+        client.force_login(low)
+        cases = [
+            ('get', '/admin/api/ops/servers/'),
+            ('get', '/admin/api/ops/ai/config/list/'),
+            ('post', '/admin/api/ops/servers/1/exec/'),
+        ]
+        for method, url in cases:
+            with self.subTest(url=url):
+                response = getattr(client, method)(url, {}, content_type='application/json')
+                self.assertEqual(response.status_code, 403)
+
+    def test_token_round_trip_with_extra_data(self):
+        from .token_auth import generate_token, verify_token
+
+        token = generate_token(self.admin, {'tenant': 'audit', 'user_id': 999999})
+        result = verify_token(token)
+        self.assertTrue(result['valid'])
+        self.assertEqual(result['payload']['tenant'], 'audit')
+        self.assertEqual(result['payload']['user_id'], self.admin.pk)
+
+    def test_active_roles_are_session_scoped(self):
+        from django.test import Client
+
+        from .engine import ACTIVE_ROLES_SESSION_KEY
+        from .models import RoleMutex
+
+        first = Role.objects.create(name='会话角色A', code='audit_session_a')
+        second = Role.objects.create(name='会话角色B', code='audit_session_b')
+        group = RoleMutex.objects.create(name='会话互斥', kind='dsd')
+        group.roles.add(first, second)
+        self.user.roles.add(first, second)
+
+        client_a = Client()
+        client_a.force_login(self.user)
+        selected = client_a.post('/admin/api/rbac/active-roles/', {
+            'role_ids': [second.id],
+        }, content_type='application/json')
+        self.assertEqual(selected.status_code, 200)
+        self.assertEqual(client_a.session[ACTIVE_ROLES_SESSION_KEY], [second.id])
+
+        client_b = Client()
+        client_b.force_login(self.user)
+        response = client_b.get('/admin/api/rbac/active-roles/')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.json()['data']['active_ids'], [second.id])
+
+    def test_register_plugin_db_failure_does_not_mutate_memory_or_hooks(self):
+        class FailingPlugin(PluginConfig):
+            name = 'audit_failing_plugin'
+            label = 'audit_failing_plugin'
+            plugin_key = 'audit_failing'
+            enabled = []
+            disabled = []
+
+            def on_enable(self):
+                self.__class__.enabled.append(True)
+
+        register_plugin_class('audit_failing', FailingPlugin)
+        with mock.patch('django_layuix.rbac.plugins._db', side_effect=RuntimeError('db down')):
+            result = register_plugin(key='audit_failing', name='Failing')
+        self.assertNotIn('audit_failing', PluginRegistry.objects.values_list('key', flat=True))
+        self.assertEqual(FailingPlugin.enabled, [])
+
+    def test_unregister_plugin_deletes_record_when_menu_cleanup_fails(self):
+        self.addCleanup(unregister_plugin, 'audit_cleanup_fail')
+        register_plugin(key='audit_cleanup_fail', name='Cleanup Fail')
+        with mock.patch(
+            'django_layuix.rbac.menu_registry.unregister_plugin_menus',
+            side_effect=RuntimeError('menu down'),
+        ):
+            unregister_plugin('audit_cleanup_fail')
+        self.assertFalse(PluginRegistry.objects.filter(key='audit_cleanup_fail').exists())
+
+    def test_plugin_owned_menus_update_with_skip_existing(self):
+        from .menu_registry import register_menus
+
+        self.addCleanup(Menu.objects.filter(name='审计插件升级菜单').delete)
+        register_menus(
+            menus_data=[('审计插件升级菜单', 'layui-icon-app', '/old', 2, 1, None)],
+            skip_existing=True,
+            plugin_key='audit_upgrade',
+        )
+        register_menus(
+            menus_data=[('审计插件升级菜单', 'layui-icon-app', '/new', 2, 2, None)],
+            skip_existing=True,
+            plugin_key='audit_upgrade',
+        )
+        self.assertEqual(Menu.objects.get(name='审计插件升级菜单').path, '/new')
+
+    def test_menu_view_permission_codes_are_enforced_in_views(self):
+        root = Path(__file__).resolve().parents[2]
+        sources = [
+            (root / 'django_layuix/rbac/views.py').read_text(encoding='utf-8'),
+            (root / 'django_layuix/ops/views.py').read_text(encoding='utf-8'),
+        ]
+        from .menu_permissions import MENU_VIEW_PERMISSIONS
+
+        for code in MENU_VIEW_PERMISSIONS.values():
+            with self.subTest(code=code):
+                self.assertTrue(
+                    any("'%s'" % code in source for source in sources),
+                    'permission code %s is not enforced' % code,
+                )
+
 
 class I18nCoverageTests(SimpleTestCase):
 

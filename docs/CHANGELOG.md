@@ -9,6 +9,20 @@
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-11-25
+
+### 🔒 核心基础能力复核修复
+- 🔴 **ops API 授权补齐** — 服务器、SSH、AI 配置与日志分析接口统一接入 RBAC 权限码，普通登录用户不再可远程执行命令
+- 🔴 **Bearer Token 认证统一** — ops 模块改用 `resolve_api_user()`，Token 客户端与 Session 客户端使用同一认证链
+- 🟡 **Token 验签修复** — `extra_data` 不再覆盖保留字段，验签基于完整 payload 并使用 `hmac.compare_digest`
+- 🟡 **DSD 会话隔离** — 移除用户级全局激活角色缓存，激活角色只保留在当前会话
+- 🟡 **插件状态一致性加固** — 插件元数据读取失败时 fail-closed，持久化成功后才更新内存与触发 hook，卸载异常独立处理
+- 🟡 **菜单权限码落地** — `server:view` / `ai_config:view` / `abac:view` / `scope:view` / `constraint:view` 在对应 API 生效
+- 🟡 **插件菜单升级** — 插件自有菜单在 `skip_existing=True` 时仍可同步 path / permission
+- 🔐 **AI Key 脱敏** — 日志与调试信息不再输出 API Key 片段
+- ✅ **版本升级至 1.4.3** — 同步包版本、锁文件、示例配置、界面版本与文档
+- 📝 **测试覆盖更新** — 回归测试 83 项（82 通过、1 跳过），新增 ops 授权、Token、DSD 会话与插件生命周期边界用例
+
 ## [1.4.2] - 2026-11-24
 
 ### 🧩 后续增强项补齐

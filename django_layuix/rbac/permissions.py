@@ -37,6 +37,26 @@ def api_permission_required(permission_code):
     return decorator
 
 
+def api_permission_by_method(mapping, default=None):
+    """Require a permission code selected by HTTP method.
+
+    mapping: {'GET': 'x:view', 'POST': 'x:edit', '*': 'x:view'}
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            user = resolve_api_user(request)
+            if user is None or not getattr(user, 'is_authenticated', False):
+                return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
+            request.user = user
+            code = mapping.get(request.method) or mapping.get('*') or default
+            if code and not has_permission(user, code, request):
+                return JsonResponse({'code': 403, 'msg': '无权限'}, status=403)
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def api_login_required(view_func):
     """登录校验装饰器：委托给通用认证桥接层。"""
     @wraps(view_func)

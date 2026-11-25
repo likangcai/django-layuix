@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=80.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-layuix"
-version = "1.4.2"
+version = "1.4.3"
 description = "基于 Layui 的 Django Admin 主题，集成 RBAC 权限系统和运维管理"
 readme = "README.md"
 license = {file = "LICENSE"}

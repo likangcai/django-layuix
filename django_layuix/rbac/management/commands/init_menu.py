@@ -268,13 +268,15 @@ class Command(BaseCommand):
             ('新增配置', 'Add Config', '新增配置', created['系统配置'], 'config:add', 1),
             ('编辑配置', 'Edit Config', '编辑配置', created['系统配置'], 'config:edit', 2),
             ('删除配置', 'Delete Config', '删除配置', created['系统配置'], 'config:delete', 3),
-            # 服务器管理下：新增、编辑、删除、查看日志、终端
+            # 服务器管理下：查看、新增、编辑、删除、查看日志、终端
+            ('查看服务器', 'View Servers', '查看服务器', created['服务器管理'], 'server:view', 0),
             ('新增服务器', 'Add Server', '新增服务器', created['服务器管理'], 'server:add', 1),
             ('编辑服务器', 'Edit Server', '编辑服务器', created['服务器管理'], 'server:edit', 2),
             ('删除服务器', 'Delete Server', '删除服务器', created['服务器管理'], 'server:delete', 3),
             ('查看日志', 'View Log', '查看日志', created['服务器管理'], 'server:view_log', 4),
             ('终端连接', 'Terminal', '终端连接', created['服务器管理'], 'server:terminal', 5),
-            # AI 配置下：新增、编辑、删除、测试连接、设默认
+            # AI 配置下：查看、新增、编辑、删除、测试连接、设默认
+            ('查看 AI 配置', 'View AI Config', '查看 AI 配置', created['AI 配置'], 'ai_config:view', 0),
             ('新增 AI 配置', 'Add AI Config', '新增 AI 配置', created['AI 配置'], 'ai_config:add', 1),
             ('编辑 AI 配置', 'Edit AI Config', '编辑 AI 配置', created['AI 配置'], 'ai_config:edit', 2),
             ('删除 AI 配置', 'Delete AI Config', '删除 AI 配置', created['AI 配置'], 'ai_config:delete', 3),

@@ -11,7 +11,7 @@ import logging
 from collections import deque
 
 from django.conf import settings
-from django.core.cache import cache
+
 
 ACTIVE_ROLES_SESSION_KEY = 'layui_active_roles'
 MAX_ROLES_CONFIG_KEY = 'rbac_max_roles_per_user'
@@ -107,10 +107,6 @@ def _active_mutex_groups(kind):
     ).prefetch_related('roles', 'permissions'))
 
 
-def _active_cache_key(user_id):
-    return 'rbac_active_roles_%s' % user_id
-
-
 def get_active_role_ids(user):
     """Roles effective in the current session (DSD-safe by default)."""
     assigned = get_assigned_role_ids(user)
@@ -118,8 +114,6 @@ def get_active_role_ids(user):
         return set()
 
     raw = getattr(user, '_layui_active_role_ids', None)
-    if raw is None and getattr(user, 'id', None):
-        raw = cache.get(_active_cache_key(user.id))
     if raw is not None:
         selected = _as_int_set(raw) & assigned
         if selected:
@@ -147,18 +141,15 @@ def store_active_roles(request, role_ids):
     ids = sorted(_as_int_set(role_ids))
     request.session[ACTIVE_ROLES_SESSION_KEY] = ids
     user = getattr(request, 'user', None)
-    if user is not None and getattr(user, 'id', None):
-        cache.set(
-            _active_cache_key(user.id), ids,
-            timeout=getattr(settings, 'TOKEN_EXPIRE_SECONDS', 24 * 60 * 60),
-        )
+    if user is not None:
+        user._layui_active_role_ids = ids
 
 
 def clear_active_roles(request):
     request.session.pop(ACTIVE_ROLES_SESSION_KEY, None)
     user = getattr(request, 'user', None)
-    if user is not None and getattr(user, 'id', None):
-        cache.delete(_active_cache_key(user.id))
+    if user is not None and hasattr(user, '_layui_active_role_ids'):
+        delattr(user, '_layui_active_role_ids')
 
 
 def get_effective_role_ids(user):

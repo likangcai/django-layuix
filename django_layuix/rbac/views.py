@@ -17,7 +17,9 @@ from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from django.contrib.auth import update_session_auth_hash
 from django.utils.timezone import localtime
-from .permissions import api_permission_required, resolve_api_user
+from .permissions import (
+    api_permission_by_method, api_permission_required, resolve_api_user,
+)
 
 
 def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
@@ -1870,7 +1872,7 @@ def plugin_manifest(request):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_by_method({'GET': 'constraint:view', '*': 'role:edit'})
 def constraint_list(request):
     """GET /api/rbac/constraints/ - 互斥组、前置角色与全局上限"""
     from .engine import _get_config, DSD_STRATEGY_KEY, PREREQ_STRATEGY_KEY, get_max_roles_per_user
@@ -1926,7 +1928,7 @@ def _sod_payload(group):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_by_method({'GET': 'constraint:view', '*': 'role:edit'})
 def sod_constraint_list(request):
     """GET/POST /api/rbac/sod-constraints/ - 1.4.2 SSD 兼容端点"""
     from .engine import RbacConstraintError, require_roles
@@ -1962,7 +1964,7 @@ def sod_constraint_list(request):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_by_method({'GET': 'constraint:view', '*': 'role:edit'})
 def sod_constraint_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/sod-constraints/<id>/ - 1.4.2 SSD 兼容端点"""
     from .engine import RbacConstraintError, require_roles
@@ -2009,7 +2011,7 @@ def sod_constraint_detail(request, pk):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_required('constraint:view')
 def sod_constraint_check(request):
     """POST /api/rbac/sod-constraints/check/ - 实时 SSD 预校验"""
     from .engine import check_sod_conflict
@@ -2208,7 +2210,7 @@ def _scope_descendant_ids(node_id):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_by_method({'GET': 'scope:view', '*': 'role:edit'})
 def scope_node_list(request):
     """GET/POST /api/rbac/scope-nodes/ - 组织节点树与创建入口"""
     from .models import ScopeNode
@@ -2238,7 +2240,7 @@ def scope_node_list(request):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_by_method({'GET': 'scope:view', '*': 'role:edit'})
 def scope_node_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/scope-nodes/<id>/"""
     from .models import ScopeNode
@@ -2299,7 +2301,7 @@ def _abac_payload(policy, include_expression=True):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_by_method({'GET': 'abac:view', '*': 'role:edit'})
 def abac_policy_list(request):
     """GET/POST /api/rbac/abac-policies/"""
     from .abac import AbacError, validate_expression
@@ -2335,7 +2337,7 @@ def abac_policy_list(request):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_by_method({'GET': 'abac:view', '*': 'role:edit'})
 def abac_policy_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/abac-policies/<id>/"""
     from .abac import AbacError, validate_expression
@@ -2377,7 +2379,7 @@ def abac_policy_detail(request, pk):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_required('abac:view')
 def abac_check(request):
     """POST /api/rbac/abac-check/ - 策略调试与前端字段/行级控制"""
     from .abac import evaluate_policies
@@ -2435,7 +2437,7 @@ def frontend_permissions(request):
     ))
     can_view_policies = (
         bool(getattr(request.user, 'is_superuser', False))
-        or has_permission(request.user, 'role:edit', request)
+        or has_permission(request.user, 'abac:view', request)
     )
     policies = [
         _abac_payload(row, include_expression=False)

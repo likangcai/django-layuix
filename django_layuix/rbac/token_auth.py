@@ -3,6 +3,7 @@ Token认证工具
 支持JWT-like token生成和验证，用于SSE等需要长连接的场景
 """
 import hashlib
+import hmac
 import time
 import json
 import base64
@@ -10,8 +11,11 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 
 
-# Token有效期（秒）- 默认24小时
-TOKEN_EXPIRE_SECONDS = getattr(settings, 'TOKEN_EXPIRE_SECONDS', 24 * 60 * 60)
+RESERVED_TOKEN_FIELDS = {'user_id', 'username', 'exp', 'iat'}
+
+
+def _token_expire_seconds():
+    return getattr(settings, 'TOKEN_EXPIRE_SECONDS', 24 * 60 * 60)
 
 
 def generate_token(user, extra_data=None):
@@ -29,16 +33,19 @@ def generate_token(user, extra_data=None):
     payload = {
         'user_id': user.id,
         'username': user.username,
-        'exp': timestamp + TOKEN_EXPIRE_SECONDS,
+        'exp': timestamp + _token_expire_seconds(),
         'iat': timestamp,
     }
-    
+
     if extra_data:
-        payload.update(extra_data)
-    
+        payload.update({
+            key: value for key, value in extra_data.items()
+            if key not in RESERVED_TOKEN_FIELDS
+        })
+
     # 使用用户的密码哈希作为secret key的一部分，确保密码修改后token失效
     user_secret = getattr(user, 'password', '')
-    secret_key = getattr(settings, 'SECRET_KEY', 'django-insecure-fallback')
+    secret_key = getattr(settings, 'SECRET_KEY', '')
     
     # 创建payload字符串
     payload_str = json.dumps(payload, sort_keys=True)
@@ -46,7 +53,7 @@ def generate_token(user, extra_data=None):
     
     # 创建签名
     signature_str = f"{payload_str}.{user_secret}.{secret_key}"
-    signature = hashlib.sha256(signature_str.encode()).hexdigest()[:16]
+    signature = hashlib.sha256(signature_str.encode()).hexdigest()
     
     # 组合token
     token = f"{payload_b64}.{signature}"
@@ -93,19 +100,12 @@ def verify_token(token):
 
         # 验证签名
         user_secret = getattr(user, 'password', '')
-        secret_key = getattr(settings, 'SECRET_KEY', 'django-insecure-fallback')
-        
-        expected_payload_str = json.dumps({
-            'user_id': payload.get('user_id'),
-            'username': payload.get('username'),
-            'exp': payload.get('exp'),
-            'iat': payload.get('iat'),
-        }, sort_keys=True)
-        
-        expected_signature_str = f"{expected_payload_str}.{user_secret}.{secret_key}"
-        expected_signature = hashlib.sha256(expected_signature_str.encode()).hexdigest()[:16]
-        
-        if signature != expected_signature:
+        secret_key = getattr(settings, 'SECRET_KEY', '')
+
+        expected_signature_str = f"{payload_str}.{user_secret}.{secret_key}"
+        expected_signature = hashlib.sha256(expected_signature_str.encode()).hexdigest()
+
+        if not hmac.compare_digest(signature, expected_signature):
             return {'valid': False, 'error': 'Invalid signature'}
         
         # 验证用户名是否匹配

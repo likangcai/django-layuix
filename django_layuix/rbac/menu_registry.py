@@ -230,7 +230,8 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
             'plugin_key': plugin_key,
         }
         menu, is_new = Menu.objects.get_or_create(name=name, defaults=defaults)
-        if not is_new and not skip_existing:
+        owned_by_plugin = bool(plugin_key and menu.plugin_key == plugin_key)
+        if not is_new and (not skip_existing or owned_by_plugin):
             changed = False
             for field, value in defaults.items():
                 if getattr(menu, field) != value:
@@ -280,7 +281,8 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
                 'plugin_key': plugin_key,
             }
             btn, is_new = Menu.objects.get_or_create(name=btn_name, defaults=defaults)
-            if not is_new and not skip_existing:
+            owned_by_plugin = bool(plugin_key and btn.plugin_key == plugin_key)
+            if not is_new and (not skip_existing or owned_by_plugin):
                 changed = False
                 for field, value in defaults.items():
                     if getattr(btn, field) != value:

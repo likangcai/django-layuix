@@ -5,11 +5,14 @@ Ops API Views - Server CRUD, SSH test, log viewing, command execution
 import re
 import shlex
 import json
-from functools import wraps
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils.timezone import localtime
+
+from django_layuix.rbac.permissions import (
+    api_login_required, api_permission_required, resolve_api_user,
+)
 
 
 def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
@@ -17,16 +20,6 @@ def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
     if dt is None:
         return ''
     return localtime(dt).strftime(format_str)
-
-
-def api_login_required(view_func):
-    """Login required decorator for API views"""
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
-        return view_func(request, *args, **kwargs)
-    return wrapper
 
 
 def get_request_body(request):
@@ -51,6 +44,7 @@ def error_response(msg='error', code=400):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:view')
 def server_list(request):
     """Get server list"""
     from .models import Server
@@ -82,6 +76,7 @@ def server_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:add')
 def server_create(request):
     """Create server"""
     if request.method != 'POST':
@@ -105,6 +100,7 @@ def server_create(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:edit')
 def server_update(request, pk):
     """Update server"""
     if request.method != 'PUT':
@@ -134,6 +130,7 @@ def server_update(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:view')
 def server_detail(request, pk):
     """Get server detail (with password/private_key for edit form)"""
     from .models import Server
@@ -158,6 +155,7 @@ def server_detail(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:delete')
 def server_delete(request, pk):
     """Delete server"""
     if request.method != 'DELETE':
@@ -175,6 +173,7 @@ def server_delete(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:terminal')
 def server_test(request, pk):
     """Test SSH connection"""
     if request.method != 'POST':
@@ -270,6 +269,7 @@ def server_test(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:view_log')
 def server_log(request, pk):
     """View remote server log file"""
     if request.method != 'POST':
@@ -306,6 +306,7 @@ def server_log(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:terminal')
 def server_exec(request, pk):
     """Execute command on remote server"""
     if request.method != 'POST':
@@ -460,6 +461,7 @@ def _get_ai_settings():
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:view')
 def ai_config_list(request):
     """List all AI model configs (api_key masked), with optional keyword search"""
     # 支持搜索：keyword 参数
@@ -521,6 +523,7 @@ def ai_config_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:view')
 def ai_config_get(request):
     """Get single AI config by id, or default config if no id given (legacy)"""
     config_id = request.GET.get('id', '')
@@ -552,6 +555,7 @@ def ai_config_get(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:edit')
 def ai_config_save(request):
     """Create or update AI config.
     POST body: {id?, name, provider, api_key, base_url, model, is_default?}
@@ -625,6 +629,7 @@ def ai_config_save(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:delete')
 def ai_config_delete(request, config_id):
     """Delete AI config by id"""
     if request.method != 'DELETE':
@@ -642,6 +647,7 @@ def ai_config_delete(request, config_id):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:set_default')
 def ai_config_set_default(request, config_id):
     """Set a config as default (active) for AI analysis"""
     if request.method != 'POST':
@@ -662,6 +668,7 @@ def ai_config_set_default(request, config_id):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:test')
 def ai_config_test(request):
     """Test AI config by sending a simple request.
     POST body: {id?} - test specific config by id, or default if no id.
@@ -710,7 +717,7 @@ def ai_config_test(request):
     logger.info(f'[AI Config Test] Config ID: {config_id or "default"}')
     logger.info(f'[AI Config Test] Base URL: "{config.get("base_url", "")}" (length: {len(config.get("base_url", ""))})')
     logger.info(f'[AI Config Test] Model: "{config.get("model", "")}" (length: {len(config.get("model", ""))})')
-    logger.info(f'[AI Config Test] API Key: "{config.get("api_key", "")[:20]}..." (length: {len(config.get("api_key", ""))})')
+    logger.info(f'[AI Config Test] API Key length: {len(config.get("api_key", ""))}')
 
     if not config.get('api_key'):
         return error_response('未配置 API Key，请在配置中填写有效的 API 密钥', 400)
@@ -746,7 +753,7 @@ def ai_config_test(request):
                 f'Base URL: "{config.get("base_url") or "(使用默认)"}"\n'
                 f'Model: "{config["model"]}"\n'
                 f'Model 长度: {len(config["model"])} 字符\n'
-                f'API Key 前20位: {config.get("api_key", "")[:20]}...\n\n'
+                f'API Key 长度: {len(config.get("api_key", ""))} 字符\n\n'
                 f'=== 可能的原因 ===\n'
                 f'1. 模型名称拼写错误（当前值：{config["model"]}）\n'
                 f'2. 模型名称包含不可见字符（如空格、换行符等）\n'
@@ -777,6 +784,7 @@ def ai_config_test(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:test')
 def ai_analyze_log(request):
     """AI analyze server log content"""
     if request.method != 'POST':
