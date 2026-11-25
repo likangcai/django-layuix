@@ -64,5 +64,6 @@ def api_login_required(view_func):
         user = resolve_api_user(request)
         if user is None or not getattr(user, 'is_authenticated', False):
             return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
+        request.user = user
         return view_func(request, *args, **kwargs)
     return wrapper

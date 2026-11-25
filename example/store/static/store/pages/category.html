@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>商品分类</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css"?v=20261124j>
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -48,17 +48,17 @@
                 <form class="layui-form" lay-filter="searchForm">
                     <div class="layui-form-item">
                         <div class="layui-inline">
-                            <label class="layui-form-label">关键词</label>
+                            <label class="layui-form-label" data-i18n="common.keyword">关键词</label>
                             <div class="layui-input-inline" style="width:200px;">
-                                <input type="text" name="keyword" id="searchKeyword" placeholder="分类名称/描述" autocomplete="off" class="layui-input">
+                                <input type="text" name="keyword" id="searchKeyword" placeholder="{{ t('store.categoryPlaceholder') }}" autocomplete="off" class="layui-input">
                             </div>
                         </div>
-                        <div class="layui-inline">
+                        <div class="layui-inline search-btns">
                             <button type="button" class="layui-btn layui-btn-sm" id="searchBtn">
-                                <i class="layui-icon layui-icon-search"></i> 搜索
+                                <i class="layui-icon layui-icon-search"></i> <span data-i18n="common.search">搜索</span>
                             </button>
                             <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary" id="resetBtn">
-                                <i class="layui-icon layui-icon-refresh"></i> 重置
+                                <i class="layui-icon layui-icon-refresh"></i> <span data-i18n="common.reset">重置</span>
                             </button>
                         </div>
                     </div>
@@ -74,40 +74,40 @@
 <script type="text/html" id="toolbarTpl">
     <div class="layui-btn-container">
         <button class="layui-btn layui-btn-sm layui-btn-normal" lay-event="add">
-            <i class="layui-icon layui-icon-add-1"></i> 新增分类
+            <i class="layui-icon layui-icon-add-1"></i> <span data-i18n="store.addCategory">新增分类</span>
         </button>
         <button class="layui-btn layui-btn-sm layui-btn-primary" lay-event="refresh">
-            <i class="layui-icon layui-icon-refresh"></i> 刷新
+            <i class="layui-icon layui-icon-refresh"></i> <span data-i18n="common.refresh">刷新</span>
         </button>
     </div>
 </script>
 
 <!-- 操作列模板：默认显示查看/编辑，多余操作在更多下拉菜单中 -->
 <script type="text/html" id="operateTpl">
-    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">查看</a>
-    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
-    <a class="layui-btn layui-btn-xs" lay-event="more">更多<i class="layui-icon layui-icon-down" style="margin-left:3px;font-size:12px"></i></a>
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view"><span data-i18n="common.view">查看</span></a>
+    <a class="layui-btn layui-btn-xs" lay-event="edit"><span data-i18n="common.edit">编辑</span></a>
+    <a class="layui-btn layui-btn-xs" lay-event="more"><span data-i18n="store.more">更多</span><i class="layui-icon layui-icon-down" style="margin-left:3px;font-size:12px"></i></a>
 </script>
 
 <!-- 新增分类弹窗模板 (只有返回/保存按钮) -->
 <script type="text/html" id="addFormTpl">
     <form class="layui-form" lay-filter="addForm" style="padding:20px 30px 0;">
         <div class="layui-form-item">
-            <label class="layui-form-label">分类名称</label>
+            <label class="layui-form-label" data-i18n="store.name">分类名称</label>
             <div class="layui-input-block">
-                <input type="text" name="name" lay-verify="required" placeholder="请输入分类名称" autocomplete="off" class="layui-input">
+                <input type="text" name="name" lay-verify="required" placeholder="{{ t('store.categoryPlaceholder') }}" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">排序</label>
+            <label class="layui-form-label" data-i18n="store.sort">排序</label>
             <div class="layui-input-block">
                 <input type="number" name="sort" value="0" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">描述</label>
+            <label class="layui-form-label" data-i18n="store.description">描述</label>
             <div class="layui-input-block">
-                <textarea name="description" placeholder="请输入分类描述" class="layui-textarea"></textarea>
+                <textarea name="description" placeholder="{{ t('store.categoryDescPlaceholder') }}" class="layui-textarea"></textarea>
             </div>
         </div>
         <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border-color);padding-top:15px;margin-top:10px;">
@@ -122,21 +122,21 @@
     <form class="layui-form" lay-filter="editForm" style="padding:20px 30px 0;">
         <input type="hidden" name="id" value="">
         <div class="layui-form-item">
-            <label class="layui-form-label">分类名称</label>
+            <label class="layui-form-label" data-i18n="store.name">分类名称</label>
             <div class="layui-input-block">
-                <input type="text" name="name" lay-verify="required" placeholder="请输入分类名称" autocomplete="off" class="layui-input">
+                <input type="text" name="name" lay-verify="required" placeholder="{{ t('store.categoryPlaceholder') }}" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">排序</label>
+            <label class="layui-form-label" data-i18n="store.sort">排序</label>
             <div class="layui-input-block">
                 <input type="number" name="sort" value="0" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">描述</label>
+            <label class="layui-form-label" data-i18n="store.description">描述</label>
             <div class="layui-input-block">
-                <textarea name="description" placeholder="请输入分类描述" class="layui-textarea"></textarea>
+                <textarea name="description" placeholder="{{ t('store.categoryDescPlaceholder') }}" class="layui-textarea"></textarea>
             </div>
         </div>
         <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border-color);padding-top:15px;margin-top:10px;">
@@ -148,8 +148,11 @@
 
 <script src="/static/layui/lib/layui.js"></script>
 <script src="/static/layui/js/common.js?v=20261124i"></script>
+<script src="/static/layui/js/i18n.js?v=20261124e"></script>
 <script>
 inheritTheme();
+I18N.getLang();
+renderI18n();
 
 layui.use(['table', 'form', 'layer', 'dropdown'], function(){
     var table = layui.table;
@@ -196,17 +199,17 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
                 limitName: 'page_size'
             },
             cols: [[
-                {field: 'id', title: 'ID', width: 70, align: 'center'},
-                {field: 'name', title: '分类名称', minWidth: 120},
-                {field: 'description', title: '描述', minWidth: 200},
-                {field: 'sort', title: '排序', width: 80, align: 'center'},
-                {field: 'product_count', title: '商品数量', width: 100, align: 'center',
+                {field: 'id', title: t('common.id'), width: 70, align: 'center'},
+                {field: 'name', title: t('store.name'), minWidth: 120},
+                {field: 'description', title: t('store.description'), minWidth: 200},
+                {field: 'sort', title: t('store.sort'), width: 80, align: 'center'},
+                {field: 'product_count', title: t('store.productCount'), width: 100, align: 'center',
                     templet: function(d) {
                         return '<span style="color:#1890ff;font-weight:bold">' + d.product_count + '</span>';
                     }
                 },
-                {field: 'create_time', title: '创建时间', width: 170, align: 'center'},
-                {title: '操作', width: 250, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+                {field: 'create_time', title: t('store.createTime'), width: 170, align: 'center'},
+                {title: t('store.operation'), width: 250, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
             ]]
         });
     }
@@ -215,7 +218,7 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
     function openAddForm() {
         layer.open({
             type: 1,
-            title: '新增分类',
+            title: t('store.addCategory'),
             area: ['500px', 'auto'],
             content: $('#addFormTpl').html(),
             success: function(layero, index) {
@@ -231,17 +234,20 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 新增提交
     form.on('submit(addSubmit)', function(data) {
+        var submitBtn = $(data.elem).prop('disabled', true).addClass('layui-btn-disabled');
         var field = data.field;
         postApi('/admin/api/store/categories/create/', field, function(res) {
             if (res.code === 200) {
-                layer.msg('创建成功', {icon: 1});
+                layer.msg(t('store.created'), {icon: 1});
                 layer.closeAll();
                 tableIns.reload({
                     where: getSearchParams()
                 });
             } else {
-                layer.msg(res.msg || '创建失败', {icon: 2});
+                layer.msg(res.msg || t('store.createFailed'), {icon: 2});
             }
+        }).always(function() {
+            submitBtn.prop('disabled', false).removeClass('layui-btn-disabled');
         });
         return false;
     });
@@ -272,18 +278,21 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 编辑提交
     form.on('submit(editSubmit)', function(data) {
+        var submitBtn = $(data.elem).prop('disabled', true).addClass('layui-btn-disabled');
         var field = data.field;
         var id = field.id;
         putApi('/admin/api/store/categories/' + id + '/', field, function(res) {
             if (res.code === 200) {
-                layer.msg('更新成功', {icon: 1});
+                layer.msg(t('store.updated'), {icon: 1});
                 layer.closeAll();
                 tableIns.reload({
                     where: getSearchParams()
                 });
             } else {
-                layer.msg(res.msg || '更新失败', {icon: 2});
+                layer.msg(res.msg || t('store.updateFailed'), {icon: 2});
             }
+        }).always(function() {
+            submitBtn.prop('disabled', false).removeClass('layui-btn-disabled');
         });
         return false;
     });
@@ -334,11 +343,11 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
         var data = obj.data;
         if (obj.event === 'view') {
             var content = '<div style="padding:20px 30px;">' +
-                '<div class="layui-form-item"><label class="layui-form-label">分类名称</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">排序</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(String(data.sort || 0)) + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">描述</label><div class="layui-input-block"><textarea class="layui-textarea" readonly>' + escapeHtml(data.description || '') + '</textarea></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">商品数量</label><div class="layui-input-block"><input type="text" value="' + (data.product_count || 0) + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">创建时间</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.create_time || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.name">分类名称</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.sort">排序</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(String(data.sort || 0)) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.description">描述</label><div class="layui-input-block"><textarea class="layui-textarea" readonly>' + escapeHtml(data.description || '') + '</textarea></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.productCount">商品数量</label><div class="layui-input-block"><input type="text" value="' + (data.product_count || 0) + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.createTime">创建时间</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.create_time || '') + '" class="layui-input" readonly></div></div>' +
                 '</div>';
             layer.open({
                 type: 1,

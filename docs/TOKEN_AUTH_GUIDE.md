@@ -29,6 +29,8 @@ const token = (await res.json()).data.token;
 
 Token 有效期默认 24 小时（`TOKEN_EXPIRE_SECONDS`），密码变更后立即失效。停用用户无法通过 Token 认证。
 
+DSD 激活角色会签入 Token。通过 `/active-roles/` 切换角色后，响应会返回新 Token；使用 Bearer Token 的客户端必须替换本地 Token，否则仍使用旧角色集合。
+
 ## 3. 请求携带
 
 ```javascript
@@ -37,7 +39,7 @@ fetch('/admin/api/rbac/userinfo/', {
 });
 ```
 
-同时支持 `X-Token` 请求头与 `?token=` 查询参数（后者仅供 SSE 等无法设置请求头的场景，生产不推荐）。
+同时支持 `X-Token` 请求头。`?token=` 查询参数仅对系统信息 SSE 端点开放；其他接口默认拒绝。如需临时开放，可设置 `LAYUI_ALLOW_QUERY_TOKEN=True`，但不推荐生产使用。
 
 ## 4. 前端权限数据流
 

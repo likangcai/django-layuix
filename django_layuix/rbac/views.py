@@ -6,7 +6,6 @@ import json
 import os
 import platform
 import socket
-from functools import wraps
 from datetime import datetime
 import time
 
@@ -18,7 +17,8 @@ from django.conf import settings
 from django.contrib.auth import update_session_auth_hash
 from django.utils.timezone import localtime
 from .permissions import (
-    api_permission_by_method, api_permission_required, resolve_api_user,
+    api_login_required, api_permission_by_method, api_permission_required,
+    resolve_api_user,
 )
 
 
@@ -27,18 +27,6 @@ def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
     if dt is None:
         return ''
     return localtime(dt).strftime(format_str)
-
-
-def api_login_required(view_func):
-    """API 登录校验：Session 与 Bearer Token 双通道。"""
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        user = resolve_api_user(request)
-        if user is None or not getattr(user, 'is_authenticated', False):
-            return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
-        request.user = user
-        return view_func(request, *args, **kwargs)
-    return wrapper
 
 
 def get_request_body(request):
@@ -74,18 +62,48 @@ def _get_user_model():
     return get_user_model()
 
 
-def _build_menu_tree(menus, parent_id=None):
-    """Build menu tree from flat menu list"""
+def _build_menu_tree(menus, parent_id=None, visited=None):
+    """Build menu tree from flat list; cycles are skipped instead of recursing forever."""
+    if visited is None:
+        visited = set()
     tree = []
     for menu in menus:
+        menu_id = menu.get('id')
+        if menu_id in visited:
+            continue
         parent_val = menu.get('parent_id') or menu.get('parent')
         if parent_val == parent_id or (parent_val is None and parent_id is None):
-            children = _build_menu_tree(menus, menu['id'])
+            visited.add(menu_id)
             item = dict(menu)
+            children = _build_menu_tree(menus, menu_id, visited)
             if children:
                 item['children'] = children
             tree.append(item)
     return tree
+
+
+def _validate_menu_parent(menu_id, parent_id):
+    """Reject self-parents and cycles in the menu hierarchy."""
+    if not parent_id:
+        return True
+    try:
+        parent_id = int(parent_id)
+    except (TypeError, ValueError):
+        return False
+    if menu_id and int(menu_id) == parent_id:
+        return False
+
+    from .models import Menu
+    seen = set()
+    current = Menu.objects.filter(pk=parent_id).first()
+    while current and current.pk not in seen:
+        if menu_id and current.pk == int(menu_id):
+            return False
+        seen.add(current.pk)
+        if not current.parent_id:
+            break
+        current = Menu.objects.filter(pk=current.parent_id).first()
+    return True
 
 
 @csrf_exempt
@@ -962,7 +980,10 @@ def menu_detail(request, pk):
         if 'name_zh_hans' in body:
             menu.name_zh_hans = body['name_zh_hans']
         if 'parent_id' in body:
-            menu.parent_id = body['parent_id'] if body['parent_id'] else None
+            parent_id = body['parent_id'] if body['parent_id'] else None
+            if not _validate_menu_parent(menu.pk, parent_id):
+                return error_response('上级菜单不能形成循环', 400)
+            menu.parent_id = parent_id
         if 'icon' in body:
             menu.icon = body['icon']
         if 'path' in body:
@@ -1014,6 +1035,8 @@ def menu_create(request):
         return error_response('菜单名称不能为空', 400)
 
     parent_id = body.get('parent_id')
+    if not _validate_menu_parent(None, parent_id):
+        return error_response('上级菜单不存在', 400)
     menu = Menu(
         name=name,
         name_en=body.get('name_en', ''),
@@ -1800,22 +1823,32 @@ def upload_image(request):
     if not image_file:
         return error_response('请选择图片文件', 400)
 
-    # 验证文件类型
-    allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-icon', 'image/svg+xml']
-    if image_file.content_type not in allowed_types:
-        return error_response('仅支持 JPG、PNG、GIF、WebP、ICO、SVG 格式', 400)
-
     # 验证文件大小（最大 2MB）
     if image_file.size > 2 * 1024 * 1024:
         return error_response('图片文件不能超过 2MB', 400)
 
-    # 保存到 MEDIA_ROOT/uploads/config/ 目录
-    import os
+    # 按文件真实字节识别格式，拒绝 SVG 与伪造 Content-Type
+    import secrets
+    from io import BytesIO
+    from PIL import Image, UnidentifiedImageError
     from django.core.files.storage import default_storage
     from django.utils import timezone
 
-    ext = os.path.splitext(image_file.name)[1].lower() or '.png'
-    filename = f'config/{timezone.now().strftime("%Y%m%d%H%M%S")}{ext}'
+    format_map = {'JPEG': '.jpg', 'PNG': '.png', 'GIF': '.gif', 'WEBP': '.webp', 'ICO': '.ico'}
+    try:
+        image_file.seek(0)
+        raw = image_file.read()
+        with Image.open(BytesIO(raw)) as image:
+            image_format = (image.format or '').upper()
+            image.verify()
+    except (UnidentifiedImageError, OSError, ValueError):
+        return error_response('文件内容不是有效图片', 400)
+    ext = format_map.get(image_format)
+    if not ext:
+        return error_response('仅支持 JPG、PNG、GIF、WebP、ICO 格式', 400)
+
+    image_file.seek(0)
+    filename = f'config/{timezone.now().strftime("%Y%m%d%H%M%S")}_{secrets.token_hex(8)}{ext}'
     saved_path = default_storage.save(filename, image_file)
 
     url = default_storage.url(saved_path)
@@ -2140,6 +2173,7 @@ def active_roles(request):
         get_assigned_role_ids, store_active_roles, validate_active_roles,
     )
     from .models import Role
+    from .token_auth import generate_token
 
     assigned_ids = get_assigned_role_ids(request.user)
     assigned = list(Role.objects.filter(id__in=assigned_ids).values('id', 'name', 'code'))
@@ -2153,6 +2187,7 @@ def active_roles(request):
 
     if request.method == 'POST':
         body = get_request_body(request)
+        selected = None
         if 'role_ids' in body and body['role_ids'] is not None:
             try:
                 selected = validate_active_roles(request.user, body['role_ids'])
@@ -2161,9 +2196,11 @@ def active_roles(request):
             store_active_roles(request, selected)
         else:
             clear_active_roles(request)
+        active_ids = get_active_role_ids(request.user)
         return success_response({
             'assigned': assigned,
-            'active_ids': sorted(get_active_role_ids(request.user)),
+            'active_ids': sorted(active_ids),
+            'token': generate_token(request.user, active_roles=selected),
         }, msg='切换成功')
 
     return error_response('Method not allowed', 405)

@@ -85,11 +85,26 @@
     if (!container) return;
 
     function showLoading() {
-        // 不做透明度变化，避免闪烁
+        hideLoading();
+        var overlay = document.createElement('div');
+        overlay.className = 'ajax-state-overlay';
+        overlay.innerHTML = '<div class="loading-state"><i class="layui-icon layui-icon-loading"></i><p>{{ t("common.loading") }}</p></div>';
+        container.prepend(overlay);
     }
 
     function hideLoading() {
-        // 不做透明度变化
+        var overlays = container.querySelectorAll('.ajax-state-overlay');
+        Array.prototype.forEach.call(overlays, function(item) { item.remove(); });
+    }
+
+    function showError(url, message) {
+        hideLoading();
+        var overlay = document.createElement('div');
+        overlay.className = 'ajax-state-overlay';
+        overlay.innerHTML = '<div class="error-state"><i class="layui-icon layui-icon-close-fill"></i><p></p><button type="button" class="layui-btn layui-btn-sm layui-btn-primary">{{ t("common.retry") }}</button></div>';
+        overlay.querySelector('p').textContent = message || '{{ t("common.loadFailed") }}';
+        overlay.querySelector('button').addEventListener('click', function() { navigate(url); });
+        container.prepend(overlay);
     }
 
     function addCacheBust(url) {
@@ -112,7 +127,16 @@
         return !!el.closest('.object-tools, .admin-header, .admin-sidebar, thead');
     }
 
+    function preserveQuery(url) {
+        if (url.charAt(0) !== '?') return url;
+        var next = new URLSearchParams(window.location.search);
+        var overrides = new URLSearchParams(url.slice(1));
+        overrides.forEach(function(value, key) { next.set(key, value); });
+        return '?' + next.toString();
+    }
+
     function navigate(url) {
+        url = preserveQuery(url);
         if (url === currentUrl) return;
         currentUrl = url;
 
@@ -151,21 +175,19 @@
                         return;
                     }
                 } else {
-                    window.location.href = url;
+                    showError(url, '{{ t("common.loadFailed") }} (' + xhr.status + ')');
                 }
             } catch(e) {
-                window.location.href = url;
+                showError(url, '{{ t("common.loadFailed") }}');
             }
         };
 
         xhr.onerror = function() {
-            hideLoading();
-            window.location.href = url;
+            showError(url, '{{ t("common.loadFailed") }}');
         };
 
         xhr.ontimeout = function() {
-            hideLoading();
-            window.location.href = url;
+            showError(url, '{{ t("common.loadTimeout") }}');
         };
 
         xhr.send();
@@ -258,8 +280,8 @@
         formData.forEach(function(value, key) {
             if (value) params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
         });
+        params.push('p=1');
         var searchUrl = '?' + params.join('&');
-        if (searchUrl === '?') searchUrl = '?';
         navigate(searchUrl);
     }, true);
 
@@ -280,7 +302,7 @@
         if (e.target.id === 'pageSizeSelect') {
             e.preventDefault();
             e.stopPropagation();
-            navigate('?per_page=' + e.target.value);
+            navigate('?per_page=' + e.target.value + '&p=1');
         }
     }, true);
 

@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import logging
+
+logger = logging.getLogger(__name__)
+
 """
 django-layuix 菜单注册工具
 允许外部应用动态注册菜单，无需修改库源码
@@ -230,8 +234,14 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
             'plugin_key': plugin_key,
         }
         menu, is_new = Menu.objects.get_or_create(name=name, defaults=defaults)
+        foreign_owned = bool(
+            plugin_key and not is_new and menu.plugin_key and menu.plugin_key != plugin_key
+        )
         owned_by_plugin = bool(plugin_key and menu.plugin_key == plugin_key)
-        if not is_new and (not skip_existing or owned_by_plugin):
+        if foreign_owned:
+            logger.warning('Menu %s is owned by plugin %s; skip registration from %s',
+                           name, menu.plugin_key, plugin_key)
+        elif not is_new and (not skip_existing or owned_by_plugin):
             changed = False
             for field, value in defaults.items():
                 if getattr(menu, field) != value:
@@ -239,7 +249,7 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
                     changed = True
             if changed:
                 menu.save()
-        elif plugin_key and menu.plugin_key != plugin_key:
+        elif plugin_key and not menu.plugin_key:
             menu.plugin_key = plugin_key
             menu.save(update_fields=['plugin_key'])
         created[name] = menu
@@ -281,8 +291,14 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
                 'plugin_key': plugin_key,
             }
             btn, is_new = Menu.objects.get_or_create(name=btn_name, defaults=defaults)
+            foreign_owned = bool(
+                plugin_key and not is_new and btn.plugin_key and btn.plugin_key != plugin_key
+            )
             owned_by_plugin = bool(plugin_key and btn.plugin_key == plugin_key)
-            if not is_new and (not skip_existing or owned_by_plugin):
+            if foreign_owned:
+                logger.warning('Button %s is owned by plugin %s; skip registration from %s',
+                               btn_name, btn.plugin_key, plugin_key)
+            elif not is_new and (not skip_existing or owned_by_plugin):
                 changed = False
                 for field, value in defaults.items():
                     if getattr(btn, field) != value:
@@ -290,7 +306,7 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
                         changed = True
                 if changed:
                     btn.save()
-            elif plugin_key and btn.plugin_key != plugin_key:
+            elif plugin_key and not btn.plugin_key:
                 btn.plugin_key = plugin_key
                 btn.save(update_fields=['plugin_key'])
 
@@ -308,15 +324,17 @@ def unregister_plugin_menus(plugin_key):
     from django_layuix.rbac.models import Menu
 
     roots = list(Menu.objects.filter(plugin_key=plugin_key))
-    ids = set()
-    for menu in roots:
-        ids.add(menu.id)
-        descendants = Menu.objects.filter(parent=menu)
-        while descendants.exists():
-            current = list(descendants)
-            for child in current:
-                ids.add(child.id)
-            descendants = Menu.objects.filter(parent__in=current)
+    ids = {menu.id for menu in roots}
+    frontier = list(roots)
+    max_depth = 32
+    for _ in range(max_depth):
+        if not frontier:
+            break
+        children = list(Menu.objects.filter(parent__in=frontier).exclude(id__in=ids))
+        if not children:
+            break
+        ids.update(child.id for child in children)
+        frontier = children
     Menu.objects.filter(id__in=ids).delete()
 
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>订单管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css"?v=20261124j>
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -48,31 +48,31 @@
                 <form class="layui-form" lay-filter="searchForm">
                     <div class="layui-form-item">
                         <div class="layui-inline">
-                            <label class="layui-form-label">关键词</label>
+                            <label class="layui-form-label" data-i18n="common.keyword">关键词</label>
                             <div class="layui-input-inline" style="width:200px;">
-                                <input type="text" name="keyword" id="searchKeyword" placeholder="订单号/客户姓名/电话" autocomplete="off" class="layui-input">
+                                <input type="text" name="keyword" id="searchKeyword" placeholder="{{ t('store.orderSearchPlaceholder') }}" autocomplete="off" class="layui-input">
                             </div>
                         </div>
                         <div class="layui-inline">
-                            <label class="layui-form-label">订单状态</label>
+                            <label class="layui-form-label" data-i18n="store.orderStatus">订单状态</label>
                             <div class="layui-input-inline" style="width:150px;">
                                 <select name="status" id="searchStatus">
-                                    <option value="">全部</option>
-                                    <option value="pending">待付款</option>
-                                    <option value="paid">已付款</option>
-                                    <option value="shipped">已发货</option>
-                                    <option value="completed">已完成</option>
-                                    <option value="cancelled">已取消</option>
-                                    <option value="refunded">已退款</option>
+                                    <option value="" data-i18n="store.all">全部</option>
+                                    <option value="pending" data-i18n="store.pending">待付款</option>
+                                    <option value="paid" data-i18n="store.paid">已付款</option>
+                                    <option value="shipped" data-i18n="store.shipped">已发货</option>
+                                    <option value="completed" data-i18n="store.completed">已完成</option>
+                                    <option value="cancelled" data-i18n="store.cancelled">已取消</option>
+                                    <option value="refunded" data-i18n="store.refunded">已退款</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="layui-inline">
+                        <div class="layui-inline search-btns">
                             <button type="button" class="layui-btn layui-btn-sm" id="searchBtn">
-                                <i class="layui-icon layui-icon-search"></i> 搜索
+                                <i class="layui-icon layui-icon-search"></i> <span data-i18n="common.search">搜索</span>
                             </button>
                             <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary" id="resetBtn">
-                                <i class="layui-icon layui-icon-refresh"></i> 重置
+                                <i class="layui-icon layui-icon-refresh"></i> <span data-i18n="common.reset">重置</span>
                             </button>
                         </div>
                     </div>
@@ -88,63 +88,63 @@
 <script type="text/html" id="toolbarTpl">
     <div class="layui-btn-container">
         <button class="layui-btn layui-btn-sm layui-btn-normal" lay-event="add">
-            <i class="layui-icon layui-icon-add-1"></i> 新增订单
+            <i class="layui-icon layui-icon-add-1"></i> <span data-i18n="store.addOrder">新增订单</span>
         </button>
         <button class="layui-btn layui-btn-sm layui-btn-primary" lay-event="refresh">
-            <i class="layui-icon layui-icon-refresh"></i> 刷新
+            <i class="layui-icon layui-icon-refresh"></i> <span data-i18n="common.refresh">刷新</span>
         </button>
     </div>
 </script>
 
 <!-- 操作列模板：查看/编辑 直接展示，其他业务操作放在更多下拉菜单中 -->
 <script type="text/html" id="operateTpl">
-    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">查看</a>
-    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
-    <a class="layui-btn layui-btn-xs" lay-event="more">更多<i class="layui-icon layui-icon-down" style="margin-left:3px;font-size:12px"></i></a>
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view"><span data-i18n="common.view">查看</span></a>
+    <a class="layui-btn layui-btn-xs" lay-event="edit"><span data-i18n="common.edit">编辑</span></a>
+    <a class="layui-btn layui-btn-xs" lay-event="more"><span data-i18n="store.more">更多</span><i class="layui-icon layui-icon-down" style="margin-left:3px;font-size:12px"></i></a>
 </script>
 
 <!-- 新增订单弹窗模板 (只有返回/保存按钮) -->
 <script type="text/html" id="addFormTpl">
     <form class="layui-form" lay-filter="addForm" style="padding:20px 30px 0;">
         <div class="layui-form-item">
-            <label class="layui-form-label">客户姓名</label>
+            <label class="layui-form-label" data-i18n="store.customerName">客户姓名</label>
             <div class="layui-input-block">
                 <input type="text" name="customer_name" lay-verify="required" placeholder="请输入客户姓名" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">联系电话</label>
+            <label class="layui-form-label" data-i18n="store.customerPhone">联系电话</label>
             <div class="layui-input-block">
                 <input type="text" name="customer_phone" lay-verify="required" placeholder="请输入联系电话" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">收货地址</label>
+            <label class="layui-form-label" data-i18n="store.shippingAddress">收货地址</label>
             <div class="layui-input-block">
                 <input type="text" name="shipping_address" placeholder="请输入收货地址" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">订单状态</label>
+            <label class="layui-form-label" data-i18n="store.orderStatus">订单状态</label>
             <div class="layui-input-inline" style="width:150px;">
                 <select name="status">
-                    <option value="pending">待付款</option>
-                    <option value="paid">已付款</option>
-                    <option value="shipped">已发货</option>
-                    <option value="completed">已完成</option>
+                    <option value="pending" data-i18n="store.pending">待付款</option>
+                    <option value="paid" data-i18n="store.paid">已付款</option>
+                    <option value="shipped" data-i18n="store.shipped">已发货</option>
+                    <option value="completed" data-i18n="store.completed">已完成</option>
                 </select>
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">订单金额</label>
+            <label class="layui-form-label" data-i18n="store.orderAmount">订单金额</label>
             <div class="layui-input-block">
                 <input type="number" name="total_amount" step="0.01" value="0" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">备注</label>
+            <label class="layui-form-label" data-i18n="store.remark">备注</label>
             <div class="layui-input-block">
-                <textarea name="remark" placeholder="订单备注" class="layui-textarea"></textarea>
+                <textarea name="remark" placeholder="{{ t('store.remarkPlaceholder') }}" class="layui-textarea"></textarea>
             </div>
         </div>
         <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border-color);padding-top:15px;margin-top:10px;">
@@ -159,50 +159,50 @@
     <form class="layui-form" lay-filter="editForm" style="padding:20px 30px 0;">
         <input type="hidden" name="id" value="">
         <div class="layui-form-item">
-            <label class="layui-form-label">订单号</label>
+            <label class="layui-form-label" data-i18n="store.orderNo">订单号</label>
             <div class="layui-input-block">
                 <input type="text" name="order_no" readonly class="layui-input layui-disabled" style="background:var(--bg-tertiary);">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">客户姓名</label>
+            <label class="layui-form-label" data-i18n="store.customerName">客户姓名</label>
             <div class="layui-input-block">
                 <input type="text" name="customer_name" lay-verify="required" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">联系电话</label>
+            <label class="layui-form-label" data-i18n="store.customerPhone">联系电话</label>
             <div class="layui-input-block">
                 <input type="text" name="customer_phone" lay-verify="required" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">收货地址</label>
+            <label class="layui-form-label" data-i18n="store.shippingAddress">收货地址</label>
             <div class="layui-input-block">
                 <input type="text" name="shipping_address" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">订单状态</label>
+            <label class="layui-form-label" data-i18n="store.orderStatus">订单状态</label>
             <div class="layui-input-inline" style="width:150px;">
                 <select name="status">
-                    <option value="pending">待付款</option>
-                    <option value="paid">已付款</option>
-                    <option value="shipped">已发货</option>
-                    <option value="completed">已完成</option>
-                    <option value="cancelled">已取消</option>
-                    <option value="refunded">已退款</option>
+                    <option value="pending" data-i18n="store.pending">待付款</option>
+                    <option value="paid" data-i18n="store.paid">已付款</option>
+                    <option value="shipped" data-i18n="store.shipped">已发货</option>
+                    <option value="completed" data-i18n="store.completed">已完成</option>
+                    <option value="cancelled" data-i18n="store.cancelled">已取消</option>
+                    <option value="refunded" data-i18n="store.refunded">已退款</option>
                 </select>
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">订单金额</label>
+            <label class="layui-form-label" data-i18n="store.orderAmount">订单金额</label>
             <div class="layui-input-block">
                 <input type="number" name="total_amount" step="0.01" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">备注</label>
+            <label class="layui-form-label" data-i18n="store.remark">备注</label>
             <div class="layui-input-block">
                 <textarea name="remark" class="layui-textarea"></textarea>
             </div>
@@ -216,8 +216,11 @@
 
 <script src="/static/layui/lib/layui.js"></script>
 <script src="/static/layui/js/common.js?v=20261124i"></script>
+<script src="/static/layui/js/i18n.js?v=20261124e"></script>
 <script>
 inheritTheme();
+I18N.getLang();
+renderI18n();
 
 layui.use(['table', 'form', 'layer', 'dropdown'], function(){
     var table = layui.table;
@@ -240,12 +243,12 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 状态样式映射
     var statusStyle = {
-        'pending':    {color: '#faad14', label: '待付款'},
-        'paid':       {color: '#1890ff', label: '已付款'},
-        'shipped':    {color: '#722ed1', label: '已发货'},
-        'completed':  {color: '#52c41a', label: '已完成'},
-        'cancelled':  {color: '#ff4d4f', label: '已取消'},
-        'refunded':   {color: '#fa8c16', label: '已退款'}
+        'pending':    {color: '#faad14', label: t('store.pending')},
+        'paid':       {color: '#1890ff', label: t('store.paid')},
+        'shipped':    {color: '#722ed1', label: t('store.shipped')},
+        'completed':  {color: '#52c41a', label: t('store.completed')},
+        'cancelled':  {color: '#ff4d4f', label: t('store.cancelled')},
+        'refunded':   {color: '#fa8c16', label: t('store.refunded')}
     };
 
     // 加载列表（使用 url 服务端分页）
@@ -276,21 +279,21 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
                 limitName: 'page_size'
             },
             cols: [[
-                {field: 'order_no', title: '订单号', width: 180},
+                {field: 'order_no', title: t('store.orderNo'), width: 180},
                 {field: 'customer_name', title: '客户', width: 90},
-                {field: 'customer_phone', title: '联系电话', width: 130},
+                {field: 'customer_phone', title: t('store.customerPhone'), width: 130},
                 {field: 'total_amount', title: '金额', width: 100, align: 'center',
                     templet: function(d) { return '¥<strong style="color:#1890ff">' + d.total_amount + '</strong>'; }
                 },
-                {field: 'status_label', title: '状态', width: 90, align: 'center',
+                {field: 'status_label', title: t('common.status'), width: 90, align: 'center',
                     templet: function(d) {
                         var s = statusStyle[d.status] || {color: '#999', label: '未知'};
                         return '<span style="background:' + s.color + ';color:#fff;padding:2px 8px;border-radius:10px;font-size:12px">' + s.label + '</span>';
                     }
                 },
-                {field: 'remark', title: '备注', minWidth: 120},
+                {field: 'remark', title: t('store.remark'), minWidth: 120},
                 {field: 'create_time', title: '下单时间', width: 170, align: 'center'},
-                {title: '操作', width: 230, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+                {title: t('store.operation'), width: 230, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
             ]]
         });
     }
@@ -299,7 +302,7 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
     function openAddForm() {
         layer.open({
             type: 1,
-            title: '新增订单',
+            title: t('store.addOrder'),
             area: ['550px', 'auto'],
             content: $('#addFormTpl').html(),
             success: function(layero, index) {
@@ -315,17 +318,20 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 新增提交
     form.on('submit(addSubmit)', function(data) {
+        var submitBtn = $(data.elem).prop('disabled', true).addClass('layui-btn-disabled');
         var field = data.field;
         postApi('/admin/api/store/orders/create/', field, function(res) {
             if (res.code === 200) {
-                layer.msg('创建成功', {icon: 1});
+                layer.msg(t('store.created'), {icon: 1});
                 layer.closeAll();
                 tableIns.reload({
                     where: getSearchParams()
                 });
             } else {
-                layer.msg(res.msg || '创建失败', {icon: 2});
+                layer.msg(res.msg || t('store.createFailed'), {icon: 2});
             }
+        }).always(function() {
+            submitBtn.prop('disabled', false).removeClass('layui-btn-disabled');
         });
         return false;
     });
@@ -360,18 +366,21 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 编辑提交
     form.on('submit(editSubmit)', function(data) {
+        var submitBtn = $(data.elem).prop('disabled', true).addClass('layui-btn-disabled');
         var field = data.field;
         var id = field.id;
         putApi('/admin/api/store/orders/' + id + '/', field, function(res) {
             if (res.code === 200) {
-                layer.msg('更新成功', {icon: 1});
+                layer.msg(t('store.updated'), {icon: 1});
                 layer.closeAll();
                 tableIns.reload({
                     where: getSearchParams()
                 });
             } else {
-                layer.msg(res.msg || '更新失败', {icon: 2});
+                layer.msg(res.msg || t('store.updateFailed'), {icon: 2});
             }
+        }).always(function() {
+            submitBtn.prop('disabled', false).removeClass('layui-btn-disabled');
         });
         return false;
     });
@@ -437,13 +446,13 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
                 itemsHtml = '<span style="color:var(--text-muted)">暂无明细</span>';
             }
             var content = '<div style="padding:20px 30px;">' +
-                '<div class="layui-form-item"><label class="layui-form-label">订单号</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.order_no || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.orderNo">订单号</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.order_no || '') + '" class="layui-input" readonly></div></div>' +
                 '<div class="layui-form-item"><label class="layui-form-label">客户</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.customer_name || '') + '" class="layui-input" readonly></div></div>' +
                 '<div class="layui-form-item"><label class="layui-form-label">电话</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.customer_phone || '') + '" class="layui-input" readonly></div></div>' +
                 '<div class="layui-form-item"><label class="layui-form-label">地址</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.shipping_address || '') + '" class="layui-input" readonly></div></div>' +
                 '<div class="layui-form-item"><label class="layui-form-label">金额</label><div class="layui-input-block"><input type="text" value="¥' + escapeHtml(data.total_amount || '0') + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">状态</label><div class="layui-input-block"><input type="text" value="' + s.label + '" style="color:' + s.color + ';font-weight:bold" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">备注</label><div class="layui-input-block"><textarea class="layui-textarea" readonly>' + escapeHtml(data.remark || '') + '</textarea></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="common.status">状态</label><div class="layui-input-block"><input type="text" value="' + s.label + '" style="color:' + s.color + ';font-weight:bold" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.remark">备注</label><div class="layui-input-block"><textarea class="layui-textarea" readonly>' + escapeHtml(data.remark || '') + '</textarea></div></div>' +
                 '<div class="layui-form-item"><label class="layui-form-label">下单时间</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.create_time || '') + '" class="layui-input" readonly></div></div>' +
                 '<div class="layui-form-item"><label class="layui-form-label">商品明细</label><div class="layui-input-block">' + itemsHtml + '</div></div>' +
                 '</div>';

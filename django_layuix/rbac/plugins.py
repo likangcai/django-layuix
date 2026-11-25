@@ -6,7 +6,7 @@ import os
 import re
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 logger = logging.getLogger(__name__)
 
@@ -186,10 +186,18 @@ def register_plugin(key, name, version='1.0.0', description='',
     if not _supports_desired_active():
         persisted_fields = [f for f in persisted_fields if f != 'desired_active']
     try:
-        obj, _ = _db().update_or_create(
-            key=key,
-            defaults={field: data[field] for field in persisted_fields},
-        )
+        obj = None
+        for attempt in range(2):
+            try:
+                with transaction.atomic():
+                    obj, _ = _db().update_or_create(
+                        key=key,
+                        defaults={field: data[field] for field in persisted_fields},
+                    )
+                break
+            except IntegrityError:
+                if attempt == 1:
+                    raise
         data['id'] = obj.id
     except Exception:
         logger.exception('Failed to persist plugin metadata for %s', key)

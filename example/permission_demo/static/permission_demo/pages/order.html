@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title data-i18n="permission_demo.title">权限示例订单</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css"?v=20261124j>
 </head>
 <body>
 <div class="page-container">
@@ -23,15 +23,16 @@
 </div>
 <script src="/static/layui/lib/layui.js"></script>
 <script src="/static/layui/js/common.js?v=20261124i"></script>
-<script src="/static/layui/js/i18n.js?v=20261124d"></script>
+<script src="/static/layui/js/i18n.js?v=20261124e"></script>
 <script>
 I18N.getLang();
 renderI18n();
 document.title = t('permission_demo.title');
-layui.use(['table'], function() {
+layui.use(['table', 'layer'], function() {
     var table = layui.table;
+    var layer = layui.layer;
     var allColumns = [
-        {field: 'id', title: 'ID', width: 70},
+        {field: 'id', title: t('common.id'), width: 70},
         {field: 'title', title: t('permission_demo.titleField'), minWidth: 180},
         {field: 'owner_name', title: t('permission_demo.owner'), width: 140},
         {field: 'department', title: t('permission_demo.department'), width: 140},
@@ -61,6 +62,13 @@ layui.use(['table'], function() {
                 page: true,
                 cols: [columns]
             });
+        })
+        .catch(function() {
+            $('#demoOrderTable').html(
+                '<div class="error-state"><i class="layui-icon layui-icon-close-fill"></i><p>'
+                + escapeHtml(t('common.loadFailed')) + '</p></div>'
+            );
+            layer.msg(t('common.loadFailed'), {icon: 2});
         });
 });
 </script>

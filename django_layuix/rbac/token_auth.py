@@ -11,23 +11,19 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 
 
-RESERVED_TOKEN_FIELDS = {'user_id', 'username', 'exp', 'iat'}
+RESERVED_TOKEN_FIELDS = {'user_id', 'username', 'exp', 'iat', 'active_roles'}
 
 
 def _token_expire_seconds():
     return getattr(settings, 'TOKEN_EXPIRE_SECONDS', 24 * 60 * 60)
 
 
-def generate_token(user, extra_data=None):
+def generate_token(user, extra_data=None, active_roles=None):
     """
-    生成认证token
-    
-    Args:
-        user: 用户对象
-        extra_data: 额外数据（可选）
-    
-    Returns:
-        str: token字符串
+    生成认证token。
+
+    active_roles 会被签入 payload，使 Bearer Token 路径遵守 DSD 选择；
+    未传时读取 user._layui_active_role_ids（由会话或主动切换写入）。
     """
     timestamp = int(time.time())
     payload = {
@@ -36,6 +32,15 @@ def generate_token(user, extra_data=None):
         'exp': timestamp + _token_expire_seconds(),
         'iat': timestamp,
     }
+
+    roles = active_roles
+    if roles is None:
+        roles = getattr(user, '_layui_active_role_ids', None)
+    if roles is not None:
+        payload['active_roles'] = sorted({
+            int(value) for value in roles
+            if str(value).isdigit()
+        })
 
     if extra_data:
         payload.update({
@@ -111,7 +116,10 @@ def verify_token(token):
         # 验证用户名是否匹配
         if payload.get('username') != user.username:
             return {'valid': False, 'error': 'Username mismatch'}
-        
+
+        if 'active_roles' in payload:
+            user._layui_active_role_ids = list(payload['active_roles'])
+
         return {
             'valid': True,
             'user': user,
@@ -141,16 +149,21 @@ def token_authenticate(request):
     
     # 1. 从Authorization header获取
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-    if auth_header.startswith('Bearer '):
-        token = auth_header[7:]
+    if auth_header.lower().startswith('bearer '):
+        token = auth_header[7:].strip()
     
     # 2. 从X-Token header获取（备选）
     if not token:
         token = request.META.get('HTTP_X_TOKEN')
     
-    # 3. 从query参数获取（用于SSE等场景）
+    # 3. query token 仅用于 SSE 等明确允许的场景，避免泄漏到日志/历史记录
     if not token:
-        token = request.GET.get('token')
+        query_allowed = (
+            getattr(settings, 'LAYUI_ALLOW_QUERY_TOKEN', False)
+            or str(request.path).endswith('/system/info/stream/')
+        )
+        if query_allowed:
+            token = request.GET.get('token')
     
     # 4. 从POST body获取
     if not token and request.method == 'POST':

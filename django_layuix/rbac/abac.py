@@ -326,7 +326,7 @@ def filter_queryset(queryset, user, action, resource, extra_context=None, chunk_
     allowed_pks = []
     for obj in queryset.iterator(chunk_size=max(1, int(chunk_size or 1000))):
         context = dict(extra_context or {})
-        context.setdefault('resource', obj)
+        context.setdefault('resource', resource_context(obj))
         if evaluate_policies(user, action, resource or obj, extra_context=context).allowed:
             allowed_pks.append(obj.pk)
     return queryset.filter(pk__in=allowed_pks)

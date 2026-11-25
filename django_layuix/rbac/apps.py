@@ -30,6 +30,15 @@ class RbacConfig(AppConfig):
         """Ensure 'django_layuix' is in INSTALLED_APPS for templatetags and static files"""
         from django.conf import settings
 
+        # Settings may use tuples; normalize to mutable lists before patching.
+        for attr in ('INSTALLED_APPS', 'MIDDLEWARE'):
+            try:
+                current = getattr(settings, attr)
+                if not isinstance(current, list):
+                    setattr(settings, attr, list(current or []))
+            except Exception:
+                pass
+
         if 'django_layuix' not in settings.INSTALLED_APPS:
             settings.INSTALLED_APPS.insert(0, 'django_layuix')
 

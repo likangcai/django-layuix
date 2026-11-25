@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>商品管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css"?v=20261124j>
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -48,36 +48,36 @@
                 <form class="layui-form" lay-filter="searchForm">
                     <div class="layui-form-item">
                         <div class="layui-inline">
-                            <label class="layui-form-label">关键词</label>
+                            <label class="layui-form-label" data-i18n="common.keyword">关键词</label>
                             <div class="layui-input-inline" style="width:200px;">
-                                <input type="text" name="keyword" id="searchKeyword" placeholder="商品名称/编码" autocomplete="off" class="layui-input">
+                                <input type="text" name="keyword" id="searchKeyword" placeholder="{{ t('store.searchPlaceholder') }}" autocomplete="off" class="layui-input">
                             </div>
                         </div>
                         <div class="layui-inline">
-                            <label class="layui-form-label">分类</label>
+                            <label class="layui-form-label" data-i18n="store.category">分类</label>
                             <div class="layui-input-inline" style="width:160px;">
                                 <select name="category_id" id="searchCategory">
-                                    <option value="">全部</option>
+                                    <option value="" data-i18n="store.all">全部</option>
                                 </select>
                             </div>
                         </div>
                         <div class="layui-inline">
-                            <label class="layui-form-label">状态</label>
+                            <label class="layui-form-label" data-i18n="common.status">状态</label>
                             <div class="layui-input-inline" style="width:120px;">
                                 <select name="status" id="searchStatus">
-                                    <option value="">全部</option>
-                                    <option value="1">上架</option>
-                                    <option value="0">下架</option>
-                                    <option value="2">售罄</option>
+                                    <option value="" data-i18n="store.all">全部</option>
+                                    <option value="1" data-i18n="store.onSale">上架</option>
+                                    <option value="0" data-i18n="store.offSale">下架</option>
+                                    <option value="2" data-i18n="store.soldOut">售罄</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="layui-inline">
+                        <div class="layui-inline search-btns">
                             <button type="button" class="layui-btn layui-btn-sm" id="searchBtn">
-                                <i class="layui-icon layui-icon-search"></i> 搜索
+                                <i class="layui-icon layui-icon-search"></i> <span data-i18n="common.search">搜索</span>
                             </button>
                             <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary" id="resetBtn">
-                                <i class="layui-icon layui-icon-refresh"></i> 重置
+                                <i class="layui-icon layui-icon-refresh"></i> <span data-i18n="common.reset">重置</span>
                             </button>
                         </div>
                     </div>
@@ -93,78 +93,78 @@
 <script type="text/html" id="toolbarTpl">
     <div class="layui-btn-container">
         <button class="layui-btn layui-btn-sm layui-btn-normal" lay-event="add">
-            <i class="layui-icon layui-icon-add-1"></i> 新增商品
+            <i class="layui-icon layui-icon-add-1"></i> <span data-i18n="store.addProduct">新增商品</span>
         </button>
         <button class="layui-btn layui-btn-sm layui-btn-primary" lay-event="refresh">
-            <i class="layui-icon layui-icon-refresh"></i> 刷新
+            <i class="layui-icon layui-icon-refresh"></i> <span data-i18n="common.refresh">刷新</span>
         </button>
     </div>
 </script>
 
 <!-- 操作列模板：默认显示查看/编辑，多余操作在更多下拉菜单中 -->
 <script type="text/html" id="operateTpl">
-    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">查看</a>
-    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
-    <a class="layui-btn layui-btn-xs" lay-event="more">更多<i class="layui-icon layui-icon-down" style="margin-left:3px;font-size:12px"></i></a>
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view"><span data-i18n="common.view">查看</span></a>
+    <a class="layui-btn layui-btn-xs" lay-event="edit"><span data-i18n="common.edit">编辑</span></a>
+    <a class="layui-btn layui-btn-xs" lay-event="more"><span data-i18n="store.more">更多</span><i class="layui-icon layui-icon-down" style="margin-left:3px;font-size:12px"></i></a>
 </script>
 
 <!-- 新增商品弹窗模板 (只有返回/保存按钮) -->
 <script type="text/html" id="addFormTpl">
     <form class="layui-form" lay-filter="addForm" style="padding:20px 30px 0;">
         <div class="layui-form-item">
-            <label class="layui-form-label">商品名称</label>
+            <label class="layui-form-label" data-i18n="store.name">商品名称</label>
             <div class="layui-input-block">
-                <input type="text" name="name" lay-verify="required" placeholder="请输入商品名称" autocomplete="off" class="layui-input">
+                <input type="text" name="name" lay-verify="required" placeholder="{{ t('store.namePlaceholder') }}" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">商品编码</label>
+            <label class="layui-form-label" data-i18n="store.sku">商品编码</label>
             <div class="layui-input-block">
-                <input type="text" name="sku" lay-verify="required" placeholder="请输入商品编码（唯一）" autocomplete="off" class="layui-input">
+                <input type="text" name="sku" lay-verify="required" placeholder="{{ t('store.skuPlaceholder') }}" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">分类</label>
+            <label class="layui-form-label" data-i18n="store.category">分类</label>
             <div class="layui-input-block">
-                <select name="category_id" id="addCategorySelect"><option value="">请选择分类</option></select>
+                <select name="category_id" id="addCategorySelect"><option value="" data-i18n="store.selectCategory">请选择分类</option></select>
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">售价(元)</label>
+            <label class="layui-form-label" data-i18n="store.price">售价(元)</label>
             <div class="layui-input-block">
                 <input type="number" name="price" step="0.01" lay-verify="required" value="0" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">成本价(元)</label>
+            <label class="layui-form-label" data-i18n="store.cost">成本价(元)</label>
             <div class="layui-input-block">
                 <input type="number" name="cost_price" step="0.01" value="0" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">库存</label>
+            <label class="layui-form-label" data-i18n="store.stock">库存</label>
             <div class="layui-input-inline" style="width:120px;">
                 <input type="number" name="stock" value="0" class="layui-input">
             </div>
-            <label class="layui-form-label" style="width:80px;">状态</label>
+            <label class="layui-form-label" style="width:80px;" data-i18n="common.status">状态</label>
             <div class="layui-input-inline" style="width:120px;">
                 <select name="status">
-                    <option value="1">上架</option>
-                    <option value="0">下架</option>
-                    <option value="2">售罄</option>
+                    <option value="1" data-i18n="store.onSale">上架</option>
+                    <option value="0" data-i18n="store.offSale">下架</option>
+                    <option value="2" data-i18n="store.soldOut">售罄</option>
                 </select>
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">推荐</label>
+            <label class="layui-form-label" data-i18n="store.recommend">推荐</label>
             <div class="layui-input-block">
-                <input type="checkbox" name="is_featured" lay-skin="switch" lay-text="是|否">
+                <input type="checkbox" name="is_featured" lay-skin="switch" lay-text="{{ t('common.yes') }}|{{ t('common.no') }}">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">描述</label>
+            <label class="layui-form-label" data-i18n="store.description">描述</label>
             <div class="layui-input-block">
-                <textarea name="description" placeholder="请输入商品描述" class="layui-textarea"></textarea>
+                <textarea name="description" placeholder="{{ t('store.descriptionPlaceholder') }}" class="layui-textarea"></textarea>
             </div>
         </div>
         <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border-color);padding-top:15px;margin-top:10px;">
@@ -179,59 +179,59 @@
     <form class="layui-form" lay-filter="editForm" style="padding:20px 30px 0;">
         <input type="hidden" name="id" value="">
         <div class="layui-form-item">
-            <label class="layui-form-label">商品名称</label>
+            <label class="layui-form-label" data-i18n="store.name">商品名称</label>
             <div class="layui-input-block">
-                <input type="text" name="name" lay-verify="required" placeholder="请输入商品名称" autocomplete="off" class="layui-input">
+                <input type="text" name="name" lay-verify="required" placeholder="{{ t('store.namePlaceholder') }}" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">商品编码</label>
+            <label class="layui-form-label" data-i18n="store.sku">商品编码</label>
             <div class="layui-input-block">
-                <input type="text" name="sku" lay-verify="required" placeholder="请输入商品编码（唯一）" autocomplete="off" class="layui-input">
+                <input type="text" name="sku" lay-verify="required" placeholder="{{ t('store.skuPlaceholder') }}" autocomplete="off" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">分类</label>
+            <label class="layui-form-label" data-i18n="store.category">分类</label>
             <div class="layui-input-block">
                 <select name="category_id" id="editCategorySelect"></select>
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">售价(元)</label>
+            <label class="layui-form-label" data-i18n="store.price">售价(元)</label>
             <div class="layui-input-block">
                 <input type="number" name="price" step="0.01" lay-verify="required" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">成本价(元)</label>
+            <label class="layui-form-label" data-i18n="store.cost">成本价(元)</label>
             <div class="layui-input-block">
                 <input type="number" name="cost_price" step="0.01" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">库存</label>
+            <label class="layui-form-label" data-i18n="store.stock">库存</label>
             <div class="layui-input-inline" style="width:120px;">
                 <input type="number" name="stock" class="layui-input">
             </div>
-            <label class="layui-form-label" style="width:80px;">状态</label>
+            <label class="layui-form-label" style="width:80px;" data-i18n="common.status">状态</label>
             <div class="layui-input-inline" style="width:120px;">
                 <select name="status">
-                    <option value="1">上架</option>
-                    <option value="0">下架</option>
-                    <option value="2">售罄</option>
+                    <option value="1" data-i18n="store.onSale">上架</option>
+                    <option value="0" data-i18n="store.offSale">下架</option>
+                    <option value="2" data-i18n="store.soldOut">售罄</option>
                 </select>
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">推荐</label>
+            <label class="layui-form-label" data-i18n="store.recommend">推荐</label>
             <div class="layui-input-block">
-                <input type="checkbox" name="is_featured" lay-skin="switch" lay-text="是|否">
+                <input type="checkbox" name="is_featured" lay-skin="switch" lay-text="{{ t('common.yes') }}|{{ t('common.no') }}">
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">描述</label>
+            <label class="layui-form-label" data-i18n="store.description">描述</label>
             <div class="layui-input-block">
-                <textarea name="description" placeholder="请输入商品描述" class="layui-textarea"></textarea>
+                <textarea name="description" placeholder="{{ t('store.descriptionPlaceholder') }}" class="layui-textarea"></textarea>
             </div>
         </div>
         <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border-color);padding-top:15px;margin-top:10px;">
@@ -243,8 +243,11 @@
 
 <script src="/static/layui/lib/layui.js"></script>
 <script src="/static/layui/js/common.js?v=20261124i"></script>
+<script src="/static/layui/js/i18n.js?v=20261124e"></script>
 <script>
 inheritTheme();
+I18N.getLang();
+renderI18n();
 
 layui.use(['table', 'form', 'layer', 'dropdown'], function(){
     var table = layui.table;
@@ -281,7 +284,7 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 渲染分类下拉
     function renderCategorySelect(selectId, selectedId) {
-        var html = '<option value="">请选择分类</option>';
+        var html = '<option value="" data-i18n="store.selectCategory">请选择分类</option>';
         for (var i = 0; i < categoryList.length; i++) {
             var selected = categoryList[i].id === selectedId ? 'selected' : '';
             html += '<option value="' + categoryList[i].id + '" ' + selected + '>' + categoryList[i].name + '</option>';
@@ -292,7 +295,7 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 初始化搜索分类下拉
     function initSearchCategories() {
-        var html = '<option value="">全部</option>';
+        var html = '<option value="" data-i18n="store.all">全部</option>';
         for (var i = 0; i < categoryList.length; i++) {
             html += '<option value="' + categoryList[i].id + '">' + categoryList[i].name + '</option>';
         }
@@ -328,29 +331,29 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
                 limitName: 'page_size'
             },
             cols: [[
-                {field: 'id', title: 'ID', width: 65, align: 'center'},
-                {field: 'name', title: '商品名称', minWidth: 150},
-                {field: 'sku', title: '编码', width: 140},
-                {field: 'category_name', title: '分类', width: 100, align: 'center'},
-                {field: 'price', title: '售价', width: 90, align: 'center',
+                {field: 'id', title: t('common.id'), width: 65, align: 'center'},
+                {field: 'name', title: t('store.name'), minWidth: 150},
+                {field: 'sku', title: t('store.sku'), width: 140},
+                {field: 'category_name', title: t('store.category'), width: 100, align: 'center'},
+                {field: 'price', title: t('store.price'), width: 90, align: 'center',
                     templet: function(d) { return '¥<strong>' + d.price + '</strong>'; }
                 },
-                {field: 'stock', title: '库存', width: 70, align: 'center'},
-                {field: 'sales', title: '销量', width: 70, align: 'center'},
-                {field: 'status_label', title: '状态', width: 80, align: 'center',
+                {field: 'stock', title: t('store.stock'), width: 70, align: 'center'},
+                {field: 'sales', title: t('store.sales'), width: 70, align: 'center'},
+                {field: 'status_label', title: t('common.status'), width: 80, align: 'center',
                     templet: function(d) {
                         var colors = {'上架': '#52c41a', '下架': '#ff4d4f', '售罄': '#faad14'};
                         var color = colors[d.status_label] || '#999';
                         return '<span style="color:' + color + ';font-weight:bold">' + d.status_label + '</span>';
                     }
                 },
-                {field: 'is_featured', title: '推荐', width: 70, align: 'center',
+                {field: 'is_featured', title: t('store.recommend'), width: 70, align: 'center',
                     templet: function(d) {
                         return d.is_featured ? '<span class="layui-badge layui-bg-orange">荐</span>' : '';
                     }
                 },
-                {field: 'create_time', title: '创建时间', width: 160, align: 'center'},
-                {title: '操作', width: 280, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+                {field: 'create_time', title: t('store.createTime'), width: 160, align: 'center'},
+                {title: t('store.operation'), width: 280, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
             ]]
         });
     }
@@ -360,7 +363,7 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
         loadCategories(function() {
             layer.open({
                 type: 1,
-                title: '新增商品',
+                title: t('store.addProduct'),
                 area: ['600px', 'auto'],
                 content: $('#addFormTpl').html(),
                 success: function(layero, index) {
@@ -378,18 +381,21 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 新增提交
     form.on('submit(addSubmit)', function(data) {
+        var submitBtn = $(data.elem).prop('disabled', true).addClass('layui-btn-disabled');
         var field = data.field;
         field.is_featured = field.is_featured === 'on';
         postApi('/admin/api/store/products/create/', field, function(res) {
             if (res.code === 200) {
-                layer.msg('创建成功', {icon: 1});
+                layer.msg(t('store.created'), {icon: 1});
                 layer.closeAll();
                 tableIns.reload({
                     where: getSearchParams()
                 });
             } else {
-                layer.msg(res.msg || '创建失败', {icon: 2});
+                layer.msg(res.msg || t('store.createFailed'), {icon: 2});
             }
+        }).always(function() {
+            submitBtn.prop('disabled', false).removeClass('layui-btn-disabled');
         });
         return false;
     });
@@ -428,19 +434,22 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
 
     // 编辑提交
     form.on('submit(editSubmit)', function(data) {
+        var submitBtn = $(data.elem).prop('disabled', true).addClass('layui-btn-disabled');
         var field = data.field;
         var id = field.id;
         field.is_featured = field.is_featured === 'on';
         putApi('/admin/api/store/products/' + id + '/', field, function(res) {
             if (res.code === 200) {
-                layer.msg('更新成功', {icon: 1});
+                layer.msg(t('store.updated'), {icon: 1});
                 layer.closeAll();
                 tableIns.reload({
                     where: getSearchParams()
                 });
             } else {
-                layer.msg(res.msg || '更新失败', {icon: 2});
+                layer.msg(res.msg || t('store.updateFailed'), {icon: 2});
             }
+        }).always(function() {
+            submitBtn.prop('disabled', false).removeClass('layui-btn-disabled');
         });
         return false;
     });
@@ -495,18 +504,18 @@ layui.use(['table', 'form', 'layer', 'dropdown'], function(){
         if (obj.event === 'view') {
             var colors = {'上架': '#52c41a', '下架': '#ff4d4f', '售罄': '#faad14'};
             var color = colors[data.status_label] || '#999';
-            var featuredHtml = data.is_featured ? '是' : '否';
+            var featuredHtml = data.is_featured ? t('common.yes') : t('common.no');
             var content = '<div style="padding:20px 30px;">' +
-                '<div class="layui-form-item"><label class="layui-form-label">商品名称</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">商品编码</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.sku || '') + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">分类</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.category_name || '-') + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">售价</label><div class="layui-input-block"><input type="text" value="¥' + escapeHtml(data.price || '0') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.name">商品名称</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.sku">商品编码</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.sku || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.category">分类</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.category_name || '-') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.price">售价</label><div class="layui-input-block"><input type="text" value="¥' + escapeHtml(data.price || '0') + '" class="layui-input" readonly></div></div>' +
                 '<div class="layui-form-item"><label class="layui-form-label">成本价</label><div class="layui-input-block"><input type="text" value="¥' + escapeHtml(data.cost_price || '0') + '" class="layui-input" readonly></div></div>' +
                 '<div class="layui-form-item"><label class="layui-form-label">库存/销量</label><div class="layui-input-block"><input type="text" value="' + (data.stock || 0) + ' / ' + (data.sales || 0) + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">状态</label><div class="layui-input-block"><input type="text" value="' + data.status_label + '" style="color:' + color + ';font-weight:bold" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">推荐</label><div class="layui-input-block"><input type="text" value="' + featuredHtml + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">描述</label><div class="layui-input-block"><textarea class="layui-textarea" readonly>' + escapeHtml(data.description || '') + '</textarea></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">创建时间</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.create_time || '') + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="common.status">状态</label><div class="layui-input-block"><input type="text" value="' + data.status_label + '" style="color:' + color + ';font-weight:bold" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.recommend">推荐</label><div class="layui-input-block"><input type="text" value="' + featuredHtml + '" class="layui-input" readonly></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.description">描述</label><div class="layui-input-block"><textarea class="layui-textarea" readonly>' + escapeHtml(data.description || '') + '</textarea></div></div>' +
+                '<div class="layui-form-item"><label class="layui-form-label" data-i18n="store.createTime">创建时间</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.create_time || '') + '" class="layui-input" readonly></div></div>' +
                 '</div>';
             layer.open({
                 type: 1,

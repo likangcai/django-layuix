@@ -1226,6 +1226,96 @@ class RbacFinalAuditTests(TestCase):
                     'permission code %s is not enforced' % code,
                 )
 
+    def test_token_active_roles_are_enforced(self):
+        from django.test import Client
+
+        from .token_auth import generate_token
+
+        view_menu = Menu.objects.create(name='审计用户查看', menu_type=3, permission='user:view')
+        high = Role.objects.create(name='高权限', code='audit_high')
+        low = Role.objects.create(name='低权限', code='audit_low')
+        high.menus.add(view_menu)
+        caller = get_user_model().objects.create_user(username='audit_token_roles', password='pass12345')
+        caller.roles.add(high, low)
+        token = generate_token(caller, active_roles=[low.id])
+
+        client = Client()
+        response = client.get(
+            '/admin/api/rbac/users/', HTTP_AUTHORIZATION='Bearer ' + token
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_query_token_is_rejected_on_regular_api(self):
+        from django.test import Client
+
+        from .token_auth import generate_token
+
+        token = generate_token(self.user)
+        anonymous = Client()
+        response = anonymous.get('/admin/api/rbac/userinfo/?token=' + token)
+        self.assertEqual(response.status_code, 401)
+
+    def test_menu_parent_cycle_is_rejected(self):
+        first = Menu.objects.create(name='审计菜单A', menu_type=1)
+        second = Menu.objects.create(name='审计菜单B', menu_type=1, parent=first)
+        response = self.client.put(
+            '/admin/api/rbac/menus/%s/' % first.pk,
+            {'parent_id': second.pk},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        first.refresh_from_db()
+        self.assertIsNone(first.parent_id)
+
+    def test_build_menu_tree_skips_cycles(self):
+        from .views import _build_menu_tree
+
+        menus = [
+            {'id': 1, 'parent_id': 2},
+            {'id': 2, 'parent_id': 1},
+        ]
+        self.assertEqual(_build_menu_tree(menus), [])
+
+    def test_upload_rejects_svg_content(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        uploaded = SimpleUploadedFile(
+            'logo.svg', b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+            content_type='image/png',
+        )
+        response = self.client.post(
+            '/admin/api/rbac/upload/image/', {'image': uploaded}, format='multipart'
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_filter_queryset_uses_sanitized_resource_context(self):
+        from .abac import filter_queryset
+        from .models import AbacPolicy
+
+        AbacPolicy.objects.create(
+            name='secret field probe', resource='audit.User', action='view',
+            effect='allow', expression="resource.password != ''", priority=1,
+        )
+        result = filter_queryset(
+            get_user_model().objects.filter(pk=self.user.pk),
+            self.user, 'view', 'audit.User',
+        )
+        self.assertFalse(result.exists())
+
+    def test_plugin_does_not_take_foreign_menu(self):
+        from .menu_registry import register_menus
+
+        menu = Menu.objects.create(name='审计插件归属', plugin_key='other_plugin')
+        self.addCleanup(menu.delete)
+        register_menus(
+            menus_data=[('审计插件归属', 'layui-icon-app', '/new', 2, 1, None)],
+            skip_existing=True,
+            plugin_key='new_plugin',
+        )
+        menu.refresh_from_db()
+        self.assertEqual(menu.plugin_key, 'other_plugin')
+        self.assertEqual(menu.path, '')
+
 
 class I18nCoverageTests(SimpleTestCase):
 

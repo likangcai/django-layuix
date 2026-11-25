@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服务器管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css"?v=20261124j>
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -268,7 +268,7 @@
                             <button type="button" class="layui-btn layui-btn-sm layui-btn-warm" id="aiAnalyzeBtn">
                                 <i class="layui-icon layui-icon-engine"></i> {{ t('server.aiAnalyzeBtn') }}
                             </button>
-                            <input type="checkbox" name="auto_refresh" lay-skin="switch" lay-text="ON|OFF" lay-filter="autoRefresh" style="width:50px;">
+                            <input type="checkbox" name="auto_refresh" lay-skin="switch" lay-text="{{ t('common.enable') }}|{{ t('common.disable') }}" lay-filter="autoRefresh" style="width:50px;">
                         </div>
                     </div>
                 </div>
