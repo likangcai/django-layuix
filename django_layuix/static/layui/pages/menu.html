@@ -29,15 +29,18 @@
     <style>
         body { padding: 0; margin: 0; background: var(--bg-primary); }
         .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
-        .menu-layout { display: flex; gap: 16px; height: calc(100vh - 140px); }
+        .menu-layout { display: flex; gap: 16px; height: calc(100vh - 140px); min-height: 360px; }
         .menu-tree-panel {
-            width: 280px; min-width: 280px;
+            width: 280px; min-width: 280px; height: 100%;
+            box-sizing: border-box;
+            display: flex; flex-direction: column;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 8px;
-            overflow: auto; padding: 12px;
+            overflow: hidden; padding: 12px;
             box-shadow: var(--shadow-sm);
         }
+        .menu-tree-panel #menuTree { flex: 1; overflow: auto; }
         .menu-tree-panel .panel-title {
             font-size: 14px; font-weight: 600; padding: 8px 4px 12px;
             border-bottom: 1px solid var(--card-border); margin-bottom: 10px;
@@ -45,7 +48,7 @@
             display: flex; align-items: center; gap: 6px;
         }
         .menu-tree-panel .panel-title i { color: var(--primary-color); }
-        .menu-table-panel { flex: 1; overflow: auto; }
+        .menu-table-panel { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
         .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
         .layui-input-block { margin-left: 130px; }
         .icon-preview { display: inline-block; width: 20px; text-align: center; margin-right: 5px; }
@@ -373,6 +376,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     defaultToolbar: [],
                     data: flatData,
                     page: false,
+                    height: 'full-140',
                     even: true,
                     cols: [[
                         {field: 'name', title: t('menu.name'), minWidth: 200, templet: function(d) {
