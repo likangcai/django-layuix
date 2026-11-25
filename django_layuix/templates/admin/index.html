@@ -129,8 +129,8 @@
                     </div>
                 </div>
                 <div class="layui-form-item" style="display:flex;justify-content:flex-end;margin-top:10px;">
-                    <button type="button" class="layui-btn layui-btn-normal" id="submitPasswordBtn"
-                            style="width: 160px; border-radius: 6px;">
+                    <button type="button" class="layui-btn layui-btn-normal w-160" id="submitPasswordBtn"
+                            style="border-radius:6px">
                         <span>确认修改</span>
                     </button>
                 </div>
@@ -171,8 +171,8 @@
                     </div>
                 </div>
                 <div class="layui-form-item" style="display:flex;justify-content:flex-end;margin-top:20px;">
-                    <button type="button" class="layui-btn layui-btn-normal" id="submitProfileBtn"
-                            style="width: 160px; border-radius: 6px;">
+                    <button type="button" class="layui-btn layui-btn-normal w-160" id="submitProfileBtn"
+                            style="border-radius:6px">
                         <span>保存修改</span>
                     </button>
                 </div>
@@ -304,7 +304,7 @@
                             $('.logo-icon i').attr('class', 'layui-icon ' + config.logo_icon);
                         }
                         if (config.logo_url) {
-                            $('.logo-icon').html('<img src="' + config.logo_url + '" style="width:32px;height:32px;border-radius:6px;">');
+                            $('.logo-icon').html('<img src="' + config.logo_url + '" style="height:32px;border-radius:6px" class="w-32">');
                         }
                         if (config.frontend_url) {
                             $('#frontendBtn').show().attr('data-url', config.frontend_url);
@@ -533,7 +533,7 @@
                 '<div class="dropdown-item" data-action="close-others" style="padding: 8px 16px;">' + t('common.closeOthers') + '</div>' +
                 '<div class="dropdown-item" data-action="close-all" style="padding: 8px 16px;">' + t('common.closeAll') + '</div>' +
                 '</div>';
-            layer.open({
+            LayuiUI.dialog({
                 type: 1, title: false, closeBtn: 0, shade: 0, area: ['140px', 'auto'],
                 content: menuHtml, offset: [e.clientY + 'px', e.clientX + 'px'],
                 success: function(layero, menuIndex) {
@@ -655,7 +655,7 @@
             e.stopPropagation();
             $('#userDropdown').removeClass('show');
             if (!currentUser) return;
-            layer.open({
+            LayuiUI.dialog({
                 type: 1, title: t('header.personalCenter'), area: ['480px', 'auto'],
                 content: renderTpl('profileTpl'),
                 success: function(layero) {
@@ -691,7 +691,7 @@
         $('#changePasswordBtn').on('click', function(e) {
             e.stopPropagation();
             $('#userDropdown').removeClass('show');
-            layer.open({
+            LayuiUI.dialog({
                 type: 1, title: t('header.changePassword'), area: ['480px', 'auto'],
                 content: renderTpl('changePasswordTpl'),
                 success: function(layero) {

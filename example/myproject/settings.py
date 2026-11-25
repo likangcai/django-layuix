@@ -110,7 +110,7 @@ AUTH_USER_MODEL = 'django_layuix_rbac.UserProfile'
 # ============================================================
 LAYUI_CONFIG = {
     'system_name': 'Layui Admin 演示',
-    'system_version': '1.4.3',
+    'system_version': '1.4.4',
     'system_description': 'django-layuix 功能演示项目',
     'logo_icon': 'layui-icon-code-circle',
     # 使用自定义图片
@@ -159,9 +159,15 @@ LAYUI_CONFIG = {
 # LAYUI_AI_MODEL = 'gpt-4o-mini'   # 代码默认值；可改为 glm-4-flash 等兼容模型
 
 # ============================================================
-# ⑦ 多实例部署：共享缓存（可选，Token 场景 DSD 激活角色需要）
-#    单实例可不配置，默认使用本地内存缓存
+# ⑦ Token / 多实例缓存
+#    Token 状态写入 sys_auth_token，并缓存到 Django cache。
+#    多实例部署请配置 Redis 作为共享缓存；单实例可用默认 LocMemCache。
 # ============================================================
+TOKEN_EXPIRE_SECONDS = 24 * 60 * 60
+LAYUI_JWT_ISSUER = 'django-layuix'
+LAYUIX_ALLOW_LEGACY_TOKEN = True
+LAYUIX_TOKEN_CACHE_PREFIX = 'layuix:auth:'
+
 # CACHES = {
 #     'default': {
 #         'BACKEND': 'django.core.cache.backends.redis.RedisCache',

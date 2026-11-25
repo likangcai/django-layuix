@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>菜单管理 - 软件测试管理后台</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css"?v=20261124j>
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261125">
     <script>
         // 同步父页面主题
         function syncParentTheme() {
@@ -230,7 +230,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261124i"></script>
+    <script src="/static/layui/js/common.js?v=20261125"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -428,7 +428,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             if (res.code !== 200) return;
             var treeData = enrichTree(res.data || [], 0);
 
-            var layerIndex = layer.open({
+            var layerIndex = LayuiUI.dialog({
                 type: 1,
                 title: title,
                 area: ['600px', '580px'],
@@ -688,7 +688,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             'layui-icon-test','layui-icon-service','layui-icon-templeate-1'
         ];
 
-        var iconLayerIndex = layer.open({
+        var iconLayerIndex = LayuiUI.dialog({
             type: 1,
             title: t('menu.iconPicker.title'),
             area: ['580px', '560px'],

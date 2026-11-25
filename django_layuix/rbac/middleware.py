@@ -259,18 +259,20 @@ class ApiOriginGuardMiddleware:
         ):
             return self.get_response(request)
 
-        if self._is_valid_bearer_request(request):
+        if self._is_valid_token_request(request):
             return self.get_response(request)
 
         source = request.META.get('HTTP_ORIGIN') or request.META.get('HTTP_REFERER')
         if not source:
-            return self.get_response(request)
+            if self._is_public_api_path(request.path):
+                return self.get_response(request)
+            return JsonResponse({'code': 403, 'msg': 'Origin or Referer is required'}, status=403)
 
         try:
             source_host = (urlsplit(source).netloc or '').lower()
         except ValueError:
             source_host = ''
-        if not source_host or source_host not in self._allowed_hosts(request):
+        if not source_host or not self._host_allowed(source_host, request):
             return JsonResponse({'code': 403, 'msg': 'Cross-origin request blocked'}, status=403)
         return self.get_response(request)
 
@@ -278,21 +280,36 @@ class ApiOriginGuardMiddleware:
         prefixes = getattr(settings, 'LAYUIX_API_PREFIXES', ['/admin/api/'])
         return any(str(prefix) and path.startswith(str(prefix)) for prefix in prefixes or [])
 
-    def _is_valid_bearer_request(self, request):
-        authorization = request.META.get('HTTP_AUTHORIZATION', '')
-        if not authorization.lower().startswith('bearer '):
-            return False
-        try:
-            from .token_auth import verify_token
+    def _is_public_api_path(self, path):
+        public_paths = getattr(settings, 'LAYUIX_PUBLIC_API_PATHS', None)
+        if public_paths is None:
+            prefixes = getattr(settings, 'LAYUIX_API_PREFIXES', ['/admin/api/'])
+            public_paths = [
+                str(prefix).rstrip('/') + '/rbac/login/'
+                for prefix in prefixes
+            ] + [
+                str(prefix).rstrip('/') + '/rbac/register/'
+                for prefix in prefixes
+            ]
+        return any(str(item) and path == str(item) for item in public_paths or [])
 
-            result = verify_token(authorization.split(None, 1)[1].strip())
-            user = result.get('user')
-            return bool(result.get('valid') and user and getattr(user, 'is_authenticated', False))
+    def _is_valid_token_request(self, request):
+        try:
+            from .token_auth import token_authenticate
+
+            user = token_authenticate(request)
+            return bool(user and getattr(user, 'is_authenticated', False))
         except Exception:
             return False
 
-    def _allowed_hosts(self, request):
-        hosts = {request.get_host().lower()}
+    def _normalize_host(self, value):
+        host = str(value or '').strip().lower()
+        if '://' in host:
+            host = urlsplit(host).netloc
+        return host.split('/')[0]
+
+    def _host_allowed(self, source_host, request):
+        hosts = {self._normalize_host(request.get_host())}
         configured = getattr(settings, 'LAYUIX_API_ALLOWED_ORIGINS', None)
         if configured is None:
             configured = [
@@ -300,8 +317,15 @@ class ApiOriginGuardMiddleware:
                 if host and host != '*'
             ]
         for host in configured or []:
-            hosts.add(str(host).lower().lstrip('.'))
-        return hosts
+            normalized = self._normalize_host(host)
+            if normalized:
+                hosts.add(normalized)
+        for host in hosts:
+            if source_host == host:
+                return True
+            if host.startswith('*.') and source_host.endswith(host[1:]):
+                return True
+        return False
 
 
 class RbacSessionMiddleware:

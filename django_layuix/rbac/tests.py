@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """RBAC3 regression tests: inheritance, constraints and server-side enforcement."""
+import hashlib
 import importlib.util
 import re
+import time
 from pathlib import Path
 from unittest import mock, skipUnless
 
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
+from django.test import Client, RequestFactory, SimpleTestCase, TestCase, override_settings
 
 from django_layuix.integrations.auth import (
     authenticate_request, register_authenticator,
@@ -27,6 +29,18 @@ from .plugins import (
     discover_entry_point_plugins, list_plugins, register_plugin,
     register_plugin_class, set_plugin_active, unregister_plugin,
 )
+
+# Browser writes always send Origin/Referer. Test clients simulate that by default;
+# tests that exercise the guard can override or remove this header explicitly.
+_original_client_init = Client.__init__
+
+
+def _client_init_with_origin(self, *args, **kwargs):
+    _original_client_init(self, *args, **kwargs)
+    self.defaults.setdefault('HTTP_ORIGIN', 'http://testserver')
+
+
+Client.__init__ = _client_init_with_origin
 
 
 class Rbac3Tests(TestCase):
@@ -969,6 +983,109 @@ class RbacFinalAuditTests(TestCase):
             from .abac import validate_expression
             validate_expression("__import__('os')")
 
+    def test_standard_jwt_is_issued_and_tracked(self):
+        import base64
+        import json
+
+        from .models import AuthToken
+        from .token_auth import generate_token, verify_token
+
+        token = generate_token(self.user, request=None)
+        header_b64, payload_b64, signature = token.split('.')
+        header = json.loads(base64.urlsafe_b64decode(header_b64 + '=='))
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64 + '=='))
+
+        self.assertEqual(header['alg'], 'HS256')
+        self.assertEqual(header['typ'], 'JWT')
+        self.assertEqual(payload['sub'], str(self.user.id))
+        self.assertTrue(payload['jti'])
+        self.assertTrue(signature)
+        self.assertTrue(AuthToken.objects.filter(jti=payload['jti'], status=1).exists())
+        result = verify_token(token)
+        self.assertTrue(result['valid'])
+        self.assertEqual(result['user'].id, self.user.id)
+
+    def test_revoked_jwt_is_rejected(self):
+        from .token_auth import generate_token, revoke_token, verify_token
+
+        token = generate_token(self.user)
+        self.assertTrue(verify_token(token)['valid'])
+        self.assertEqual(revoke_token(token, reason='test'), 1)
+        self.assertFalse(verify_token(token)['valid'])
+
+    def test_revoke_user_tokens_invalidates_all_tokens(self):
+        from .token_auth import generate_token, revoke_user_tokens, verify_token
+
+        first = generate_token(self.user)
+        second = generate_token(self.user)
+        self.assertTrue(verify_token(first)['valid'])
+        self.assertTrue(verify_token(second)['valid'])
+        self.assertEqual(revoke_user_tokens(self.user, reason='test_bulk'), 2)
+        self.assertFalse(verify_token(first)['valid'])
+        self.assertFalse(verify_token(second)['valid'])
+
+    def test_legacy_token_can_be_disabled(self):
+        from .token_auth import generate_token, verify_token
+
+        token = generate_token(self.user)
+        with override_settings(LAYUIX_ALLOW_LEGACY_TOKEN=False):
+            self.assertTrue(verify_token(token)['valid'])
+
+    def test_session_write_without_origin_is_rejected(self):
+        client = Client()
+        client.force_login(self.user)
+        client.defaults.pop('HTTP_ORIGIN', None)
+        response = client.post('/admin/api/rbac/roles/create/', {
+            'name': '无来源', 'code': 'no_origin',
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+
+    def test_public_login_without_origin_is_allowed(self):
+        client = Client()
+        client.defaults.pop('HTTP_ORIGIN', None)
+        response = client.post('/admin/api/rbac/login/', {
+            'username': self.user.username, 'password': 'pass12345',
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_x_token_without_origin_is_allowed(self):
+        from .token_auth import generate_token
+
+        client = Client()
+        client.defaults.pop('HTTP_ORIGIN', None)
+        response = client.post(
+            '/admin/api/rbac/roles/create/',
+            {'name': 'X Token 角色', 'code': 'x_token_role'},
+            content_type='application/json',
+            HTTP_X_TOKEN=generate_token(self.admin),
+        )
+        self.assertEqual(response.status_code, 200, response.content.decode())
+
+    def test_legacy_token_can_be_revoked(self):
+        import base64
+        import json
+        import time
+        from django.conf import settings
+
+        from .token_auth import revoke_token, verify_token
+
+        exp = int(time.time()) + 3600
+        payload = {
+            'user_id': self.user.id,
+            'username': self.user.username,
+            'exp': exp,
+        }
+        payload_str = json.dumps(payload, sort_keys=True)
+        payload_b64 = base64.urlsafe_b64encode(payload_str.encode()).decode().rstrip('=')
+        signature = hashlib.sha256((
+            '%s.%s.%s' % (payload_str, self.user.password, settings.SECRET_KEY)
+        ).encode()).hexdigest()
+        token = payload_b64 + '.' + signature
+
+        self.assertTrue(verify_token(token)['valid'])
+        self.assertEqual(revoke_token(token, reason='test_legacy'), 1)
+        self.assertFalse(verify_token(token)['valid'])
+
     def test_explicit_english_language_is_preserved(self):
         from django.conf import settings
         from django.test import override_settings
@@ -1316,6 +1433,26 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(menu.plugin_key, 'other_plugin')
         self.assertEqual(menu.path, '')
 
+    def test_scope_node_delete_reparents_children(self):
+        from .models import ScopeNode
+
+        parent = ScopeNode.objects.create(code='audit_parent', name='审计父节点')
+        child = ScopeNode.objects.create(code='audit_child', name='审计子节点', parent=parent)
+        response = self.client.delete('/admin/api/rbac/scope-nodes/%s/' % parent.pk)
+        self.assertEqual(response.status_code, 200)
+        child.refresh_from_db()
+        self.assertIsNone(child.parent_id)
+        self.assertFalse(ScopeNode.objects.filter(pk=parent.pk).exists())
+
+    def test_scope_node_delete_rejects_referenced_node(self):
+        from .models import ScopeNode
+
+        node = ScopeNode.objects.create(code='audit_scope_ref', name='审计引用节点')
+        Role.objects.create(name='审计数据范围角色', code='audit_scope_role', scope_node=node.code)
+        response = self.client.delete('/admin/api/rbac/scope-nodes/%s/' % node.pk)
+        self.assertEqual(response.status_code, 409)
+        self.assertTrue(ScopeNode.objects.filter(pk=node.pk).exists())
+
 
 class I18nCoverageTests(SimpleTestCase):
 
@@ -1337,6 +1474,9 @@ class I18nCoverageTests(SimpleTestCase):
                 current = 'zh'
             elif line.strip().startswith("'en': {"):
                 current = 'en'
+                continue
+            if line.strip().startswith("'zh-hans': {"):
+                continue
             match = key_pattern.match(line)
             if current and match:
                 dictionaries[current].add(match.group(1))
@@ -1346,6 +1486,7 @@ class I18nCoverageTests(SimpleTestCase):
             root / 'django_layuix/static/layui/pages',
             root / 'django_layuix/templates/admin',
             root / 'example/permission_demo/static',
+            root / 'example/store/static',
         ]
         for html_root in html_roots:
             if not html_root.exists():
@@ -1355,8 +1496,24 @@ class I18nCoverageTests(SimpleTestCase):
                 used_keys.update(re.findall(r"\bt\(\s*['\"]([^'\"]+)['\"]", html))
                 used_keys.update(re.findall(r'data-i18n=["\']([^"\']+)["\']', html))
 
+        js_files = [
+            root / 'django_layuix/static/layui/js/common.js',
+            root / 'django_layuix/static/layui/js/i18n.js',
+        ]
+        js_files.extend((root / 'django_layuix/static/sdk').rglob('*.js'))
+        for js_path in js_files:
+            if not js_path.exists():
+                continue
+            js = js_path.read_text(encoding='utf-8')
+            js = '\n'.join(
+                line for line in js.splitlines()
+                if not line.lstrip().startswith(('*', '//'))
+            )
+            used_keys.update(re.findall(r"\bt\(\s*['\"]([^'\"]+)['\"]", js))
+
         missing = sorted(
             key for key in used_keys
             if key not in dictionaries['zh'] or key not in dictionaries['en']
         )
         self.assertEqual(missing, [])
+        self.assertEqual(dictionaries['zh'], dictionaries['en'])

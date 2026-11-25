@@ -171,7 +171,7 @@ python manage.py runserver
 LAYUI_CONFIG = {
     # 系统信息
     'system_name': 'Django Layuix Admin',
-    'system_version': '1.4.3',         # 系统版本号（显示在侧边栏）
+    'system_version': '1.4.4',         # 系统版本号（显示在侧边栏）
     'system_description': '',          # 系统描述（显示在登录页）
 
     # Logo
@@ -289,7 +289,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
 | `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
-| `system_version` | 版本号 | 包版本（当前 1.4.3） |
+| `system_version` | 版本号 | 包版本（当前 1.4.4） |
 | `system_description` | 系统描述 | （空） |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |
@@ -323,6 +323,9 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | `LAYUIX_API_ALLOWED_ORIGINS` | 管理 API 允许的来源主机白名单 | 未设置（使用 `ALLOWED_HOSTS`） |
 | `LAYUIX_API_PREFIXES` | 应用来源防护的管理 API 路径前缀 | `['/admin/api/']` |
 | `TOKEN_EXPIRE_SECONDS` | Token 有效期（秒） | 86400 |
+| `LAYUI_JWT_ISSUER` | JWT `iss` 声明 | `django-layuix` |
+| `LAYUIX_ALLOW_LEGACY_TOKEN` | 是否兼容升级前两段式 Token | True |
+| `LAYUIX_TOKEN_CACHE_PREFIX` | Token 状态缓存键前缀 | `layuix:auth:` |
 | `LAYUI_ALLOW_QUERY_TOKEN` | 是否允许普通 API 通过 `?token=` 传 Token（不推荐） | False |
 | `LAYUIX_SCOPE_HIERARCHY` | 数据作用域层级 | `[]` |
 | `LAYUIX_SCOPE_TREE` | 数据作用域节点树 | `{}` |

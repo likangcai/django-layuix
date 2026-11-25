@@ -427,19 +427,23 @@ function openStandardDialog(options) {
     if (!api || !api.layer) return null;
     var layer = api.layer;
     var form = api.form;
-    var settings = options || {};
+    var settings = Object.assign({}, options || {});
     var content = settings.content || '';
     if (settings.tplId) {
         content = renderTpl(settings.tplId, settings.tplData);
     }
-    var index = layer.open({
-        type: 1,
+    var originalSuccess = settings.success;
+    var originalCancel = settings.cancel;
+    var uiText = function(key, fallback) {
+        return typeof t === 'function' ? t(key) : fallback;
+    };
+    var config = Object.assign({}, settings, {
+        type: settings.type || 1,
         title: settings.title || '',
         area: settings.area || ['620px', '520px'],
         maxHeight: settings.maxHeight || '80vh',
-        btn: settings.btn || [t('common.save'), t('common.cancel')],
+        closeBtn: settings.closeBtn === undefined ? 1 : settings.closeBtn,
         btnAlign: settings.btnAlign || 'r',
-        closeBtn: 1,
         content: content,
         success: function(layero, idx) {
             if (form && settings.filter && settings.data) {
@@ -449,21 +453,36 @@ function openStandardDialog(options) {
                 form.render(null, settings.filter);
             }
             if (typeof renderI18n === 'function') renderI18n();
-            if (typeof settings.success === 'function') settings.success(layero, idx);
-        },
-        yes: function(idx, layero) {
-            if (typeof settings.onSubmit === 'function' && settings.onSubmit(layero, idx) === false) return;
-            layer.close(idx);
-        },
-        btn2: function(idx, layero) {
-            if (typeof settings.onCancel === 'function' && settings.onCancel(layero, idx) === false) return false;
+            if (typeof originalSuccess === 'function') originalSuccess(layero, idx);
         },
         cancel: function(idx) {
-            if (typeof settings.onCancel === 'function' && settings.onCancel(null, idx) === false) return false;
-        },
-        end: settings.end
+            if (typeof originalCancel === 'function' && originalCancel(idx) === false) return false;
+        }
     });
-    return index;
+
+    if (settings.standard) {
+        config.btn = settings.btn || [uiText('common.save', 'Save'), uiText('common.cancel', 'Cancel')];
+        config.yes = settings.yes || function(idx, layero) {
+            if (typeof settings.onSubmit === 'function' && settings.onSubmit(layero, idx) === false) return;
+            layer.close(idx);
+        };
+        config.btn2 = settings.btn2 || function(idx, layero) {
+            if (typeof settings.onCancel === 'function' && settings.onCancel(layero, idx) === false) return false;
+            layer.close(idx);
+        };
+    } else if (settings.onSubmit && !config.yes) {
+        config.yes = function(idx, layero) {
+            if (settings.onSubmit(layero, idx) === false) return;
+            layer.close(idx);
+        };
+    }
+    if (settings.onCancel && !config.btn2) {
+        config.btn2 = function(idx, layero) {
+            if (settings.onCancel(layero, idx) === false) return false;
+            layer.close(idx);
+        };
+    }
+    return layer.open(config);
 }
 
 /**

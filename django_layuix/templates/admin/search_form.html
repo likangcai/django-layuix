@@ -2,7 +2,7 @@
 {% if cl.search_fields %}
 <div id="toolbar">
 <form id="changelist-search" method="get" role="search">
-<div style="display:flex;align-items:stretch;max-width:450px;gap:8px">
+<div style="display:flex;align-items:stretch;gap:8px" class="max-w-450">
 <input type="text" name="{{ search_var }}" value="{{ cl.query }}" class="layui-input"
        placeholder="{% translate 'Search' %}"
        style="flex:1;height:38px;border-radius:4px">

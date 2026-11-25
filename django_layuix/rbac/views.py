@@ -703,6 +703,8 @@ def profile_password(request):
 
     user.set_password(new_password)
     user.save()
+    from .token_auth import revoke_user_tokens
+    revoke_user_tokens(user, reason='password_change')
     # 注意：不调用 update_session_auth_hash，让 session 失效，强制重新登录
     return success_response(msg='密码修改成功')
 
@@ -844,8 +846,8 @@ def api_login(request):
     # Django Session登录（保持兼容）
     django_login(request, user)
     
-    # 生成Token（用于SSE等场景）
-    token = generate_token(user)
+    # 生成标准 JWT（用于 SSE / 前后端分离客户端）
+    token = generate_token(user, request=request)
     
     return success_response(
         msg='登录成功', 
@@ -864,8 +866,19 @@ def api_login(request):
 @csrf_exempt
 @api_login_required
 def logout(request):
-    """AJAX logout - clear session and return success"""
+    """AJAX logout - clear session, revoke current token and return success"""
     from django.contrib.auth import logout as django_logout
+
+    from .token_auth import revoke_token
+
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    token = ''
+    if auth_header.lower().startswith('bearer '):
+        token = auth_header[7:].strip()
+    if not token:
+        token = request.META.get('HTTP_X_TOKEN') or ''
+    if token:
+        revoke_token(token, reason='logout')
     django_logout(request)
     return success_response(msg='已退出登录')
 
@@ -1540,6 +1553,8 @@ def user_reset_password(request, pk):
 
     user.set_password(new_password)
     user.save()
+    from .token_auth import revoke_user_tokens
+    revoke_user_tokens(user, reason='admin_reset')
     return success_response(msg='密码重置成功')
 
 
@@ -1566,6 +1581,9 @@ def user_toggle_status(request, pk):
 
     user.is_active = not user.is_active
     user.save(update_fields=['is_active'])
+    if not user.is_active:
+        from .token_auth import revoke_user_tokens
+        revoke_user_tokens(user, reason='user_disabled')
     return success_response({'is_active': user.is_active}, msg='状态已更新')
 
 
@@ -2200,7 +2218,7 @@ def active_roles(request):
         return success_response({
             'assigned': assigned,
             'active_ids': sorted(active_ids),
-            'token': generate_token(request.user, active_roles=selected),
+            'token': generate_token(request.user, active_roles=selected, request=request),
         }, msg='切换成功')
 
     return error_response('Method not allowed', 405)
@@ -2253,7 +2271,7 @@ def scope_node_list(request):
     from .models import ScopeNode
 
     if request.method == 'GET':
-        rows = ScopeNode.objects.filter(is_active=True).order_by('sort', 'id')
+        rows = ScopeNode.objects.all().order_by('sort', 'id')
         return success_response(_build_scope_tree([_scope_node_payload(row) for row in rows]))
 
     if request.method == 'POST':
@@ -2264,10 +2282,14 @@ def scope_node_list(request):
             return error_response('节点编码和名称不能为空', 400)
         if ScopeNode.objects.filter(code=code).exists():
             return error_response('节点编码已存在', 400)
-        parent_id = body.get('parent_id') or None
+        try:
+            parent_id = int(body['parent_id']) if body.get('parent_id') else None
+            sort = int(body.get('sort') or 0)
+        except (TypeError, ValueError):
+            return error_response('上级节点或排序参数无效', 400)
         node = ScopeNode.objects.create(
             code=code, name=name, parent_id=parent_id,
-            sort=int(body.get('sort') or 0),
+            sort=sort,
             is_active=bool(body.get('is_active', True)),
         )
         return success_response({'id': node.id}, msg='创建成功')
@@ -2280,7 +2302,7 @@ def scope_node_list(request):
 @api_permission_by_method({'GET': 'scope:view', '*': 'role:edit'})
 def scope_node_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/scope-nodes/<id>/"""
-    from .models import ScopeNode
+    from .models import Role, ScopeNode
 
     node = ScopeNode.objects.filter(pk=pk).first()
     if not node:
@@ -2299,20 +2321,30 @@ def scope_node_detail(request, pk):
         if 'name' in body:
             node.name = str(body['name']).strip()
         if 'parent_id' in body:
-            parent_id = int(body['parent_id']) if body['parent_id'] else None
+            try:
+                parent_id = int(body['parent_id']) if body['parent_id'] else None
+            except (TypeError, ValueError):
+                return error_response('上级节点参数无效', 400)
             if parent_id == pk or parent_id in _scope_descendant_ids(pk):
                 return error_response('上级节点不能是自身或后代', 400)
             node.parent_id = parent_id
         if 'sort' in body:
-            node.sort = int(body['sort'] or 0)
+            try:
+                node.sort = int(body['sort'] or 0)
+            except (TypeError, ValueError):
+                return error_response('排序参数无效', 400)
         if 'is_active' in body:
             node.is_active = bool(body['is_active'])
         node.save()
         return success_response(msg='更新成功')
 
     if request.method == 'DELETE':
-        ScopeNode.objects.filter(parent_id=pk).update(parent=None)
-        node.delete()
+        if Role.objects.filter(scope_node=node.code).exists():
+            return error_response('该节点已被角色数据范围引用，不能删除', 409)
+        from django.db import transaction
+        with transaction.atomic():
+            ScopeNode.objects.filter(parent_id=pk).update(parent=node.parent)
+            node.delete()
         return success_response(msg='删除成功')
 
     return error_response('Method not allowed', 405)

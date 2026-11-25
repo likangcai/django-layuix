@@ -182,6 +182,39 @@ class AbacPolicy(models.Model):
         return self.name
 
 
+class AuthToken(models.Model):
+    """Persistent state for signed access tokens."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='auth_tokens', verbose_name='用户',
+    )
+    jti = models.CharField(max_length=64, unique=True, verbose_name='Token ID')
+    token_type = models.CharField(max_length=20, default='access', verbose_name='Token 类型')
+    status = models.PositiveSmallIntegerField(default=1, verbose_name='状态')
+    issued_at = models.DateTimeField(verbose_name='签发时间')
+    expires_at = models.DateTimeField(verbose_name='过期时间')
+    revoked_at = models.DateTimeField(null=True, blank=True, verbose_name='撤销时间')
+    revoke_reason = models.CharField(max_length=64, blank=True, default='', verbose_name='撤销原因')
+    client_ip = models.CharField(max_length=64, blank=True, default='', verbose_name='客户端 IP')
+    user_agent = models.CharField(max_length=255, blank=True, default='', verbose_name='User Agent')
+    last_used_at = models.DateTimeField(null=True, blank=True, verbose_name='最后使用时间')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_auth_token'
+        verbose_name = '访问令牌'
+        verbose_name_plural = '访问令牌'
+        ordering = ['-issued_at']
+        indexes = [
+            models.Index(fields=['user', 'status', 'expires_at'], name='idx_auth_token_user_status_exp'),
+            models.Index(fields=['expires_at'], name='idx_auth_token_expires_at'),
+        ]
+
+    def __str__(self):
+        return '%s (%s)' % (self.jti[:12], self.user_id)
+
+
 class PluginRegistry(models.Model):
     """Registered django-layuix plugin metadata (persisted across restarts)."""
     key = models.CharField(max_length=100, unique=True, verbose_name='插件标识')
