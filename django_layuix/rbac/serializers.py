@@ -60,6 +60,24 @@ API_FIELD_REGISTRY = {
         'shipping_address', 'total_amount', 'status', 'status_label',
         'remark', 'items', 'create_time', 'update_time',
     ),
+    'rbac.Department': (
+        'id', 'name', 'code', 'type', 'type_display', 'parent_id',
+        'parent_name', 'leader', 'phone', 'email', 'sort', 'status',
+        'note', 'create_time', 'update_time',
+    ),
+    'rbac.Position': (
+        'id', 'name', 'code', 'sort', 'status', 'note',
+        'create_time', 'update_time',
+    ),
+    'rbac.Region': (
+        'id', 'name', 'code', 'area_code', 'zip_code', 'pinyin', 'level',
+        'level_display', 'parent_id', 'parent_name', 'sort', 'status',
+        'note', 'create_time', 'update_time',
+    ),
+    'rbac.MemberLevel': (
+        'id', 'name', 'code', 'min_points', 'discount', 'icon', 'sort',
+        'status', 'description', 'create_time', 'update_time',
+    ),
     'rbac.UserRole': (
         'id', 'name', 'code',
     ),

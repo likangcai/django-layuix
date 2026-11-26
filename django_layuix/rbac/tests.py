@@ -1525,6 +1525,107 @@ class RbacFinalAuditTests(TestCase):
         self.assertFalse(has_permission(self.user, 'user:view'))
         self.assertTrue(catalog.status)
 
+    def test_department_tree_crud_and_cycle_protection(self):
+        response = self.client.post(
+            '/admin/api/rbac/departments/create/',
+            {'name': '技术中心', 'code': 'tech', 'type': 3},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        parent_id = response.json()['data']['id']
+        response = self.client.post(
+            '/admin/api/rbac/departments/create/',
+            {'name': '平台组', 'code': 'platform', 'type': 4, 'parent_id': parent_id},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        child_id = response.json()['data']['id']
+
+        listed = self.client.get('/admin/api/rbac/departments/').json()['data']['list']
+        self.assertEqual(len(listed), 2)
+        self.assertEqual(listed[1]['parent_id'], parent_id)
+
+        response = self.client.put(
+            '/admin/api/rbac/departments/%s/' % parent_id,
+            {'parent_id': child_id},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+        response = self.client.delete('/admin/api/rbac/departments/%s/' % parent_id)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.client.delete('/admin/api/rbac/departments/%s/' % child_id).status_code, 200)
+        self.assertEqual(self.client.delete('/admin/api/rbac/departments/%s/' % parent_id).status_code, 200)
+
+    def test_position_and_member_level_crud(self):
+        response = self.client.post(
+            '/admin/api/rbac/positions/create/',
+            {'name': '运营专员', 'code': 'operator', 'sort': 2},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        position_id = response.json()['data']['id']
+        self.assertEqual(
+            len(self.client.get('/admin/api/rbac/positions/').json()['data']['list']), 1
+        )
+        self.assertEqual(
+            self.client.delete('/admin/api/rbac/positions/%s/' % position_id).status_code,
+            200,
+        )
+
+        response = self.client.post(
+            '/admin/api/rbac/member-levels/create/',
+            {'name': '金卡', 'code': 'gold', 'min_points': 1000, 'discount': 95},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        level_id = response.json()['data']['id']
+        response = self.client.put(
+            '/admin/api/rbac/member-levels/%s/' % level_id,
+            {'discount': 120},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        response = self.client.put(
+            '/admin/api/rbac/member-levels/%s/' % level_id,
+            {'discount': 98.5, 'min_points': 1200},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.delete('/admin/api/rbac/member-levels/%s/' % level_id).status_code,
+            200,
+        )
+
+    def test_region_tree_crud_and_page_permissions_are_registered(self):
+        response = self.client.post(
+            '/admin/api/rbac/regions/create/',
+            {'name': '浙江省', 'code': '330000', 'level': 1},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        province_id = response.json()['data']['id']
+        response = self.client.post(
+            '/admin/api/rbac/regions/create/',
+            {'name': '杭州市', 'code': '330100', 'level': 2, 'parent_id': province_id},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        city_id = response.json()['data']['id']
+        self.assertEqual(
+            self.client.delete('/admin/api/rbac/regions/%s/' % province_id).status_code,
+            400,
+        )
+        self.assertEqual(self.client.delete('/admin/api/rbac/regions/%s/' % city_id).status_code, 200)
+        self.assertEqual(self.client.delete('/admin/api/rbac/regions/%s/' % province_id).status_code, 200)
+
+        from .permission_registry import PAGE_PERMISSIONS
+        for path in (
+            '/static/layui/pages/dept.html', '/static/layui/pages/position.html',
+            '/static/layui/pages/region.html', '/static/layui/pages/member-level.html',
+        ):
+            self.assertIn(path, PAGE_PERMISSIONS)
+
     def test_role_code_conflict_is_rejected_atomically(self):
         from .permission_registry import register_page_permissions
 

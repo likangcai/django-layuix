@@ -196,6 +196,7 @@ LAYUI_CONFIG = {
 
 - 页面路径：`permission_registry.PAGE_PERMISSIONS` 映射到 `sys_menu`。
 - 按钮/动作：`permission_registry.BUTTON_ACTIONS` 与各模块前缀组成权限码；`init_menu` 会全量预注册到“权限目录 / 按钮权限目录”。
+- 数据管理：`dept:*`、`position:*`、`region:*`、`member_level:*` 分别对应部门、岗位、地区、会员等级模块。
 - 自定义权限：在权限管理中创建启用且可见的 `sys_menu` 记录。
 - 字段白名单：在 `rbac/serializers.py` 的 `API_FIELD_REGISTRY` 中注册业务资源字段；未注册字段不会出现在响应中。嵌套集合通过 `API_NESTED_FIELD_REGISTRY` 声明，例如用户角色与订单明细。
 - 路由守卫：`/static/` 页面由 `enforcePagePermission()` 检查；未登记静态页面默认拒绝。

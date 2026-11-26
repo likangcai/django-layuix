@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="data.department">部门管理</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126f">
+    <link rel="stylesheet" href="/static/layui/css/data-admin.css?v=1">
+    <script>
+        function syncParentTheme() {
+            var themeMode = 'light';
+            try {
+                if (window.parent && window.parent.document) {
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'light';
+                }
+            } catch (e) {}
+            document.documentElement.setAttribute('data-theme-mode', themeMode);
+        }
+        syncParentTheme();
+        window.addEventListener('message', function (event) {
+            if (event.data && event.data.type === 'themeChange') {
+                document.documentElement.setAttribute('data-theme-mode', event.data.themeMode);
+            }
+        });
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background: var(--bg-primary); }
+        .page-container { padding: 16px 18px; min-height: 100%; box-sizing: border-box; }
+        .data-side { width: 340px; flex-basis: 340px; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="data-layout">
+        <aside class="data-panel data-side">
+            <div class="data-head">
+                <div>
+                    <div class="data-title" data-i18n="data.department">部门管理</div>
+                    <div class="data-subtitle" data-i18n="data.treeHint">选择左侧节点筛选数据</div>
+                </div>
+                <button type="button" class="layui-btn layui-btn-xs layui-btn-primary" id="showAllBtn" data-i18n="data.allNodes">全部数据</button>
+            </div>
+            <div class="data-tree-host" id="deptTree"></div>
+        </aside>
+        <section class="data-panel data-main">
+            <div class="data-head">
+                <div>
+                    <div class="data-title" id="deptScopeTitle" data-i18n="data.allNodes">全部数据</div>
+                    <div class="data-subtitle" data-i18n="data.departmentDesc">维护组织层级、负责人和联系方式</div>
+                </div>
+                <button type="button" class="layui-btn layui-btn-sm" id="addDeptBtn" data-perm="dept:add">
+                    <i class="layui-icon layui-icon-add-1"></i> <span data-i18n="data.addDepartment">新增部门</span>
+                </button>
+            </div>
+            <div class="data-body">
+                <div class="data-toolbar">
+                    <input type="text" id="deptKeyword" class="layui-input data-keyword" data-i18n-placeholder="data.search" placeholder="搜索名称或编码" autocomplete="off">
+                    <select id="deptStatus" class="data-status">
+                        <option value="" data-i18n="data.allStatus">全部状态</option>
+                        <option value="1" data-i18n="data.enabled">启用</option>
+                        <option value="0" data-i18n="data.disabled">停用</option>
+                    </select>
+                    <button type="button" class="layui-btn layui-btn-sm" id="searchDeptBtn"><i class="layui-icon layui-icon-search"></i></button>
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="resetDeptBtn"><i class="layui-icon layui-icon-refresh"></i></button>
+                </div>
+                <div class="data-table-host">
+                    <table id="deptTable" lay-filter="deptTable"></table>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script type="text/html" id="deptRowToolTpl">
+    <div class="data-row-actions">
+    {{# if(DataAdmin.hasPerm('dept:add')){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="addChild" title="{{ t('data.addChild') }}"><i class="layui-icon layui-icon-add-1"></i></a>
+    {{# } }}
+    {{# if(DataAdmin.hasPerm('dept:edit')){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>{{ t('common.edit') }}</a>
+    {{# } }}
+    {{# if(DataAdmin.hasPerm('dept:delete')){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon layui-icon-delete"></i>{{ t('common.delete') }}</a>
+    {{# } }}
+    </div>
+</script>
+
+<script type="text/html" id="deptFormTpl">
+    <form class="layui-form admin-dialog-form" lay-filter="deptForm">
+        <div class="data-form-grid">
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.name">名称</label>
+                <div class="layui-input-block"><input type="text" name="name" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.code">编码</label>
+                <div class="layui-input-block"><input type="text" name="code" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.type">类型</label>
+                <div class="layui-input-block">
+                    <select name="type">
+                        <option value="1" data-i18n="data.typeCompany">公司</option>
+                        <option value="2" data-i18n="data.typeSubsidiary">子公司</option>
+                        <option value="3" data-i18n="data.typeDepartment" selected>部门</option>
+                        <option value="4" data-i18n="data.typeGroup">小组</option>
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.parent">上级</label>
+                <div class="layui-input-block">
+                    <select name="parent_id">
+                        <option value="" data-i18n="data.root">顶级</option>
+                        {{# layui.each(d.parents || [], function(i, p){ }}
+                        <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                        {{# }); }}
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.leader">负责人</label>
+                <div class="layui-input-block"><input type="text" name="leader" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.phone">联系电话</label>
+                <div class="layui-input-block"><input type="text" name="phone" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.email">邮箱</label>
+                <div class="layui-input-block"><input type="email" name="email" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.sort">排序</label>
+                <div class="layui-input-block"><input type="number" name="sort" class="layui-input" value="0"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.status">状态</label>
+                <div class="layui-input-block"><input type="checkbox" name="status" lay-skin="switch" lay-text="启用|停用"></div>
+            </div>
+            <div class="layui-form-item data-form-full">
+                <label class="layui-form-label" data-i18n="data.note">备注</label>
+                <div class="layui-input-block"><textarea name="note" class="layui-textarea" placeholder=""></textarea></div>
+            </div>
+        </div>
+    </form>
+</script>
+
+<script src="/static/layui/lib/layui.js"></script>
+<script src="/static/layui/js/common.js?v=20261126f"></script>
+<script src="/static/layui/js/i18n.js?v=20261126f"></script>
+<script src="/static/layui/js/data-admin.js?v=1"></script>
+<script>
+inheritTheme();
+renderI18n();
+
+layui.use(['form', 'table', 'tree', 'layer'], function () {
+    var $ = layui.jquery;
+    var form = layui.form;
+    var table = layui.table;
+    var tree = layui.tree;
+    var layer = layui.layer;
+
+    var allRows = [];
+    var selectedId = null;
+
+    function can(code) { return DataAdmin.hasPerm(code); }
+
+    function applyPermissions() {
+        $('[data-perm]').each(function () {
+            var code = $(this).data('perm');
+            if (code && !can(code)) $(this).addClass('permission-hidden');
+            else $(this).removeClass('permission-hidden');
+        });
+    }
+
+    function treeNodes(rows) {
+        var built = DataAdmin.buildTree(rows);
+        return built.roots.map(function (row) {
+            return {
+                id: row.id,
+                title: row.name + (row.code ? ' (' + row.code + ')' : ''),
+                children: (function mapChildren(nodes) {
+                    return (nodes || []).map(function (node) {
+                        return {
+                            id: node.id,
+                            title: node.name + (node.code ? ' (' + node.code + ')' : ''),
+                            children: mapChildren(node.children),
+                        };
+                    });
+                })(row.children),
+            };
+        });
+    }
+
+    function selectedName() {
+        if (selectedId === null) return t('data.allNodes');
+        var row = allRows.find(function (item) { return Number(item.id) === Number(selectedId); });
+        return row ? row.name : t('data.allNodes');
+    }
+
+    function renderTree() {
+        tree.render({
+            elem: '#deptTree',
+            data: treeNodes(allRows),
+            showLine: true,
+            click: function (obj) {
+                selectedId = obj.data.id;
+                $('#deptScopeTitle').text(selectedName());
+                renderTable();
+            }
+        });
+    }
+
+    function visibleRows() {
+        var keyword = $('#deptKeyword').val().trim().toLowerCase();
+        var status = $('#deptStatus').val();
+        var allowed = selectedId === null ? null : DataAdmin.descendantIds(allRows, selectedId);
+        return allRows.filter(function (row) {
+            if (allowed && !allowed[String(row.id)]) return false;
+            if (status !== '' && String(row.status) !== status) return false;
+            if (!keyword) return true;
+            return DataAdmin.matches(row, keyword, ['name', 'code', 'leader', 'phone', 'email']);
+        });
+    }
+
+    function renderTable() {
+        var rows = visibleRows();
+        LayuiUI.table({
+            elem: '#deptTable',
+            id: 'deptTable',
+            data: rows,
+            page: false,
+            height: 'full-235',
+            defaultToolbar: [],
+            cols: [[
+                {field: 'name', title: t('data.name'), width: 160},
+                {field: 'code', title: t('data.code'), width: 110},
+                {field: 'type_display', title: t('data.type'), width: 70, align: 'center', templet: function (d) {
+                    return '<span class="data-tag data-tag-info">' + escapeHtml(d.type_display) + '</span>';
+                }},
+                {field: 'leader', title: t('data.leader'), width: 85},
+                {field: 'phone', title: t('data.phone'), width: 105},
+                {field: 'sort', title: t('data.sort'), width: 55, align: 'center'},
+                {field: 'status', title: t('data.status'), width: 70, align: 'center', templet: function (d) {
+                    return DataAdmin.statusBadge(d.status);
+                }},
+                {title: t('common.operation'), width: 190, align: 'center', toolbar: '#deptRowToolTpl'}
+            ]]
+        });
+    }
+
+    function loadData() {
+        getApi('/admin/api/rbac/departments/', function (res) {
+            if (res.code !== 200) {
+                layer.msg(res.msg || t('common.loadFailed'), {icon: 2});
+                return;
+            }
+            allRows = (res.data && res.data.list) || [];
+            if (selectedId !== null && !allRows.some(function (row) { return Number(row.id) === Number(selectedId); })) {
+                selectedId = null;
+            }
+            $('#deptScopeTitle').text(selectedName());
+            renderTree();
+            renderTable();
+        });
+    }
+
+    function parentOptions(excludeId) {
+        var excluded = excludeId ? DataAdmin.descendantIds(allRows, excludeId) : {};
+        return allRows.filter(function (row) {
+            return !excluded[String(row.id)];
+        });
+    }
+
+    function openDialog(data, parentId) {
+        var isEdit = !!(data && data.id);
+        var initial = isEdit ? Object.assign({}, data) : {
+            type: 3, parent_id: parentId || '', status: true, sort: 0,
+        };
+        if (!isEdit && parentId) initial.parent_id = parentId;
+        LayuiUI.dialog({
+            tplId: 'deptFormTpl',
+            tplData: {parents: parentOptions(isEdit ? data.id : null)},
+            filter: 'deptForm',
+            data: initial,
+            title: isEdit ? t('common.edit') + t('data.department') : t('data.addDepartment'),
+            area: ['680px', 'auto'],
+            standard: true,
+            onSubmit: function (layero, index) {
+                var field = form.val('deptForm');
+                var payload = {
+                    name: String(field.name || '').trim(),
+                    code: String(field.code || '').trim(),
+                    type: parseInt(field.type, 10) || 3,
+                    parent_id: field.parent_id || null,
+                    leader: String(field.leader || '').trim(),
+                    phone: String(field.phone || '').trim(),
+                    email: String(field.email || '').trim(),
+                    sort: parseInt(field.sort, 10) || 0,
+                    status: field.status === 'on',
+                    note: String(field.note || '').trim()
+                };
+                if (!payload.name || !payload.code) {
+                    layer.msg(t('common.required'), {icon: 2});
+                    return false;
+                }
+                var done = function (res) {
+                    if (res.code !== 200) {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
+                    }
+                    layer.msg(t('data.saved'), {icon: 1});
+                    layer.close(index);
+                    loadData();
+                };
+                if (isEdit) putApi('/admin/api/rbac/departments/' + data.id + '/', payload, done);
+                else postApi('/admin/api/rbac/departments/create/', payload, done);
+                return false;
+            }
+        });
+    }
+
+    table.on('tool(deptTable)', function (obj) {
+        if (obj.event === 'edit') {
+            openDialog(obj.data);
+        } else if (obj.event === 'addChild') {
+            openDialog(null, obj.data.id);
+        } else if (obj.event === 'delete') {
+            DataAdmin.confirmDelete(t('common.confirmDelete'), function () {
+                deleteApi('/admin/api/rbac/departments/' + obj.data.id + '/', function (res) {
+                    if (res.code !== 200) {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
+                    }
+                    layer.msg(t('common.deleteSuccess'), {icon: 1});
+                    loadData();
+                });
+            });
+        }
+    });
+
+    $('#addDeptBtn').on('click', function () { openDialog(null); });
+    $('#showAllBtn').on('click', function () {
+        selectedId = null;
+        $('#deptScopeTitle').text(t('data.allNodes'));
+        renderTable();
+    });
+    $('#searchDeptBtn').on('click', renderTable);
+    $('#resetDeptBtn').on('click', function () {
+        $('#deptKeyword').val('');
+        $('#deptStatus').val('');
+        selectedId = null;
+        $('#deptScopeTitle').text(t('data.allNodes'));
+        renderTable();
+    });
+    $('#deptKeyword').on('keydown', function (event) {
+        if (event.key === 'Enter') { event.preventDefault(); renderTable(); }
+    });
+
+    DataAdmin.loadPerms(function () {
+        applyPermissions();
+        form.render('select');
+        loadData();
+    });
+});
+</script>
+</body>
+</html>

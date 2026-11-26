@@ -1,4 +1,4 @@
 """
 django-layuix - A Layui-based Django admin theme
 """
-__version__ = '1.4.8'
+__version__ = '1.4.9'

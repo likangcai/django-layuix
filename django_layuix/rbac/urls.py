@@ -1,5 +1,5 @@
 from django.urls import path
-from . import dictionary_views, views
+from . import data_admin_views, dictionary_views, views
 
 urlpatterns = [
     # User info & menus
@@ -95,6 +95,20 @@ urlpatterns = [
     path('dictionaries/<int:pk>/items/create/', dictionary_views.dictionary_item_create, name='rbac_dictionary_item_create'),
     path('dictionaries/<int:pk>/', dictionary_views.dictionary_detail, name='rbac_dictionary_detail'),
     path('dictionary-items/<int:pk>/', dictionary_views.dictionary_item_detail, name='rbac_dictionary_item_detail'),
+
+    # Department / position / region / member level
+    path('departments/', data_admin_views.department_list, name='rbac_department_list'),
+    path('departments/create/', data_admin_views.department_create, name='rbac_department_create'),
+    path('departments/<int:pk>/', data_admin_views.department_detail, name='rbac_department_detail'),
+    path('positions/', data_admin_views.position_list, name='rbac_position_list'),
+    path('positions/create/', data_admin_views.position_create, name='rbac_position_create'),
+    path('positions/<int:pk>/', data_admin_views.position_detail, name='rbac_position_detail'),
+    path('regions/', data_admin_views.region_list, name='rbac_region_list'),
+    path('regions/create/', data_admin_views.region_create, name='rbac_region_create'),
+    path('regions/<int:pk>/', data_admin_views.region_detail, name='rbac_region_detail'),
+    path('member-levels/', data_admin_views.member_level_list, name='rbac_member_level_list'),
+    path('member-levels/create/', data_admin_views.member_level_create, name='rbac_member_level_create'),
+    path('member-levels/<int:pk>/', data_admin_views.member_level_detail, name='rbac_member_level_detail'),
 
     # Operation Log
     path('logs/', views.log_list, name='rbac_log_list'),

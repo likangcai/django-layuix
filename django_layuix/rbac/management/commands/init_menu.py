@@ -147,7 +147,7 @@ class Command(BaseCommand):
                     admin_role.menus.add(menu)
 
     def _ensure_data_menus(self):
-        """Add data dictionary menu to existing installations."""
+        """Add data-management menus to existing installations."""
         group, group_created = Menu.objects.get_or_create(
             name='数据管理',
             defaults={
@@ -157,25 +157,50 @@ class Command(BaseCommand):
                 'backend_visible': True, 'frontend_visible': True,
             },
         )
-        menu, created = Menu.objects.get_or_create(
-            name='字典管理',
-            defaults={
-                'name_en': 'Dictionary', 'name_zh_hans': '字典管理',
-                'icon': 'layui-icon-read', 'path': '/data/dictionary',
-                'permission': 'dict:view', 'menu_type': 2, 'sort': 1,
-                'parent': group, 'status': True, 'visible': True,
-                'backend_visible': True, 'frontend_visible': True,
-            },
-        )
-        if menu.permission != 'dict:view' or menu.parent_id != group.pk:
-            menu.permission = 'dict:view'
-            menu.parent = group
-            menu.save(update_fields=['permission', 'parent'])
-        if created or group_created:
-            admin_role = Role.objects.filter(code='admin').first()
-            if admin_role:
-                admin_role.menus.add(group, menu)
-            self.stdout.write(self.style.SUCCESS('  创建菜单: 数据管理 / 字典管理'))
+        specs = [
+            ('字典管理', 'Dictionary', '字典管理', 'layui-icon-read',
+             '/data/dictionary', 'dict:view', 1),
+            ('部门管理', 'Departments', '部门管理', 'layui-icon-group',
+             '/data/department', 'dept:view', 2),
+            ('岗位管理', 'Positions', '岗位管理', 'layui-icon-user',
+             '/data/position', 'position:view', 3),
+            ('地区管理', 'Regions', '地区管理', 'layui-icon-location',
+             '/data/region', 'region:view', 4),
+            ('会员等级', 'Member Levels', '会员等级', 'layui-icon-diamond',
+             '/data/member-level', 'member_level:view', 5),
+        ]
+        admin_role = Role.objects.filter(code='admin').first()
+        created_any = False
+        for name, name_en, name_zh, icon, path, permission, sort in specs:
+            menu, created = Menu.objects.get_or_create(
+                name=name,
+                defaults={
+                    'name_en': name_en, 'name_zh_hans': name_zh,
+                    'icon': icon, 'path': path, 'permission': permission,
+                    'menu_type': 2, 'sort': sort, 'parent': group,
+                    'status': True, 'visible': True,
+                    'backend_visible': True, 'frontend_visible': True,
+                },
+            )
+            updated_fields = []
+            if menu.permission != permission:
+                menu.permission = permission
+                updated_fields.append('permission')
+            if menu.parent_id != group.pk:
+                menu.parent = group
+                updated_fields.append('parent')
+            if menu.path != path:
+                menu.path = path
+                updated_fields.append('path')
+            if updated_fields:
+                menu.save(update_fields=updated_fields)
+            if created and admin_role:
+                admin_role.menus.add(menu)
+            created_any = created_any or created
+        if admin_role:
+            admin_role.menus.add(group)
+        if created_any or group_created:
+            self.stdout.write(self.style.SUCCESS('  创建菜单: 数据管理 / 部门 / 岗位 / 地区 / 会员等级'))
 
     def _init_menus(self, force=False):
         """初始化菜单数据"""

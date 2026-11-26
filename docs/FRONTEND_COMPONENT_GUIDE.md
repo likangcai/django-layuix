@@ -1,11 +1,12 @@
 # 前端组件与设计 Token 规范
 
-版本：v2.1　适用版本：django-layuix 1.4.8+
+版本：v2.2　适用版本：django-layuix 1.4.9+
 
 ## 结论（TL;DR）
 【事实】后台统一使用 `admin.css` 中的设计 token 与 `common.js` 暴露的 `LayuiUI.table/dialog/virtualTable` 组件。
 【判断】通用列表和表单弹窗应复用组件，树、卡片、图表、详情内嵌表格等特殊情况保留独立实现。
 【事实】大数据量只读列表可改用 `LayuiUI.virtualTable()`，只渲染可视行；1.4.7 支持服务端分页混合模式与列配置持久化。
+【事实】1.4.9 数据管理模块统一使用 `data-admin.css` 与 `data-admin.js`，覆盖树/表格布局、状态徽章、行操作和删除确认。
 【本期不做】强制重写所有历史页面为虚拟滚动表格；不引入新的前端框架；不发布独立 npm 包。
 
 ---

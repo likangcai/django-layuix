@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="data.region">地区管理</title>
+    <link rel="stylesheet" href="/static/layui/lib/layui.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126f">
+    <link rel="stylesheet" href="/static/layui/css/data-admin.css?v=1">
+    <script>
+        function syncParentTheme() {
+            var themeMode = 'light';
+            try {
+                if (window.parent && window.parent.document) {
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'light';
+                }
+            } catch (e) {}
+            document.documentElement.setAttribute('data-theme-mode', themeMode);
+        }
+        syncParentTheme();
+        window.addEventListener('message', function (event) {
+            if (event.data && event.data.type === 'themeChange') {
+                document.documentElement.setAttribute('data-theme-mode', event.data.themeMode);
+            }
+        });
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background: var(--bg-primary); }
+        .page-container { padding: 16px 18px; min-height: 100%; box-sizing: border-box; }
+        .data-side { width: 340px; flex-basis: 340px; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="data-layout">
+        <aside class="data-panel data-side">
+            <div class="data-head">
+                <div>
+                    <div class="data-title" data-i18n="data.region">地区管理</div>
+                    <div class="data-subtitle" data-i18n="data.treeHint">选择左侧节点筛选数据</div>
+                </div>
+                <button type="button" class="layui-btn layui-btn-xs layui-btn-primary" id="showAllRegionBtn" data-i18n="data.allNodes">全部数据</button>
+            </div>
+            <div class="data-tree-host" id="regionTree"></div>
+        </aside>
+        <section class="data-panel data-main">
+            <div class="data-head">
+                <div>
+                    <div class="data-title" id="regionScopeTitle" data-i18n="data.allNodes">全部数据</div>
+                    <div class="data-subtitle" data-i18n="data.regionDesc">维护省、市、县区、街道层级数据</div>
+                </div>
+                <button type="button" class="layui-btn layui-btn-sm" id="addRegionBtn" data-perm="region:add">
+                    <i class="layui-icon layui-icon-add-1"></i> <span data-i18n="data.addRegion">新增地区</span>
+                </button>
+            </div>
+            <div class="data-body">
+                <div class="data-toolbar">
+                    <input type="text" id="regionKeyword" class="layui-input data-keyword" data-i18n-placeholder="data.search" placeholder="搜索名称或编码" autocomplete="off">
+                    <select id="regionStatus" class="data-status">
+                        <option value="" data-i18n="data.allStatus">全部状态</option>
+                        <option value="1" data-i18n="data.enabled">启用</option>
+                        <option value="0" data-i18n="data.disabled">停用</option>
+                    </select>
+                    <button type="button" class="layui-btn layui-btn-sm" id="searchRegionBtn"><i class="layui-icon layui-icon-search"></i></button>
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="resetRegionBtn"><i class="layui-icon layui-icon-refresh"></i></button>
+                </div>
+                <div class="data-table-host">
+                    <table id="regionTable" lay-filter="regionTable"></table>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script type="text/html" id="regionRowToolTpl">
+    <div class="data-row-actions">
+    {{# if(DataAdmin.hasPerm('region:add')){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="addChild" title="{{ t('data.addChild') }}"><i class="layui-icon layui-icon-add-1"></i></a>
+    {{# } }}
+    {{# if(DataAdmin.hasPerm('region:edit')){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>{{ t('common.edit') }}</a>
+    {{# } }}
+    {{# if(DataAdmin.hasPerm('region:delete')){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon layui-icon-delete"></i>{{ t('common.delete') }}</a>
+    {{# } }}
+    </div>
+</script>
+
+<script type="text/html" id="regionFormTpl">
+    <form class="layui-form admin-dialog-form" lay-filter="regionForm">
+        <div class="data-form-grid">
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.name">名称</label>
+                <div class="layui-input-block"><input type="text" name="name" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.code">编码</label>
+                <div class="layui-input-block"><input type="text" name="code" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.level">层级</label>
+                <div class="layui-input-block">
+                    <select name="level">
+                        <option value="1" data-i18n="data.levelProvince">省份</option>
+                        <option value="2" data-i18n="data.levelCity">城市</option>
+                        <option value="3" data-i18n="data.levelDistrict">县区</option>
+                        <option value="4" data-i18n="data.levelStreet">街道</option>
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.parent">上级</label>
+                <div class="layui-input-block">
+                    <select name="parent_id">
+                        <option value="" data-i18n="data.root">顶级</option>
+                        {{# layui.each(d.parents || [], function(i, p){ }}
+                        <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                        {{# }); }}
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.areaCode">区号</label>
+                <div class="layui-input-block"><input type="text" name="area_code" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.zipCode">邮编</label>
+                <div class="layui-input-block"><input type="text" name="zip_code" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.pinyin">拼音</label>
+                <div class="layui-input-block"><input type="text" name="pinyin" class="layui-input" autocomplete="off"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.sort">排序</label>
+                <div class="layui-input-block"><input type="number" name="sort" class="layui-input" value="0"></div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" data-i18n="data.status">状态</label>
+                <div class="layui-input-block"><input type="checkbox" name="status" lay-skin="switch" lay-text="启用|停用"></div>
+            </div>
+            <div class="layui-form-item data-form-full">
+                <label class="layui-form-label" data-i18n="data.note">备注</label>
+                <div class="layui-input-block"><textarea name="note" class="layui-textarea" placeholder=""></textarea></div>
+            </div>
+        </div>
+    </form>
+</script>
+
+<script src="/static/layui/lib/layui.js"></script>
+<script src="/static/layui/js/common.js?v=20261126f"></script>
+<script src="/static/layui/js/i18n.js?v=20261126f"></script>
+<script src="/static/layui/js/data-admin.js?v=1"></script>
+<script>
+inheritTheme();
+renderI18n();
+
+layui.use(['form', 'table', 'tree', 'layer'], function () {
+    var $ = layui.jquery;
+    var form = layui.form;
+    var table = layui.table;
+    var tree = layui.tree;
+    var layer = layui.layer;
+
+    var allRows = [];
+    var selectedId = null;
+
+    function can(code) { return DataAdmin.hasPerm(code); }
+
+    function applyPermissions() {
+        $('[data-perm]').each(function () {
+            var code = $(this).data('perm');
+            if (code && !can(code)) $(this).addClass('permission-hidden');
+            else $(this).removeClass('permission-hidden');
+        });
+    }
+
+    function treeNodes(rows) {
+        var built = DataAdmin.buildTree(rows);
+        return built.roots.map(function (row) {
+            return {
+                id: row.id,
+                title: row.name + (row.code ? ' (' + row.code + ')' : ''),
+                children: (function mapChildren(nodes) {
+                    return (nodes || []).map(function (node) {
+                        return {
+                            id: node.id,
+                            title: node.name + (node.code ? ' (' + node.code + ')' : ''),
+                            children: mapChildren(node.children),
+                        };
+                    });
+                })(row.children),
+            };
+        });
+    }
+
+    function selectedName() {
+        if (selectedId === null) return t('data.allNodes');
+        var row = allRows.find(function (item) { return Number(item.id) === Number(selectedId); });
+        return row ? row.name : t('data.allNodes');
+    }
+
+    function renderTree() {
+        tree.render({
+            elem: '#regionTree',
+            data: treeNodes(allRows),
+            showLine: true,
+            click: function (obj) {
+                selectedId = obj.data.id;
+                $('#regionScopeTitle').text(selectedName());
+                renderTable();
+            }
+        });
+    }
+
+    function visibleRows() {
+        var keyword = $('#regionKeyword').val().trim().toLowerCase();
+        var status = $('#regionStatus').val();
+        var allowed = selectedId === null ? null : DataAdmin.descendantIds(allRows, selectedId);
+        return allRows.filter(function (row) {
+            if (allowed && !allowed[String(row.id)]) return false;
+            if (status !== '' && String(row.status) !== status) return false;
+            if (!keyword) return true;
+            return DataAdmin.matches(row, keyword, ['name', 'code', 'area_code', 'zip_code', 'pinyin']);
+        });
+    }
+
+    function renderTable() {
+        var rows = visibleRows();
+        LayuiUI.table({
+            elem: '#regionTable',
+            id: 'regionTable',
+            data: rows,
+            page: false,
+            height: 'full-235',
+            defaultToolbar: [],
+            cols: [[
+                {field: 'name', title: t('data.name'), width: 150},
+                {field: 'code', title: t('data.code'), width: 105},
+                {field: 'level_display', title: t('data.level'), width: 70, align: 'center', templet: function (d) {
+                    return '<span class="data-tag data-tag-muted">' + escapeHtml(d.level_display) + '</span>';
+                }},
+                {field: 'area_code', title: t('data.areaCode'), width: 75, align: 'center'},
+                {field: 'zip_code', title: t('data.zipCode'), width: 75, align: 'center'},
+                {field: 'pinyin', title: t('data.pinyin'), width: 100},
+                {field: 'status', title: t('data.status'), width: 65, align: 'center', templet: function (d) {
+                    return DataAdmin.statusBadge(d.status);
+                }},
+                {title: t('common.operation'), width: 190, align: 'center', toolbar: '#regionRowToolTpl'}
+            ]]
+        });
+    }
+
+    function loadData() {
+        getApi('/admin/api/rbac/regions/', function (res) {
+            if (res.code !== 200) {
+                layer.msg(res.msg || t('common.loadFailed'), {icon: 2});
+                return;
+            }
+            allRows = (res.data && res.data.list) || [];
+            if (selectedId !== null && !allRows.some(function (row) { return Number(row.id) === Number(selectedId); })) {
+                selectedId = null;
+            }
+            $('#regionScopeTitle').text(selectedName());
+            renderTree();
+            renderTable();
+        });
+    }
+
+    function parentOptions(excludeId) {
+        var excluded = excludeId ? DataAdmin.descendantIds(allRows, excludeId) : {};
+        return allRows.filter(function (row) {
+            return !excluded[String(row.id)];
+        });
+    }
+
+    function openDialog(data, parentId) {
+        var isEdit = !!(data && data.id);
+        var initial = isEdit ? Object.assign({}, data) : {
+            level: 1, parent_id: parentId || '', status: true, sort: 0,
+        };
+        if (!isEdit && parentId) initial.parent_id = parentId;
+        LayuiUI.dialog({
+            tplId: 'regionFormTpl',
+            tplData: {parents: parentOptions(isEdit ? data.id : null)},
+            filter: 'regionForm',
+            data: initial,
+            title: isEdit ? t('common.edit') + t('data.region') : t('data.addRegion'),
+            area: ['700px', 'auto'],
+            standard: true,
+            onSubmit: function (layero, index) {
+                var field = form.val('regionForm');
+                var payload = {
+                    name: String(field.name || '').trim(),
+                    code: String(field.code || '').trim(),
+                    level: parseInt(field.level, 10) || 1,
+                    parent_id: field.parent_id || null,
+                    area_code: String(field.area_code || '').trim(),
+                    zip_code: String(field.zip_code || '').trim(),
+                    pinyin: String(field.pinyin || '').trim(),
+                    sort: parseInt(field.sort, 10) || 0,
+                    status: field.status === 'on',
+                    note: String(field.note || '').trim()
+                };
+                if (!payload.name || !payload.code) {
+                    layer.msg(t('common.required'), {icon: 2});
+                    return false;
+                }
+                var done = function (res) {
+                    if (res.code !== 200) {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
+                    }
+                    layer.msg(t('data.saved'), {icon: 1});
+                    layer.close(index);
+                    loadData();
+                };
+                if (isEdit) putApi('/admin/api/rbac/regions/' + data.id + '/', payload, done);
+                else postApi('/admin/api/rbac/regions/create/', payload, done);
+                return false;
+            }
+        });
+    }
+
+    table.on('tool(regionTable)', function (obj) {
+        if (obj.event === 'edit') {
+            openDialog(obj.data);
+        } else if (obj.event === 'addChild') {
+            openDialog(null, obj.data.id);
+        } else if (obj.event === 'delete') {
+            DataAdmin.confirmDelete(t('common.confirmDelete'), function () {
+                deleteApi('/admin/api/rbac/regions/' + obj.data.id + '/', function (res) {
+                    if (res.code !== 200) {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
+                    }
+                    layer.msg(t('common.deleteSuccess'), {icon: 1});
+                    loadData();
+                });
+            });
+        }
+    });
+
+    $('#addRegionBtn').on('click', function () { openDialog(null); });
+    $('#showAllRegionBtn').on('click', function () {
+        selectedId = null;
+        $('#regionScopeTitle').text(t('data.allNodes'));
+        renderTable();
+    });
+    $('#searchRegionBtn').on('click', renderTable);
+    $('#resetRegionBtn').on('click', function () {
+        $('#regionKeyword').val('');
+        $('#regionStatus').val('');
+        selectedId = null;
+        $('#regionScopeTitle').text(t('data.allNodes'));
+        renderTable();
+    });
+    $('#regionKeyword').on('keydown', function (event) {
+        if (event.key === 'Enter') { event.preventDefault(); renderTable(); }
+    });
+
+    DataAdmin.loadPerms(function () {
+        applyPermissions();
+        form.render('select');
+        loadData();
+    });
+});
+</script>
+</body>
+</html>

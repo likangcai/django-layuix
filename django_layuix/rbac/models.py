@@ -403,3 +403,116 @@ class DictionaryItem(models.Model):
 
     def __str__(self):
         return '%s = %s' % (self.label, self.value)
+
+
+class Department(models.Model):
+    """Hierarchical department / organization unit."""
+    TYPE_CHOICES = [
+        (1, '公司'),
+        (2, '子公司'),
+        (3, '部门'),
+        (4, '小组'),
+    ]
+    name = models.CharField(max_length=150, verbose_name='部门名称')
+    code = models.CharField(max_length=64, unique=True, verbose_name='部门编码')
+    type = models.IntegerField(choices=TYPE_CHOICES, default=3, verbose_name='部门类型')
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, related_name='children',
+        on_delete=models.CASCADE, verbose_name='上级部门',
+    )
+    leader = models.CharField(max_length=50, blank=True, default='', verbose_name='负责人')
+    phone = models.CharField(max_length=30, blank=True, default='', verbose_name='联系电话')
+    email = models.EmailField(blank=True, default='', verbose_name='邮箱')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    note = models.CharField(max_length=255, blank=True, default='', verbose_name='备注')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_department'
+        verbose_name = '部门'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class Position(models.Model):
+    """Job position / post."""
+    name = models.CharField(max_length=150, verbose_name='岗位名称')
+    code = models.CharField(max_length=64, unique=True, verbose_name='岗位编码')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    note = models.CharField(max_length=255, blank=True, default='', verbose_name='备注')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_position'
+        verbose_name = '岗位'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class Region(models.Model):
+    """Administrative region tree."""
+    LEVEL_CHOICES = [
+        (1, '省份'),
+        (2, '城市'),
+        (3, '县区'),
+        (4, '街道'),
+    ]
+    name = models.CharField(max_length=150, verbose_name='地区名称')
+    code = models.CharField(max_length=20, unique=True, verbose_name='行政编码')
+    area_code = models.CharField(max_length=20, blank=True, default='', verbose_name='区号')
+    zip_code = models.CharField(max_length=20, blank=True, default='', verbose_name='邮编')
+    pinyin = models.CharField(max_length=150, blank=True, default='', verbose_name='拼音')
+    level = models.IntegerField(choices=LEVEL_CHOICES, default=1, verbose_name='层级')
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, related_name='children',
+        on_delete=models.CASCADE, verbose_name='上级地区',
+    )
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    note = models.CharField(max_length=255, blank=True, default='', verbose_name='备注')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_region'
+        verbose_name = '地区'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class MemberLevel(models.Model):
+    """Member level / customer tier."""
+    name = models.CharField(max_length=150, verbose_name='等级名称')
+    code = models.CharField(max_length=64, unique=True, verbose_name='等级编码')
+    min_points = models.IntegerField(default=0, verbose_name='最低积分')
+    discount = models.DecimalField(
+        max_digits=5, decimal_places=2, default=100, verbose_name='折扣比例',
+    )
+    icon = models.CharField(max_length=50, blank=True, default='', verbose_name='图标')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    description = models.CharField(max_length=255, blank=True, default='', verbose_name='说明')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_member_level'
+        verbose_name = '会员等级'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
