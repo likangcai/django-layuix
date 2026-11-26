@@ -6,7 +6,7 @@
     <title data-i18n="permission.title">权限目录</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126p">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126s">
     <link rel="stylesheet" href="/static/layui/css/data-admin.css?v=3">
     <script>
         function syncParentTheme() {
@@ -32,6 +32,8 @@
         .permission-stat { flex: 1; padding: 12px 14px; border: 1px solid var(--card-border); border-radius: var(--radius-md); background: var(--card-bg); }
         .permission-stat b { display: block; font-size: 22px; color: var(--text-primary); }
         .permission-stat span { color: var(--text-muted); font-size: 12px; }
+        .button-action-checks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 10px; padding: 8px 0; }
+        .button-action-checks .layui-form-checkbox { margin-right: 0 !important; }
     </style>
 </head>
 <body>
@@ -63,6 +65,7 @@
                 </select>
                 <button type="button" class="layui-btn layui-btn-sm" id="searchPermissionBtn"><i class="layui-icon layui-icon-search"></i></button>
                 <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="resetPermissionBtn"><i class="layui-icon layui-icon-refresh"></i></button>
+                <button type="button" class="layui-btn layui-btn-sm layui-btn-normal" id="createButtonPermissionBtn" data-perm="permission:edit"><i class="layui-icon layui-icon-add-1"></i> {{ t('permission.addButton') }}</button>
             </div>
             <div class="data-table-host">
                 <table id="permissionTable" lay-filter="permissionTable"></table>
@@ -80,23 +83,44 @@
     <a class="layui-btn layui-btn-xs {{ d.status ? 'layui-btn-danger' : 'layui-btn-normal' }}" lay-event="toggle">
         <i class="layui-icon {{ d.status ? 'layui-icon-pause' : 'layui-icon-play' }}"></i>{{ d.status ? t('permission.disable') : t('permission.enable') }}
     </a>
+    {{# if(d.deletable){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="deleteButton">{{ t('common.delete') }}</a>
+    {{# } }}
     {{# } }}
     {{# } }}
     </div>
 </script>
 
+<script type="text/html" id="buttonPermissionFormTpl">
+    <form class="layui-form" lay-filter="buttonPermissionForm" style="padding: 20px 30px 0;">
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('permission.parentMenu') }}</label>
+            <div class="layui-input-block">
+                <select name="parent_id" id="buttonParentSelect"></select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ t('permission.actions') }}</label>
+            <div class="layui-input-block">
+                <div class="button-action-checks" id="buttonActionChecks"></div>
+            </div>
+        </div>
+    </form>
+</script>
+
 <script src="/static/layui/lib/layui.js"></script>
-<script src="/static/layui/js/common.js?v=20261126p"></script>
-<script src="/static/layui/js/i18n.js?v=20261126p"></script>
+<script src="/static/layui/js/common.js?v=20261126s"></script>
+<script src="/static/layui/js/i18n.js?v=20261126s"></script>
 <script src="/static/layui/js/data-admin.js?v=3"></script>
 <script>
 inheritTheme();
 renderI18n();
 
-layui.use(['table', 'layer'], function () {
+layui.use(['table', 'layer', 'form'], function () {
     var $ = layui.jquery;
     var table = layui.table;
     var layer = layui.layer;
+    var form = layui.form;
 
     function applyPermissions() {
         $('[data-perm]').each(function () {
@@ -124,7 +148,7 @@ layui.use(['table', 'layer'], function () {
             $('#permissionPageCount').text(data.page_count || 0);
             $('#permissionButtonCount').text(data.button_count || 0);
             var rows = (data.list || []).map(function (row) {
-                row.protected = ['permission:view', 'permission:edit'].indexOf(row.code) > -1;
+                row.protected = !!row.protected;
                 return row;
             });
             LayuiUI.table({
@@ -141,6 +165,10 @@ layui.use(['table', 'layer'], function () {
                         return '<span class="data-tag ' + (d.kind === 'page' ? 'data-tag-info' : 'data-tag-muted') + '">' +
                             escapeHtml(d.kind_label) + '</span>';
                     }},
+                    {field: 'source_label', title: t('permission.source'), width: 80, align: 'center', templet: function (d) {
+                        return '<span class="data-tag ' + (d.source === 'builtin' ? 'data-tag-muted' : 'data-tag-info') + '">' +
+                            escapeHtml(d.source_label) + '</span>';
+                    }},
                     {field: 'path', title: t('permission.path'), minWidth: 220, templet: function (d) {
                         return d.path ? '<code>' + escapeHtml(d.path) + '</code>' : '<span style="color:var(--text-muted);">-</span>';
                     }},
@@ -148,13 +176,105 @@ layui.use(['table', 'layer'], function () {
                     {field: 'status', title: t('data.status'), width: 80, align: 'center', templet: function (d) {
                         return DataAdmin.statusBadge(d.status);
                     }},
-                    {title: t('common.operation'), width: 130, align: 'center', toolbar: '#permissionRowToolTpl'}
+                    {title: t('common.operation'), width: 175, align: 'center', toolbar: '#permissionRowToolTpl'}
                 ]]
             });
         });
     }
 
+    function openButtonPermissionDialog() {
+        getApi('/admin/api/rbac/menus/tree/?exclude_catalog=1', function (menuRes) {
+            if (menuRes.code !== 200) {
+                layer.msg(menuRes.msg || t('common.loadFailed'), {icon: 2});
+                return;
+            }
+            getApi('/admin/api/rbac/userinfo/', function (userRes) {
+                var actions = userRes.code === 200 ? (userRes.data.button_actions || []) : [];
+                var menus = [];
+                function walk(nodes, prefix) {
+                    (nodes || []).forEach(function (node) {
+                        if (node.menu_type === 1 || node.menu_type === 2) {
+                            menus.push({id: node.id, name: prefix + node.name});
+                        }
+                        walk(node.children, prefix + '　');
+                    });
+                }
+                walk(menuRes.data || [], '');
+                if (!menus.length) {
+                    layer.msg(t('permission.noActions'), {icon: 2});
+                    return;
+                }
+                var parentHtml = menus.map(function (menu) {
+                    return '<option value="' + menu.id + '">' + escapeHtml(menu.name) + '</option>';
+                }).join('');
+                var lang = userRes.code === 200 ? userRes.data.language : 'zh-hans';
+                var actionHtml = actions.map(function (action) {
+                    var label = lang === 'en' ? (action.en || action.value) : (action.zh_hans || action.value);
+                    return '<input type="checkbox" name="button_actions" value="' + escapeHtml(action.value) +
+                        '" title="' + escapeHtml(label) + '">';
+                }).join('') || '<div class="layui-word-aux">' + escapeHtml(t('permission.noActions')) + '</div>';
+
+                LayuiUI.dialog({
+                    type: 1,
+                    title: t('permission.addButton'),
+                    area: ['560px', 'auto'],
+                    content: renderTpl('buttonPermissionFormTpl'),
+                    btn: [t('common.save'), t('common.cancel')],
+                    success: function (layero) {
+                        layero.find('#buttonParentSelect').html(parentHtml);
+                        layero.find('#buttonActionChecks').html(actionHtml);
+                        form.render(null, 'buttonPermissionForm');
+                    },
+                    yes: function (index, layero) {
+                        var parentId = layero.find('#buttonParentSelect').val();
+                        var selected = [];
+                        layero.find('input[name="button_actions"]:checked').each(function () {
+                            selected.push($(this).val());
+                        });
+                        if (!parentId || !selected.length) {
+                            layer.msg(t('permission.noActions'), {icon: 2});
+                            return;
+                        }
+                        var $btn = layero.find('.layui-layer-btn0');
+                        $btn.prop('disabled', true);
+                        postApi('/admin/api/rbac/permission-catalog/buttons/create/', {
+                            parent_id: parseInt(parentId, 10),
+                            actions: selected,
+                            replace: false
+                        }, function (res) {
+                            $btn.prop('disabled', false);
+                            if (res.code !== 200) {
+                                layer.msg(res.msg || t('common.fail'), {icon: 2});
+                                return;
+                            }
+                            layer.close(index);
+                            layer.msg(t('permission.saved'), {icon: 1});
+                            loadData();
+                        });
+                    }
+                });
+            });
+        });
+    }
+
     table.on('tool(permissionTable)', function (obj) {
+        if (obj.event === 'deleteButton') {
+            layer.confirm(t('permission.deleteConfirm'), {
+                title: t('permission.title'), skin: 'layui-layer-admin',
+                btn: [t('common.confirm'), t('common.cancel')]
+            }, function (index) {
+                layer.close(index);
+                postApi('/admin/api/rbac/permission-catalog/buttons/' + obj.data.id + '/delete/', {}, function (res) {
+                    if (res.code !== 200) {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
+                    }
+                    layer.msg(t('permission.deleted'), {icon: 1});
+                    loadData();
+                });
+            });
+            return;
+        }
         if (obj.event !== 'toggle' || obj.data.protected) return;
         var nextStatus = !obj.data.status;
         var message = nextStatus ? t('permission.enableConfirm') : t('permission.disableConfirm');
@@ -175,6 +295,7 @@ layui.use(['table', 'layer'], function () {
     });
 
     $('#searchPermissionBtn').on('click', loadData);
+    $('#createButtonPermissionBtn').on('click', openButtonPermissionDialog);
     $('#resetPermissionBtn').on('click', function () {
         $('#permissionKeyword').val('');
         $('#permissionKind').val('');

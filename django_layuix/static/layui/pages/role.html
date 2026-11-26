@@ -6,7 +6,7 @@
     <title data-i18n="role.title">角色管理</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126p">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126s">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -40,6 +40,13 @@
             display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
         }
         .permission-assign-toolbar .layui-input { width: 240px; }
+        .scope-assign-panel {
+            display: grid; grid-template-columns: 90px 1fr 90px 1fr; gap: 8px; align-items: center;
+            padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--card-border);
+            border-radius: var(--radius-md); background: var(--bg-secondary);
+        }
+        .scope-assign-panel label { font-size: 13px; color: var(--text-secondary); }
+        .scope-assign-panel .layui-input { height: 32px; }
         .permission-tree-wrap {
             height: 360px; overflow: auto; padding: 12px 14px;
             border: 1px solid var(--card-border); border-radius: var(--radius-md);
@@ -103,6 +110,11 @@
             <i class="layui-icon layui-icon-add-1"></i> {{ t('common.add') + t('role.title') }}
         </button>
         {{# } }}
+        {{# if((cu.is_superuser || false) || layui.$.inArray('role:delete', perms) > -1){ }}
+        <button class="layui-btn layui-btn-sm layui-btn-danger" lay-event="batchDelete">
+            {{ t('data.batchDelete') }}
+        </button>
+        {{# } }}
         <button class="layui-btn layui-btn-sm layui-btn-primary" lay-event="refresh">
             <i class="layui-icon layui-icon-refresh"></i> {{ t('common.refresh') }}
         </button>
@@ -159,24 +171,6 @@
                 <input type="number" name="max_users" min="0" placeholder="{{ t('role.maxUsersPlaceholder') }}" class="layui-input">
             </div>
         </div>
-        <details class="layui-form-item advanced-scope-panel w-full" style="border-top:1px solid var(--border-color);padding-top:10px">
-            <summary style="cursor:pointer;color:var(--text-secondary);font-weight:500;">{{ t('role.scopeAdvanced') }}</summary>
-            <div style="padding:10px 0 0 120px;">
-                <div class="layui-form-item">
-                    <label class="layui-form-label">{{ t('role.scopeNode') }}</label>
-                    <div class="layui-input-block">
-                        <input type="text" name="scope_node" placeholder="{{ t('role.scopeNodePlaceholder') }}" class="layui-input">
-                    </div>
-                </div>
-                <div class="layui-form-item">
-                    <label class="layui-form-label">{{ t('role.scopeDepth') }}</label>
-                    <div class="layui-input-block">
-                        <input type="number" name="scope_depth" min="0" value="0" class="layui-input">
-                    </div>
-                </div>
-                <div id="scopePreview" class="layui-form-mid layui-word-aux" style="padding-left:0;">{{ t('role.scopePreviewNone') }}</div>
-            </div>
-        </details>
         <div class="layui-form-item">
             <label class="layui-form-label">{{ t('role.menuPermission') }}</label>
             <div class="layui-input-block">
@@ -199,6 +193,12 @@
 <!-- 角色授权弹窗模板 -->
 <script type="text/html" id="permissionDialogTpl">
     <div class="permission-assign-dialog">
+        <div class="scope-assign-panel">
+            <label>{{ t('role.scopeNode') }}</label>
+            <select id="authScopeNode" class="layui-input"></select>
+            <label>{{ t('role.scopeDepth') }}</label>
+            <input type="number" id="authScopeDepth" min="0" value="0" class="layui-input">
+        </div>
         <div class="permission-assign-toolbar">
             <input type="text" id="permissionSearch" class="layui-input" placeholder="{{ t('role.permissionSearch') }}" autocomplete="off">
             <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="permissionExpandAll">
@@ -251,8 +251,8 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261126p"></script>
-    <script src="/static/layui/js/i18n.js?v=20261126p"></script>
+    <script src="/static/layui/js/common.js?v=20261126s"></script>
+    <script src="/static/layui/js/i18n.js?v=20261126s"></script>
     <script>
 inheritTheme();
 
@@ -283,6 +283,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
     var permissions = currentUser.permissions || [];
     var allRoles = [];
     var tableRoles = [];
+    var currentRoleFormData = null;
 
     function loadAllRoles(callback) {
         if (allRoles.length) {
@@ -343,15 +344,6 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
         selected.forEach(function(id) { count += collectInheritedPermissionCount(id); });
         layero.find('#parentInheritPreview').text(
             selected.length ? t('role.parentPreview', [count]) : t('role.parentPreviewNone')
-        );
-    }
-
-    function updateScopePreview(layero) {
-        var node = $.trim(layero.find('[name="scope_node"]').val() || '');
-        var depth = parseInt(layero.find('[name="scope_depth"]').val() || '0', 10);
-        if (isNaN(depth) || depth < 0) depth = 0;
-        layero.find('#scopePreview').text(
-            node ? t('role.scopePreview', [node, depth]) : t('role.scopePreviewNone')
         );
     }
 
@@ -423,6 +415,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                 return role.parent_id || (role.parent_ids || []).length || role.scope_node;
             });
             var cols = [[
+                {type: 'checkbox', fixed: 'left', width: 44},
                 {field: 'id', title: t('common.id'), width: 70, align: 'center'},
                 {field: 'name', title: t('role.name'), width: 190, templet: function(d) {
                     var depth = roleDepth(d, byId);
@@ -439,10 +432,10 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                         ? '<span class="layui-badge">' + t('role.system') + '</span>'
                         : '<span class="layui-badge layui-bg-gray">' + t('role.normal') + '</span>';
                 }},
-                {field: 'status', title: t('common.status'), width: 90, align: 'center', templet: function(d) {
-                    return d.status
-                        ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
-                        : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
+                {field: 'status', title: t('common.status'), width: 100, align: 'center', templet: function(d) {
+                    return '<input type="checkbox" name="roleStatus" value="' + d.id + '" lay-skin="switch" lay-filter="roleStatus" lay-text="' +
+                        t('common.enable') + '|' + t('common.disable') + '"' +
+                        (d.status ? ' checked' : '') + (d.is_system ? ' disabled' : '') + '>';
                 }},
                 {field: 'create_time', title: t('user.createTime'), width: 170, align: 'center'},
                 {title: t('common.operation'), width: 260, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
@@ -467,6 +460,9 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                     layout: ['count', 'prev', 'page', 'next', 'skip', 'limit']
                 },
                 even: true,
+                done: function() {
+                    form.render('checkbox');
+                },
                 cols: cols
             });
         });
@@ -633,8 +629,8 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                         status: !!roleData.status,
                         max_users: roleData.max_users || 0,
                         parent_ids: roleData.parent_ids || [],
-                        scope_node: roleData.scope_node || '',
-                        scope_depth: roleData.scope_depth || 0,
+                        scope_node: layeroCache.find('#authScopeNode').val() || '',
+                        scope_depth: parseInt(layeroCache.find('#authScopeDepth').val(), 10) || 0,
                         menu_ids: selectedIds
                     }, function(saveRes) {
                         $btn.prop('disabled', false).removeClass('layui-btn-disabled');
@@ -649,6 +645,19 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                 },
                 success: function(layero, index) {
                     layeroCache = $(layero);
+                    getApi('/admin/api/rbac/scope-nodes/', function(scopeRes) {
+                        var options = ['<option value="">' + escapeHtml(t('role.scopeUnrestricted')) + '</option>'];
+                        function walkScope(nodes) {
+                            (nodes || []).forEach(function(node) {
+                                options.push('<option value="' + escapeHtml(node.code) + '">' +
+                                    escapeHtml(node.name + ' (' + node.code + ')') + '</option>');
+                                walkScope(node.children);
+                            });
+                        }
+                        walkScope(scopeRes.code === 200 ? (scopeRes.data || []) : []);
+                        layeroCache.find('#authScopeNode').html(options.join('')).val(roleData.scope_node || '');
+                        layeroCache.find('#authScopeDepth').val(roleData.scope_depth || 0);
+                    });
                     tree.render({
                         elem: layeroCache.find('#permissionTree')[0],
                         data: treeData,
@@ -681,6 +690,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
 
     // 打开角色表单弹窗
     function openRoleForm(roleData) {
+        currentRoleFormData = roleData || null;
         var isEdit = !!roleData;
         var title = isEdit ? t('common.edit') + t('role.title') : t('common.add') + t('role.title');
 
@@ -720,15 +730,9 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                             code: roleData.code,
                             description: roleData.description || '',
                             status: roleData.status,
-                            max_users: roleData.max_users || '',
-                            scope_node: roleData.scope_node || '',
-                            scope_depth: roleData.scope_depth || 0
+                            max_users: roleData.max_users || ''
                         });
                     }
-                    layero.find('[name="scope_node"], [name="scope_depth"]').off('input.scopePreview').on('input.scopePreview', function() {
-                        updateScopePreview(layero);
-                    });
-                    updateScopePreview(layero);
 
                     form.render(null, 'roleForm');
                     loadAllRoles(function() {
@@ -837,8 +841,8 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                 max_users: field.max_users || 0,
                 parent_ids: parentIds,
                 parent_id: parentIds[0] || null,
-                scope_node: field.scope_node || '',
-                scope_depth: field.scope_depth || 0,
+                scope_node: currentRoleFormData ? (currentRoleFormData.scope_node || '') : '',
+                scope_depth: currentRoleFormData ? (currentRoleFormData.scope_depth || 0) : 0,
                 menu_ids: menuIds
             };
 
@@ -934,6 +938,27 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
     table.on('toolbar(roleTable)', function(obj) {
         if (obj.event === 'add') {
             openRoleForm(null);
+        } else if (obj.event === 'batchDelete') {
+            var checked = table.checkStatus('roleTable').data || [];
+            var ids = checked.map(function(row) { return row.id; });
+            if (!ids.length) {
+                layer.msg(t('data.selectRowsFirst') || '请先选择角色', {icon: 2});
+                return;
+            }
+            layer.confirm(t('data.batchDeleteConfirm') || '确认批量删除所选角色？', {
+                title: t('role.title'), skin: 'layui-layer-admin',
+                btn: [t('common.confirm'), t('common.cancel')]
+            }, function(index) {
+                layer.close(index);
+                postApi('/admin/api/rbac/roles/batch-delete/', {ids: ids}, function(res) {
+                    if (res.code !== 200) {
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
+                    }
+                    layer.msg(t('common.deleteSuccess'), {icon: 1});
+                    loadTable();
+                });
+            });
         } else if (obj.event === 'refresh') {
             loadTable();
         }
@@ -1076,6 +1101,24 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
         } else if (obj.event === 'edit') {
             openRoleForm(data);
         }
+    });
+
+    table.on('switch(roleStatus)', function(obj) {
+        var data = obj.data || {};
+        var desired = !!obj.elem.checked;
+        if (data.is_system) {
+            obj.elem.checked = !desired;
+            form.render('checkbox');
+            layer.msg(t('role.systemCannotDelete'), {icon: 2});
+            return;
+        }
+        postApi('/admin/api/rbac/roles/' + data.id + '/status/', {status: desired}, function(res) {
+            if (res.code !== 200) {
+                obj.elem.checked = !desired;
+                form.render('checkbox');
+                layer.msg(res.msg || t('common.fail'), {icon: 2});
+            }
+        });
     });
 
     // 初始化

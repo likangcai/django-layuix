@@ -6,7 +6,7 @@
     <title>菜单管理 - 软件测试管理后台</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126p">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126s">
     <script>
         // 同步父页面主题
         function syncParentTheme() {
@@ -54,15 +54,6 @@
         .menu-tree-toolbar .layui-btn { margin-left: 0; padding: 0 8px; }
         .menu-tree-toolbar .layui-btn i { font-size: 14px; }
         .menu-table-panel { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
-        .permission-shuttle { display: grid; grid-template-columns: 1fr 70px 1fr; gap: 8px; align-items: stretch; }
-        .permission-shuttle-panel { border: 1px solid var(--card-border); border-radius: 6px; background: var(--bg-secondary); overflow: hidden; }
-        .permission-shuttle-title { padding: 6px 10px; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--card-border); }
-        .permission-shuttle-list { height: 168px; overflow-y: auto; padding: 6px; }
-        .permission-shuttle-item { padding: 5px 8px; border-radius: 4px; cursor: pointer; user-select: none; font-size: 13px; }
-        .permission-shuttle-item:hover { background: var(--bg-hover); }
-        .permission-shuttle-item.is-selected { background: var(--primary-color); color: #fff; }
-        .permission-shuttle-actions { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
-        .permission-shuttle-actions .layui-btn { margin-left: 0; padding: 0; }
         .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
         .layui-input-block { margin-left: 130px; }
         .icon-preview { display: inline-block; width: 20px; text-align: center; margin-right: 5px; }
@@ -198,29 +189,6 @@
                 <input type="text" name="permission" placeholder="{{ t('menu.permission') }}" autocomplete="off" class="layui-input">
             </div>
         </div>
-        <div class="layui-form-item menu-field" data-types="1,2">
-            <label class="layui-form-label">{{ t('menu.buttonPermissions') }}</label>
-            <div class="layui-input-block">
-                <div class="permission-shuttle">
-                    <div class="permission-shuttle-panel">
-                        <div class="permission-shuttle-title">{{ t('menu.availableActions') }}</div>
-                        <div class="permission-shuttle-list" id="availableActions"></div>
-                    </div>
-                    <div class="permission-shuttle-actions">
-                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="addAllActions">&gt;&gt;</button>
-                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="addAction">&gt;</button>
-                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="removeAction">&lt;</button>
-                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="removeAllActions">&lt;&lt;</button>
-                    </div>
-                    <div class="permission-shuttle-panel">
-                        <div class="permission-shuttle-title">{{ t('menu.selectedActions') }}</div>
-                        <div class="permission-shuttle-list" id="selectedActions"></div>
-                    </div>
-                    <input type="hidden" name="generated_actions" id="generatedActions" value="">
-                </div>
-                <div class="layui-form-mid layui-word-aux" style="padding-left:0;">{{ t('menu.autoGenerateHint') }}</div>
-            </div>
-        </div>
         <div class="layui-form-item">
             <label class="layui-form-label">{{ t('menu.sort') }}</label>
             <div class="layui-input-block">
@@ -275,7 +243,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261126p"></script>
+    <script src="/static/layui/js/common.js?v=20261126s"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -499,116 +467,6 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         });
     }
 
-    function derivePermissionPrefix(menuData) {
-        var code = String((menuData && menuData.permission) || '').trim();
-        if (code.indexOf(':') > -1) return code.split(':')[0];
-        var path = String((menuData && menuData.path) || '').replace(/^\/+|\/+$/g, '');
-        if (path) {
-            var segment = path.split('/').pop().replace('.html', '').replace(/-/g, '_');
-            if (segment) return segment.toLowerCase();
-        }
-        return 'menu';
-    }
-
-    function actionLabel(action, lang) {
-        return lang === 'en' ? (action.en || action.value) : (action.zh_hans || action.value);
-    }
-
-    function initPermissionShuttle(layero, menuData, treeData) {
-        var root = $(layero);
-        var currentUser = (window.parent && window.parent.currentUser) || {};
-        var actions = currentUser.button_actions || [];
-        var selected = {};
-
-        function renderShuttle() {
-            if (menuData) {
-                var prefix = derivePermissionPrefix(menuData);
-                function visit(nodes) {
-                    (nodes || []).forEach(function(node) {
-                        if (node.menu_type === 3 && node.permission && node.permission.indexOf(prefix + ':') === 0) {
-                            var key = node.permission.split(':')[1];
-                            if (key) selected[key] = true;
-                        }
-                        visit(node.children);
-                    });
-                }
-                visit(treeData);
-            }
-
-            function itemHtml(action) {
-                return '<div class="permission-shuttle-item" data-value="' + escapeHtml(action.value) + '">'
-                    + escapeHtml(actionLabel(action, currentUser.language)) + '</div>';
-            }
-            var available = actions.filter(function(a) { return !selected[a.value]; });
-            var selectedActions = actions.filter(function(a) { return selected[a.value]; });
-            root.find('#availableActions').html(
-                available.length ? available.map(itemHtml).join('')
-                    : '<div class="permission-shuttle-item layui-disabled">' + escapeHtml(t('menu.noActionHint')) + '</div>'
-            );
-            root.find('#selectedActions').html(selectedActions.map(itemHtml).join(''));
-
-            function syncHidden() {
-                var values = root.find('#selectedActions .permission-shuttle-item[data-value]').map(function() {
-                    return $(this).attr('data-value');
-                }).get();
-                root.find('input[name="generated_actions"]').val(values.join(','));
-            }
-
-            function bindSelection(selector) {
-                root.find(selector).off('click.permissionShuttle').on('click.permissionShuttle', '.permission-shuttle-item[data-value]', function() {
-                    $(this).toggleClass('is-selected');
-                });
-            }
-            bindSelection('#availableActions');
-            bindSelection('#selectedActions');
-
-            function move(from, to, all) {
-                var items = root.find(from + ' .permission-shuttle-item[data-value]');
-                if (!all) items = items.filter('.is-selected');
-                if (!items.length) return;
-                root.find(to).append(items.clone().removeClass('is-selected'));
-                items.remove();
-                syncHidden();
-            }
-            root.find('#addAction').off('click').on('click', function() { move('#availableActions', '#selectedActions', false); });
-            root.find('#removeAction').off('click').on('click', function() { move('#selectedActions', '#availableActions', false); });
-            root.find('#addAllActions').off('click').on('click', function() { move('#availableActions', '#selectedActions', true); });
-            root.find('#removeAllActions').off('click').on('click', function() { move('#selectedActions', '#availableActions', true); });
-            syncHidden();
-        }
-
-        if (!actions.length) {
-            getApi('/admin/api/rbac/userinfo/', function(res) {
-                if (res.code === 200 && res.data) {
-                    currentUser = res.data;
-                    actions = currentUser.button_actions || [];
-                }
-                renderShuttle();
-            });
-        } else {
-            renderShuttle();
-        }
-    }
-
-    function selectedButtonActions(layero) {
-        var value = $(layero).find('input[name="generated_actions"]').val() || '';
-        return value ? value.split(',') : [];
-    }
-
-    function generateButtons(menuId, layero, done) {
-        var actions = selectedButtonActions(layero);
-        postApi('/admin/api/rbac/menus/' + menuId + '/generate-permissions/', {
-            actions: actions, replace: true
-        }, function(res) {
-            if (res.code !== 200) {
-                layer.msg(res.msg || t('common.fail'), {icon: 2});
-                done(false);
-                return;
-            }
-            done(true);
-        });
-    }
-
     // 打开菜单表单弹窗
     function openMenuForm(menuData) {
         var isEdit = !!menuData;
@@ -662,7 +520,6 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                         });
                     }
 
-                    initPermissionShuttle(layero, menuData, treeData);
                     form.render(null, 'menuForm');
 
                     // ===== 联动逻辑：visible 总开关控制 =====
@@ -740,14 +597,11 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                         layer.msg(res.msg || t('common.fail'), {icon: 2});
                         return;
                     }
-                    generateButtons(id, $btn.closest('.layui-layer'), function(success) {
-                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
-                        if (!success) return;
-                        layer.msg(t('common.updateSuccess'), {icon: 1});
-                        layer.closeAll();
-                        loadMenuTree();
-                        loadTable();
-                    });
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                    layer.msg(t('common.updateSuccess'), {icon: 1});
+                    layer.closeAll();
+                    loadMenuTree();
+                    loadTable();
                 });
             } else {
                 postApi('/admin/api/rbac/menus/create/', submitData, function(res) {
@@ -756,14 +610,11 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                         layer.msg(res.msg || t('common.fail'), {icon: 2});
                         return;
                     }
-                    generateButtons(res.data.id, $btn.closest('.layui-layer'), function(success) {
-                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
-                        if (!success) return;
-                        layer.msg(t('common.addSuccess'), {icon: 1});
-                        layer.closeAll();
-                        loadMenuTree();
-                        loadTable();
-                    });
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                    layer.msg(t('common.addSuccess'), {icon: 1});
+                    layer.closeAll();
+                    loadMenuTree();
+                    loadTable();
                 });
             }
             return false;

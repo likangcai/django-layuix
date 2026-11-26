@@ -1800,6 +1800,74 @@ class RbacFinalAuditTests(TestCase):
         Menu.objects.create(name='业务节点一', menu_type=3, permission='audit:unique')
         Menu.objects.create(name='业务节点二', menu_type=3, permission='audit:unique')
 
+    def test_permission_catalog_business_button_create_and_delete(self):
+        from .models import Menu
+
+        parent = Menu.objects.create(
+            name='审计中心', menu_type=2, permission='audit:view', status=True
+        )
+        response = self.client.post(
+            '/admin/api/rbac/permission-catalog/buttons/create/',
+            {'parent_id': parent.pk, 'actions': ['add', 'edit']},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        codes = response.json()['data']['created']
+        self.assertIn('audit:add', codes)
+        child = Menu.objects.get(
+            parent=parent, permission='audit:add', menu_type=3, plugin_key=''
+        )
+        listed = self.client.get(
+            '/admin/api/rbac/permission-catalog/?keyword=audit:add'
+        ).json()['data']['list']
+        self.assertTrue(any(
+            row['id'] == child.pk and row['source'] == 'business' and row['deletable']
+            for row in listed
+        ))
+        response = self.client.post(
+            '/admin/api/rbac/permission-catalog/buttons/%s/delete/' % child.pk,
+            {}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Menu.objects.filter(pk=child.pk).exists())
+
+    def test_role_status_toggle_and_batch_delete(self):
+        from .models import Role
+
+        role_a = Role.objects.create(name='状态切换A', code='status_a')
+        role_b = Role.objects.create(name='状态切换B', code='status_b')
+        system_role = Role.objects.create(
+            name='审计系统角色', code='audit_system_role', is_system=True
+        )
+
+        response = self.client.post(
+            '/admin/api/rbac/roles/%s/status/' % role_a.pk,
+            {'status': False}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        role_a.refresh_from_db()
+        self.assertFalse(role_a.status)
+
+        response = self.client.post(
+            '/admin/api/rbac/roles/%s/status/' % system_role.pk,
+            {'status': False}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+        response = self.client.post(
+            '/admin/api/rbac/roles/batch-delete/',
+            {'ids': [role_a.pk, role_b.pk]}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['deleted'], 2)
+        self.assertFalse(Role.objects.filter(pk__in=[role_a.pk, role_b.pk]).exists())
+
+        response = self.client.post(
+            '/admin/api/rbac/roles/batch-delete/',
+            {'ids': [system_role.pk]}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_permission_catalog_can_toggle_non_core_codes(self):
         from .permission_registry import PAGE_PERMISSIONS, register_page_permissions
 

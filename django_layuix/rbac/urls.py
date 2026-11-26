@@ -52,11 +52,13 @@ urlpatterns = [
 
     # 角色 CRUD
     path('roles/', views.role_list, name='rbac_role_list'),
+    path('roles/batch-delete/', views.role_batch_delete, name='rbac_role_batch_delete'),
     path('roles/create/', views.role_create, name='rbac_role_create'),
     path('roles/<int:pk>/effective_permissions/', views.role_effective_permissions, name='rbac_role_effective_permissions'),
     path('roles/<int:pk>/', views.role_detail, name='rbac_role_detail'),
     path('roles/<int:pk>/update/', views.role_detail, name='rbac_role_update'),
     path('roles/<int:pk>/delete/', views.role_detail, name='rbac_role_delete'),
+    path('roles/<int:pk>/status/', views.role_toggle_status, name='rbac_role_status'),
     path('roles/<int:pk>/copy/', views.role_copy, name='rbac_role_copy'),
 
     # 用户 CRUD
@@ -113,6 +115,8 @@ urlpatterns = [
     path('positions/create/', data_admin_views.position_create, name='rbac_position_create'),
     path('positions/<int:pk>/', data_admin_views.position_detail, name='rbac_position_detail'),
     path('permission-catalog/', permission_catalog_views.permission_catalog_list, name='rbac_permission_catalog_list'),
+    path('permission-catalog/buttons/create/', permission_catalog_views.permission_catalog_buttons_create, name='rbac_permission_catalog_buttons_create'),
+    path('permission-catalog/buttons/<int:pk>/delete/', permission_catalog_views.permission_catalog_buttons_delete, name='rbac_permission_catalog_buttons_delete'),
     path('permission-catalog/<int:pk>/status/', permission_catalog_views.permission_catalog_set_status, name='rbac_permission_catalog_status'),
     path('regions/', data_admin_views.region_list, name='rbac_region_list'),
     path('regions/tree/', data_admin_views.region_tree, name='rbac_region_tree'),

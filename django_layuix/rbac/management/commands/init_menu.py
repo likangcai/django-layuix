@@ -140,8 +140,8 @@ class Command(BaseCommand):
     def _ensure_142_menus(self):
         """为 1.4.2 之前创建的安装补齐 ABAC 策略和数据范围菜单。"""
         specs = [
-            ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 5, '权限管理'),
-            ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 6, '权限管理'),
+            ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 7, '权限管理'),
+            ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 8, '权限管理'),
         ]
         self._migrate_scope_menu()
         for name, name_en, name_zh, icon, path, sort, parent_name in specs:
@@ -157,6 +157,15 @@ class Command(BaseCommand):
                     'backend_visible': True, 'frontend_visible': True,
                 },
             )
+            updated = []
+            if menu.sort != sort:
+                menu.sort = sort
+                updated.append('sort')
+            if menu.path != path:
+                menu.path = path
+                updated.append('path')
+            if updated:
+                menu.save(update_fields=updated)
             if created:
                 admin_role = Role.objects.filter(code='admin').first()
                 if admin_role:
@@ -173,27 +182,36 @@ class Command(BaseCommand):
                 'backend_visible': True, 'frontend_visible': True,
             },
         )
+        permission_group, _ = Menu.objects.get_or_create(
+            name='权限管理',
+            defaults={
+                'name_en': 'Permission', 'name_zh_hans': '权限管理',
+                'icon': 'layui-icon-auz', 'path': '', 'menu_type': 1,
+                'sort': 1, 'parent': None, 'status': True, 'visible': True,
+                'backend_visible': True, 'frontend_visible': True,
+            },
+        )
         specs = [
             ('字典管理', 'Dictionary', '字典管理', 'layui-icon-read',
-             '/data/dictionary', 'dict:view', 1),
+             '/data/dictionary', 'dict:view', 1, group),
             ('部门管理', 'Departments', '部门管理', 'layui-icon-group',
-             '/data/department', 'dept:view', 2),
+             '/data/department', 'dept:view', 4, permission_group),
             ('岗位管理', 'Positions', '岗位管理', 'layui-icon-user',
-             '/data/position', 'position:view', 3),
+             '/data/position', 'position:view', 5, permission_group),
             ('地区管理', 'Regions', '地区管理', 'layui-icon-location',
-             '/data/region', 'region:view', 4),
+             '/data/region', 'region:view', 4, group),
             ('会员等级', 'Member Levels', '会员等级', 'layui-icon-diamond',
-             '/data/member-level', 'member_level:view', 5),
+             '/data/member-level', 'member_level:view', 5, group),
         ]
         admin_role = Role.objects.filter(code='admin').first()
         created_any = False
-        for name, name_en, name_zh, icon, path, permission, sort in specs:
+        for name, name_en, name_zh, icon, path, permission, sort, target_group in specs:
             menu, created = Menu.objects.get_or_create(
                 name=name,
                 defaults={
                     'name_en': name_en, 'name_zh_hans': name_zh,
                     'icon': icon, 'path': path, 'permission': permission,
-                    'menu_type': 2, 'sort': sort, 'parent': group,
+                    'menu_type': 2, 'sort': sort, 'parent': target_group,
                     'status': True, 'visible': True,
                     'backend_visible': True, 'frontend_visible': True,
                 },
@@ -202,9 +220,12 @@ class Command(BaseCommand):
             if menu.permission != permission:
                 menu.permission = permission
                 updated_fields.append('permission')
-            if menu.parent_id != group.pk:
-                menu.parent = group
+            if menu.parent_id != target_group.pk:
+                menu.parent = target_group
                 updated_fields.append('parent')
+            if menu.sort != sort:
+                menu.sort = sort
+                updated_fields.append('sort')
             if menu.path != path:
                 menu.path = path
                 updated_fields.append('path')
@@ -215,6 +236,7 @@ class Command(BaseCommand):
             created_any = created_any or created
         if admin_role:
             admin_role.menus.add(group)
+            admin_role.menus.add(permission_group)
         if created_any or group_created:
             self.stdout.write(self.style.SUCCESS('  创建菜单: 数据管理 / 部门 / 岗位 / 地区 / 会员等级'))
 
@@ -231,7 +253,7 @@ class Command(BaseCommand):
                 'path': '/permission/catalog',
                 'permission': 'permission:view',
                 'menu_type': 2,
-                'sort': 7,
+                'sort': 9,
                 'parent': parent,
                 'status': True,
                 'visible': True,
@@ -239,6 +261,18 @@ class Command(BaseCommand):
                 'frontend_visible': True,
             },
         )
+        updated = []
+        if menu.sort != 9:
+            menu.sort = 9
+            updated.append('sort')
+        if menu.parent_id != parent.pk:
+            menu.parent = parent
+            updated.append('parent')
+        if menu.path != '/permission/catalog':
+            menu.path = '/permission/catalog'
+            updated.append('path')
+        if updated:
+            menu.save(update_fields=updated)
         if created:
             admin_role = Role.objects.filter(code='admin').first()
             if admin_role:
@@ -256,18 +290,18 @@ class Command(BaseCommand):
 
             # ---- 权限管理 ----
             ('权限管理', 'Permission', '权限管理', 'layui-icon-auz', '', 1, 1, None),
-            ('菜单管理', 'Menu', '菜单管理', 'layui-icon-menu-fill', '/permission/menu', 2, 1, '权限管理'),
+            ('用户管理', 'User', '用户管理', 'layui-icon-username', '/permission/user', 2, 1, '权限管理'),
             ('角色管理', 'Role', '角色管理', 'layui-icon-group', '/permission/role', 2, 2, '权限管理'),
-            ('用户管理', 'User', '用户管理', 'layui-icon-username', '/permission/user', 2, 3, '权限管理'),
-            ('约束管理', 'Constraints', '约束管理', 'layui-icon-auz', '/system/rbac-constraints', 2, 4, '权限管理'),
-            ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 2, 5, '权限管理'),
+            ('菜单管理', 'Menu', '菜单管理', 'layui-icon-menu-fill', '/permission/menu', 2, 3, '权限管理'),
+            ('约束管理', 'Constraints', '约束管理', 'layui-icon-auz', '/system/rbac-constraints', 2, 6, '权限管理'),
+            ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 2, 7, '权限管理'),
 
             # ---- 系统管理 ----
             ('系统管理', 'System', '系统管理', 'layui-icon-set', '', 1, 2, None),
             ('个人中心', 'Profile', '个人中心', 'layui-icon-user', '/static/layui/pages/profile.html', 2, 1, '系统管理'),
             ('操作日志', 'Log', '操作日志', 'layui-icon-log', '/system/log', 2, 2, '系统管理'),
             ('系统配置', 'Config', '系统配置', 'layui-icon-set-sm', '/system/config', 2, 3, '系统管理'),
-            ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 2, 6, '权限管理'),
+            ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 2, 8, '权限管理'),
 
             # ---- 运维管理 ----
             ('运维管理', 'Operations', '运维管理', 'layui-icon-console', '', 1, 3, None),
@@ -331,12 +365,18 @@ class Command(BaseCommand):
                         menu.frontend_visible = True
                         updated = True
                 else:
-                    # 非 --force 模式：只更新名称字段
+                    # 非 --force 模式：更新名称、排序和父级，保持侧栏结构与种子一致
                     if menu.name_en != name_en:
                         menu.name_en = name_en
                         updated = True
                     if menu.name_zh_hans != name_zh_hans:
                         menu.name_zh_hans = name_zh_hans
+                        updated = True
+                    if menu.sort != sort:
+                        menu.sort = sort
+                        updated = True
+                    if parent and menu.parent_id != parent.id:
+                        menu.parent = parent
                         updated = True
                 if updated:
                     menu.save()

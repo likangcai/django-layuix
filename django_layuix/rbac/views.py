@@ -1328,6 +1328,63 @@ def role_detail(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('role:edit')
+def role_toggle_status(request, pk):
+    """POST /api/rbac/roles/<pk>/status/ - 启用或停用角色。"""
+    from .models import Role
+
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    role = Role.objects.filter(pk=pk).first()
+    if role is None:
+        return error_response('角色不存在', 404)
+    if role.is_system:
+        return error_response('系统内置角色不能修改状态', 400)
+    body = get_request_body(request)
+    if 'status' not in body:
+        return error_response('缺少目标状态', 400)
+    role.status = bool(body.get('status'))
+    role.save(update_fields=['status'])
+    return success_response(
+        {'id': role.pk, 'status': role.status},
+        msg='角色已启用' if role.status else '角色已停用',
+    )
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:delete')
+def role_batch_delete(request):
+    """POST /api/rbac/roles/batch-delete/ - 批量删除角色。"""
+    from django.db import transaction
+
+    from .models import Role
+
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    body = get_request_body(request)
+    ids = body.get('ids') or []
+    if isinstance(ids, str):
+        ids = [item for item in ids.split(',') if item]
+    if not isinstance(ids, list) or not ids:
+        return error_response('请选择要删除的角色', 400)
+    try:
+        role_ids = [int(item) for item in ids]
+    except (TypeError, ValueError):
+        return error_response('角色 ID 格式错误', 400)
+    roles = list(Role.objects.filter(id__in=role_ids))
+    if len(roles) != len(set(role_ids)):
+        return error_response('部分角色不存在', 404)
+    system_names = [role.name for role in roles if role.is_system]
+    if system_names:
+        return error_response('系统内置角色不能删除：%s' % '、'.join(system_names), 400)
+    with transaction.atomic():
+        Role.objects.filter(id__in=role_ids).delete()
+    return success_response({'deleted': len(roles)}, msg='角色已删除')
+
+
+@csrf_exempt
+@api_login_required
 @api_permission_required('role:add')
 def role_create(request):
     """POST /api/rbac/roles/create/ - 创建角色"""

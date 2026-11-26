@@ -198,6 +198,8 @@ LAYUI_CONFIG = {
 - 按钮/动作：`permission_registry.BUTTON_ACTIONS` 与各模块前缀组成权限码；`init_menu` 会全量预注册到“权限目录 / 按钮权限目录”。
 - 数据管理：`dept:*`、`position:*`、`region:*`、`member_level:*` 分别对应部门、岗位、地区、会员等级模块。
 - 权限目录：新增 `permission:view` / `permission:edit` 与独立“权限总览”页面；`Menu.catalog_key` 为内置目录权限提供数据库唯一键，`permission:view`、`permission:edit` 受保护不可停用。
+- 业务按钮权限：在“权限总览”页选择上级菜单和按钮动作创建，按 `prefix:action` 生成业务按钮节点；仅业务来源按钮可删除，内置目录权限不可删除。
+- 角色授权：角色数据范围在“角色权限”弹窗中选择作用域节点与层数，保存时与菜单权限一起提交；角色列表支持行内状态切换与批量删除，系统内置角色受保护。
 - 自定义权限：在权限管理中创建启用且可见的 `sys_menu` 记录。
 - 字段白名单：在 `rbac/serializers.py` 的 `API_FIELD_REGISTRY` 中注册业务资源字段；未注册字段不会出现在响应中。嵌套集合通过 `API_NESTED_FIELD_REGISTRY` 声明，例如用户角色与订单明细。
 - 路由守卫：`/static/` 页面由 `enforcePagePermission()` 检查；未登记静态页面默认拒绝。
