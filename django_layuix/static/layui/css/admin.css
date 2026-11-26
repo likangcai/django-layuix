@@ -2852,8 +2852,12 @@ textarea:focus-visible,
 .layui-layer.layui-layer-admin {
     border: 0;
     border-radius: 12px;
-    overflow: hidden;
     box-shadow: 0 18px 50px rgba(15, 23, 42, 0.22);
+}
+/* 允许表单下拉菜单超出弹窗内容区，避免选项被裁切 */
+.layui-layer.layui-layer-admin,
+.layui-layer.layui-layer-admin .layui-layer-content {
+    overflow: visible;
 }
 .layui-layer.layui-layer-admin .layui-layer-title {
     height: 52px;

@@ -949,6 +949,29 @@ function currentUserPermissions() {
     return user.permissions || [];
 }
 
+// 等待当前用户信息就绪后再渲染依赖权限的表格，避免工具栏按空权限渲染
+function ensureCurrentUser(callback) {
+    var root = window.parent && window.parent !== window ? window.parent : window;
+    var user = root.currentUser || window.currentUser;
+    if (user && user.permissions) {
+        callback(user);
+        return;
+    }
+    if (typeof fetch !== 'function') {
+        callback({});
+        return;
+    }
+    fetch('/admin/api/rbac/userinfo/', {credentials: 'same-origin'})
+        .then(function(response) { return response.ok ? response.json() : {code: 401}; })
+        .then(function(res) {
+            var data = res && res.code === 200 ? res.data : {};
+            root.currentUser = data;
+            window.currentUser = data;
+            callback(data);
+        })
+        .catch(function() { callback({}); });
+}
+
 function requiredPagePermission(path) {
     var clean = String(path || location.pathname).split('?')[0].split('#')[0];
     var map = PAGE_PERMISSION_MAP;
@@ -1009,7 +1032,8 @@ window.LayuiUI = {
     virtualTable: renderVirtualTable,
     dialog: openStandardDialog,
     enforcePagePermission: enforcePagePermission,
-    requiredPagePermission: requiredPagePermission
+    requiredPagePermission: requiredPagePermission,
+    ensureCurrentUser: ensureCurrentUser
 };
 
 if (document.readyState === 'loading') {
