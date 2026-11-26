@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : sidebar_menu.py
 # -----------------------------
-"""django-layuix sidebar menu template tag"""
+"""django-layuix 侧栏菜单模板标签。"""
 from django import template
 from django.utils.safestring import mark_safe
 register = template.Library()

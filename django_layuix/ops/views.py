@@ -4,9 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : views.py
 # -----------------------------
-"""
-Ops API Views - Server CRUD, SSH test, log viewing, command execution
-"""
+"""运维 API 视图：服务器 CRUD、SSH 测试、日志查看和命令执行。"""
 import re
 import shlex
 import json
@@ -29,7 +27,7 @@ def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
 
 
 def get_request_body(request):
-    """Get parsed request body"""
+    """获取解析后的请求体。"""
     try:
         if request.content_type == 'application/json':
             return json.loads(request.body)
@@ -53,7 +51,7 @@ def error_response(msg='error', code=400):
 @api_permission_required('server:view')
 @field_whitelisted('ops.Server')
 def server_list(request):
-    """Get server list"""
+    """获取服务器列表。"""
     from .models import Server
     try:
         page = max(1, int(request.GET.get('page', 1)))
@@ -85,7 +83,7 @@ def server_list(request):
 @api_login_required
 @api_permission_required('server:add')
 def server_create(request):
-    """Create server"""
+    """创建服务器。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -109,7 +107,7 @@ def server_create(request):
 @api_login_required
 @api_permission_required('server:edit')
 def server_update(request, pk):
-    """Update server"""
+    """更新服务器。"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -140,7 +138,7 @@ def server_update(request, pk):
 @api_permission_required('server:view')
 @field_whitelisted('ops.Server')
 def server_detail(request, pk):
-    """Get server detail; credential fields are never returned"""
+    """获取服务器详情；绝不返回凭据字段。"""
     from .models import Server
     try:
         server = Server.objects.get(pk=pk)
@@ -165,7 +163,7 @@ def server_detail(request, pk):
 @api_login_required
 @api_permission_required('server:delete')
 def server_delete(request, pk):
-    """Delete server"""
+    """删除服务器。"""
     if request.method != 'DELETE':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -183,7 +181,7 @@ def server_delete(request, pk):
 @api_login_required
 @api_permission_required('server:terminal')
 def server_test(request, pk):
-    """Test SSH connection"""
+    """测试 SSH 连接。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -279,7 +277,7 @@ def server_test(request, pk):
 @api_login_required
 @api_permission_required('server:view_log')
 def server_log(request, pk):
-    """View remote server log file"""
+    """查看远程服务器日志文件。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -316,7 +314,7 @@ def server_log(request, pk):
 @api_login_required
 @api_permission_required('server:terminal')
 def server_exec(request, pk):
-    """Execute command on remote server"""
+    """在远程服务器执行命令。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -364,7 +362,7 @@ import uuid as _uuid
 
 
 def _mask_key(api_key):
-    """Mask API key for display"""
+    """对 API Key 脱敏后展示。"""
     if not api_key:
         return ''
     if len(api_key) > 12:
@@ -373,7 +371,7 @@ def _mask_key(api_key):
 
 
 def _load_ai_configs():
-    """Load AI configs from database only."""
+    """仅从数据库加载 AI 配置。"""
     from .models import AIModelConfig
     
     configs = []
@@ -397,7 +395,7 @@ def _load_ai_configs():
 
 
 def _save_ai_configs(configs):
-    """Save AI configs to database only."""
+    """仅将 AI 配置保存到数据库。"""
     from .models import AIModelConfig
     
     try:
@@ -471,7 +469,7 @@ def _get_ai_settings():
 @api_login_required
 @api_permission_required('ai_config:view')
 def ai_config_list(request):
-    """List all AI model configs (api_key masked), with optional keyword search"""
+    """列出全部 AI 模型配置（api_key 已脱敏），支持关键词搜索。"""
     # 支持搜索：keyword 参数
     keyword = request.GET.get('keyword', '').strip().lower()
     
@@ -533,7 +531,7 @@ def ai_config_list(request):
 @api_login_required
 @api_permission_required('ai_config:view')
 def ai_config_get(request):
-    """Get single AI config by id, or default config if no id given (legacy)"""
+    """按 ID 获取单个 AI 配置；未传 ID 时返回默认配置（兼容旧版）。"""
     config_id = request.GET.get('id', '')
     configs = _load_ai_configs()
     if config_id:
@@ -564,10 +562,7 @@ def ai_config_get(request):
 @csrf_exempt
 @api_login_required
 def ai_config_save(request):
-    """Create or update AI config.
-    POST body: {id?, name, provider, api_key, base_url, model, is_default?}
-    If id is provided -> update; else -> create new.
-    """
+    """创建或更新 AI 配置。POST 请求体：{id?, name, provider, api_key, base_url, model, is_default?}；传 id 表示更新，否则创建。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
 
@@ -641,7 +636,7 @@ def ai_config_save(request):
 @api_login_required
 @api_permission_required('ai_config:delete')
 def ai_config_delete(request, config_id):
-    """Delete AI config by id"""
+    """按 ID 删除 AI 配置。"""
     if request.method != 'DELETE':
         return error_response('Method not allowed', 405)
     configs = _load_ai_configs()
@@ -659,7 +654,7 @@ def ai_config_delete(request, config_id):
 @api_login_required
 @api_permission_required('ai_config:set_default')
 def ai_config_set_default(request, config_id):
-    """Set a config as default (active) for AI analysis"""
+    """将某个配置设为 AI 分析默认（启用）配置。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     configs = _load_ai_configs()
@@ -680,9 +675,7 @@ def ai_config_set_default(request, config_id):
 @api_login_required
 @api_permission_required('ai_config:test')
 def ai_config_test(request):
-    """Test AI config by sending a simple request.
-    POST body: {id?} - test specific config by id, or default if no id.
-    """
+    """通过简单请求测试 AI 配置。POST 请求体：{id?}；传 id 测试指定配置，否则测试默认配置。"""
     import logging
     logger = logging.getLogger(__name__)
 
@@ -796,7 +789,7 @@ def ai_config_test(request):
 @api_login_required
 @api_permission_required('ai_config:test')
 def ai_analyze_log(request):
-    """AI analyze server log content"""
+    """使用 AI 分析服务器日志内容。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
 

@@ -280,9 +280,7 @@ pre code .layui-code-h3 {{
 
 
 def generate_all_themes():
-    """
-    Generate CSS files for all available themes (dark/light only)
-    """
+    """为全部可用主题生成 CSS 文件（仅深色/浅色）。"""
     from django_layuix.rbac.themes import DJANGO_LAYUIX_THEMES
     
     # 获取输出目录

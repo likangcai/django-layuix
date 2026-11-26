@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : plugins.py
 # -----------------------------
-"""Third-party plugin registry: discovery, validation, persistence and hooks."""
+"""第三方插件注册表：发现、校验、持久化和钩子。"""
 import importlib
 import logging
 import os
@@ -34,7 +34,7 @@ def _db():
 
 
 def _supports_desired_active():
-    """Avoid querying a column that does not exist before migrations run."""
+    """避免迁移执行前查询不存在的字段。"""
     from .models import PluginRegistry
     return any(field.name == 'desired_active' for field in PluginRegistry._meta.get_fields())
 
@@ -92,7 +92,7 @@ def _as_lines(value):
 
 
 def validate_plugin_metadata(metadata):
-    """Return a list of human-readable validation errors."""
+    """返回可读性良好的校验错误列表。"""
     errors = []
     minimum = metadata.get('min_layuix_version')
     if minimum and not _satisfies('django-layuix>=%s' % minimum):
@@ -152,7 +152,7 @@ def register_plugin(key, name, version='1.0.0', description='',
                     api_prefix='', menu_path='', app_label='',
                     dependencies=(), is_active=True, source='app',
                     validation_error='', validation_errors=None):
-    """Register or update plugin metadata. Safe to call from AppConfig.ready()."""
+    """注册或更新插件元数据。可从 AppConfig.ready() 安全调用。"""
     errors = list(validation_errors or [])
     if key in RESERVED_PLUGIN_KEYS:
         errors.append('插件键 %s 为系统保留键' % key)
@@ -256,7 +256,7 @@ def unregister_plugin(key):
 
 
 def set_plugin_active(key, active):
-    """Persist user intent, then invoke lifecycle hook only on a successful transition."""
+    """先持久化用户意图，仅在状态切换成功后调用生命周期钩子。"""
     active = bool(active)
     supports_desired = _supports_desired_active()
     try:
@@ -292,7 +292,7 @@ def set_plugin_active(key, active):
 
 
 def register_plugin_menus(key, plugin_instance):
-    """Register menus and buttons declared by a PluginConfig."""
+    """注册 PluginConfig 声明的菜单和按钮。"""
     if key in RESERVED_PLUGIN_KEYS:
         logger.warning('Refused to register menus for reserved plugin key %s', key)
         return
@@ -308,7 +308,7 @@ def register_plugin_menus(key, plugin_instance):
 
 
 def discover_entry_point_plugins():
-    """Discover plugins published by installed third-party packages."""
+    """发现已安装第三方包发布的插件。"""
     from importlib.metadata import entry_points
 
     try:
@@ -345,7 +345,7 @@ def discover_entry_point_plugins():
 
 
 def list_plugins():
-    """Merge persisted records with the in-process registry."""
+    """将持久化记录与进程内注册表合并。"""
     merged = {}
     persisted_keys = set()
     try:

@@ -323,7 +323,7 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
 
 
 def unregister_plugin_menus(plugin_key):
-    """Delete all menus and buttons declared by a plugin."""
+    """删除插件声明的全部菜单和按钮。"""
     if not plugin_key:
         return
     from django_layuix.rbac.models import Menu

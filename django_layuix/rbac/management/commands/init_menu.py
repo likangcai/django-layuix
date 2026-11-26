@@ -91,7 +91,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('\n初始化完成！'))
 
     def _ensure_rbac3_menu(self):
-        """Add the constraint-management menu to installations created before RBAC3."""
+        """为 RBAC3 之前创建的安装补齐约束管理菜单。"""
         parent = Menu.objects.filter(name='权限管理').first()
         if not parent:
             return
@@ -138,7 +138,7 @@ class Command(BaseCommand):
             duplicate.delete()
 
     def _ensure_142_menus(self):
-        """Add ABAC policy and data scope menus to pre-1.4.2 installations."""
+        """为 1.4.2 之前创建的安装补齐 ABAC 策略和数据范围菜单。"""
         specs = [
             ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 5, '权限管理'),
             ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 6, '权限管理'),
@@ -163,7 +163,7 @@ class Command(BaseCommand):
                     admin_role.menus.add(menu)
 
     def _ensure_data_menus(self):
-        """Add data-management menus to existing installations."""
+        """为已有安装补齐数据管理菜单。"""
         group, group_created = Menu.objects.get_or_create(
             name='数据管理',
             defaults={
@@ -681,7 +681,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f'  提示：{skipped_count} 个系统配置已存在，未作修改。如需重置为默认值，请使用 --force 参数。'))
 
     def _init_default_dictionaries(self):
-        """Seed reusable dictionaries without overwriting later edits."""
+        """写入可复用字典种子，不覆盖后续修改。"""
         defaults = [
             ('sys_common_status', '通用状态', '启用与停用状态', [
                 ('启用', '1', True), ('停用', '0', False),

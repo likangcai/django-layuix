@@ -11,7 +11,7 @@ from django_layuix.rbac.scopes import ScopedModelMixin
 
 
 class DemoOrder(ScopedModelMixin, models.Model):
-    """Copyable example model showing Scope + ABAC field filtering."""
+    """可复制的示例模型，展示数据范围 + ABAC 字段过滤。"""
 
     SCOPE_FIELD = 'department'
 

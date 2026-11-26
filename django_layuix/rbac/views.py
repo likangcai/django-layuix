@@ -4,9 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : views.py
 # -----------------------------
-"""
-RBAC API Views - User info, menu data, system info, profile management
-"""
+"""RBAC API 视图：用户信息、菜单数据、系统信息和个人资料管理。"""
 import json
 import os
 import platform
@@ -36,7 +34,7 @@ def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
 
 
 def get_request_body(request):
-    """Get parsed request body - supports JSON and form data for all HTTP methods"""
+    """获取解析后的请求体，支持所有 HTTP 方法的 JSON 和表单数据。"""
     try:
         if request.content_type == 'application/json':
             return json.loads(request.body)
@@ -63,13 +61,13 @@ def error_response(msg='error', code=400):
 
 
 def _get_user_model():
-    """Get the user model"""
+    """获取用户模型。"""
     from django.contrib.auth import get_user_model
     return get_user_model()
 
 
 def _build_menu_tree(menus, parent_id=None, visited=None):
-    """Build menu tree from flat list; cycles are skipped instead of recursing forever."""
+    """从扁平列表构建菜单树；检测到环时跳过，避免无限递归。"""
     if visited is None:
         visited = set()
     tree = []
@@ -89,7 +87,7 @@ def _build_menu_tree(menus, parent_id=None, visited=None):
 
 
 def _validate_menu_parent(menu_id, parent_id):
-    """Reject self-parents and cycles in the menu hierarchy."""
+    """拒绝菜单层级中的自我上级和环形引用。"""
     if not parent_id:
         return True
     try:
@@ -115,7 +113,7 @@ def _validate_menu_parent(menu_id, parent_id):
 @csrf_exempt
 @api_login_required
 def user_info(request):
-    """Get current user info with menus"""
+    """获取当前用户信息及菜单。"""
     User = _get_user_model()
     try:
         user = User.objects.get(pk=request.user.pk)
@@ -236,13 +234,13 @@ def _get_frontend_menus(user):
 
 
 def _get_user_permissions(user):
-    """Get user permission strings (inheritance and active roles included)."""
+    """获取用户权限码（包含继承和激活角色）。"""
     from .engine import get_effective_permissions
     return list(get_effective_permissions(user))
 
 
 def _permission_catalog_payload(user, permissions):
-    """Expose only the catalog subset relevant to the current user."""
+    """仅暴露与当前用户相关的权限目录子集。"""
     from .permission_registry import BUTTON_ACTIONS, PAGE_PERMISSIONS, permission_catalog
 
     is_admin = bool(
@@ -265,7 +263,7 @@ def _permission_catalog_payload(user, permissions):
 @api_login_required
 @api_permission_required('config:view')
 def system_info(request):
-    """Get system information including CPU, memory, disk, network"""
+    """获取系统信息，包括 CPU、内存、磁盘和网络。"""
     import psutil
     data = {
         'python_version': platform.python_version(),
@@ -391,7 +389,7 @@ def system_info(request):
 @api_login_required
 @api_permission_required('config:view')
 def system_info_stream_ticket(request):
-    """Issue a short-lived ticket for EventSource, avoiding JWT in URLs."""
+    """为 EventSource 签发短期票据，避免将 JWT 放入 URL。"""
     from .token_auth import generate_stream_ticket
 
     return success_response({
@@ -573,13 +571,13 @@ def system_info_stream(request):
 
 
 def _get_django_version():
-    """Get Django version"""
+    """获取 Django 版本。"""
     import django
     return django.get_version()
 
 
 def _bytes_to_human(n):
-    """Convert bytes to human readable format (1TB=1024GB)"""
+    """将字节数转换为易读格式（1TB=1024GB）。"""
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         if abs(n) < 1024.0:
             return f"{n:.2f} {unit}"
@@ -588,7 +586,7 @@ def _bytes_to_human(n):
 
 
 def _get_db_info():
-    """Get database information"""
+    """获取数据库信息。"""
     from django.db import connections
 
     db_info = {}
@@ -636,7 +634,7 @@ def _get_db_info():
 
 @csrf_exempt
 def public_config(request):
-    """Get public system configuration (no auth required) - for login page etc."""
+    """获取公开系统配置（无需认证），用于登录页等场景。"""
     from .models import SystemConfig
 
     db_configs = {}
@@ -669,7 +667,7 @@ def public_config(request):
 @csrf_exempt
 @api_login_required
 def system_config(request):
-    """Get system configuration - database first, settings as fallback"""
+    """获取系统配置：优先数据库，settings 作为回退。"""
     from .models import SystemConfig
 
     # 从 settings 获取默认值
@@ -704,7 +702,7 @@ def system_config(request):
 @csrf_exempt
 @api_login_required
 def profile_update(request):
-    """Update user profile"""
+    """更新用户资料。"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
 
@@ -726,7 +724,7 @@ def profile_update(request):
 @csrf_exempt
 @api_login_required
 def profile_password(request):
-    """Change user password"""
+    """修改用户密码。"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
 
@@ -757,7 +755,7 @@ def profile_password(request):
 @csrf_exempt
 @api_login_required
 def profile_theme(request):
-    """Update user theme preference - supports both new format ('dark'/'light') and legacy Chinese theme names"""
+    """更新用户主题偏好，同时支持新格式（'dark'/'light'）和旧版中文主题名称。"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
 
@@ -778,7 +776,7 @@ def profile_theme(request):
 @csrf_exempt
 @api_login_required
 def available_themes(request):
-    """GET /api/rbac/available-themes/ - Get available themes (dark/light only)"""
+    """GET /api/rbac/available-themes/ - 获取可用主题（仅深色/浅色）。"""
     from .themes import get_all_themes
 
     themes = get_all_themes()
@@ -790,7 +788,7 @@ def available_themes(request):
 @csrf_exempt
 @api_login_required
 def set_language(request):
-    """Set user language preference"""
+    """设置用户语言偏好。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
 
@@ -911,7 +909,7 @@ def api_login(request):
 @csrf_exempt
 @api_login_required
 def logout(request):
-    """AJAX logout - clear session, revoke current token and return success"""
+    """AJAX 登出：清除会话、撤销当前令牌并返回成功。"""
     from django.contrib.auth import logout as django_logout
 
     from .token_auth import revoke_token
@@ -932,7 +930,7 @@ def logout(request):
 @api_login_required
 @api_permission_required('dashboard:view')
 def stats_data(request):
-    """Get statistics data for dashboard"""
+    """获取仪表盘统计数据。"""
     from .models import Menu, Role, OperationLog
 
     User = _get_user_model()
@@ -1739,7 +1737,7 @@ def _position_assignment_payload(item):
 @api_login_required
 @api_permission_required('user:view')
 def user_position_assignments(request, pk):
-    """GET /api/rbac/users/<id>/position-assignments/."""
+    """GET /api/rbac/users/<id>/position-assignments/ - 获取用户任职记录。"""
     if request.method != 'GET':
         return error_response('Method not allowed', 405)
     User = _get_user_model()
@@ -1757,7 +1755,7 @@ def user_position_assignments(request, pk):
 @api_login_required
 @api_permission_required('user:edit')
 def end_position_assignment(request, pk):
-    """POST /api/rbac/position-assignments/<id>/end/ - close a tenure."""
+    """POST /api/rbac/position-assignments/<id>/end/ - 结束一条任职记录。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     from django.utils import timezone
@@ -1792,7 +1790,7 @@ def end_position_assignment(request, pk):
 @api_login_required
 @api_permission_required('user:view')
 def user_org_options(request):
-    """GET /api/rbac/users/org-options/ - active departments and positions."""
+    """GET /api/rbac/users/org-options/ - 获取启用的部门和岗位选项。"""
     from .models import Department, Position
 
     return success_response({
@@ -2747,7 +2745,7 @@ def scope_node_list(request):
 @api_login_required
 @api_permission_by_method({'GET': 'scope:view', 'POST': 'scope:add', 'PUT': 'scope:edit', 'PATCH': 'scope:edit', 'DELETE': 'scope:delete'})
 def scope_node_detail(request, pk):
-    """GET/PUT/DELETE /api/rbac/scope-nodes/<id>/"""
+    """GET/PUT/DELETE /api/rbac/scope-nodes/<id>/ - 查询、更新或删除数据范围节点。"""
     from .models import Role, ScopeNode
 
     node = ScopeNode.objects.filter(pk=pk).first()
@@ -2818,7 +2816,7 @@ def _abac_payload(policy, include_expression=True):
 @api_login_required
 @api_permission_by_method({'GET': 'abac:view', 'POST': 'abac:add', 'PUT': 'abac:edit', 'PATCH': 'abac:edit', 'DELETE': 'abac:delete'})
 def abac_policy_list(request):
-    """GET/POST /api/rbac/abac-policies/"""
+    """GET/POST /api/rbac/abac-policies/ - 获取或创建 ABAC 策略。"""
     from .abac import AbacError, validate_expression
     from .models import AbacPolicy
 
@@ -2854,7 +2852,7 @@ def abac_policy_list(request):
 @api_login_required
 @api_permission_by_method({'GET': 'abac:view', 'POST': 'abac:add', 'PUT': 'abac:edit', 'PATCH': 'abac:edit', 'DELETE': 'abac:delete'})
 def abac_policy_detail(request, pk):
-    """GET/PUT/DELETE /api/rbac/abac-policies/<id>/"""
+    """GET/PUT/DELETE /api/rbac/abac-policies/<id>/ - 查询、更新或删除 ABAC 策略。"""
     from .abac import AbacError, validate_expression
     from .models import AbacPolicy
 

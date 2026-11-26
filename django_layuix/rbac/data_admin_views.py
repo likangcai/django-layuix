@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : data_admin_views.py
 # -----------------------------
-"""Department, position, region and member-level management APIs."""
+"""部门、岗位、地区和会员等级管理 API。"""
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
@@ -130,7 +130,7 @@ def _member_level_payload(obj):
 @api_permission_required('dept:view')
 @field_whitelisted('rbac.Department')
 def department_list(request):
-    """GET /api/rbac/departments/ - list departments."""
+    """GET /api/rbac/departments/ - 获取部门列表。"""
     queryset = Department.objects.select_related('parent')
     keyword = str(request.GET.get('keyword') or '').strip()
     if keyword:
@@ -149,7 +149,7 @@ def department_list(request):
 @api_login_required
 @api_permission_required('dept:add')
 def department_create(request):
-    """POST /api/rbac/departments/create/."""
+    """POST /api/rbac/departments/create/ - 创建部门。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     body = get_request_body(request)
@@ -186,7 +186,7 @@ def department_create(request):
 @api_permission_required('dept:view')
 @field_whitelisted('rbac.Department')
 def department_detail(request, pk):
-    """GET/PUT/DELETE /api/rbac/departments/<id>/."""
+    """GET/PUT/DELETE /api/rbac/departments/<id>/ - 查询、更新或删除部门。"""
     try:
         obj = Department.objects.select_related('parent').get(pk=pk)
     except Department.DoesNotExist:
@@ -256,7 +256,7 @@ def department_detail(request, pk):
 @api_permission_required('position:view')
 @field_whitelisted('rbac.Position')
 def position_list(request):
-    """GET /api/rbac/positions/ - list positions."""
+    """GET /api/rbac/positions/ - 获取岗位列表。"""
     queryset = Position.objects.all()
     keyword = str(request.GET.get('keyword') or '').strip()
     if keyword:
@@ -274,7 +274,7 @@ def position_list(request):
 @api_login_required
 @api_permission_required('position:add')
 def position_create(request):
-    """POST /api/rbac/positions/create/."""
+    """POST /api/rbac/positions/create/ - 创建岗位。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     body = get_request_body(request)
@@ -302,7 +302,7 @@ def position_create(request):
 @api_permission_required('position:view')
 @field_whitelisted('rbac.Position')
 def position_detail(request, pk):
-    """GET/PUT/DELETE /api/rbac/positions/<id>/."""
+    """GET/PUT/DELETE /api/rbac/positions/<id>/ - 查询、更新或删除岗位。"""
     try:
         obj = Position.objects.get(pk=pk)
     except Position.DoesNotExist:
@@ -351,13 +351,7 @@ def position_detail(request, pk):
 @api_login_required
 @api_permission_required('region:view')
 def region_list(request):
-    """GET /api/rbac/regions/ - list regions.
-
-    ``_region_payload`` is the explicit response whitelist for this large
-    collection; applying the generic decorator would serialize 40k+ rows twice.
-    ``page`` enables server-side paging; omitting it keeps the legacy full-list
-    response for exports and existing integrations.
-    """
+    """GET /api/rbac/regions/ - 获取地区列表。_region_payload 是该大集合的显式响应白名单；通用装饰器会对 4 万行重复序列化。page 参数启用服务端分页，省略时保持旧版全量响应。"""
     queryset = Region.objects.select_related('parent')
     keyword = str(request.GET.get('keyword') or '').strip()
     if keyword:
@@ -413,7 +407,7 @@ def region_list(request):
 @api_login_required
 @api_permission_required('region:view')
 def region_tree(request):
-    """GET /api/rbac/regions/tree/ - province/city plus municipality districts."""
+    """GET /api/rbac/regions/tree/ - 返回省、市及直辖市区县树。"""
     provinces = list(Region.objects.filter(level=1).order_by('sort', 'id'))
     province_ids = [row.pk for row in provinces]
     cities = list(Region.objects.filter(
@@ -453,7 +447,7 @@ def region_tree(request):
 @api_login_required
 @api_permission_required('region:add')
 def region_create(request):
-    """POST /api/rbac/regions/create/."""
+    """POST /api/rbac/regions/create/ - 创建地区。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     body = get_request_body(request)
@@ -485,7 +479,7 @@ def region_create(request):
 @api_permission_required('region:view')
 @field_whitelisted('rbac.Region')
 def region_detail(request, pk):
-    """GET/PUT/DELETE /api/rbac/regions/<id>/."""
+    """GET/PUT/DELETE /api/rbac/regions/<id>/ - 查询、更新或删除地区。"""
     try:
         obj = Region.objects.select_related('parent').get(pk=pk)
     except Region.DoesNotExist:
@@ -547,7 +541,7 @@ def region_detail(request, pk):
 @api_permission_required('member_level:view')
 @field_whitelisted('rbac.MemberLevel')
 def member_level_list(request):
-    """GET /api/rbac/member-levels/ - list member levels."""
+    """GET /api/rbac/member-levels/ - 获取会员等级列表。"""
     queryset = MemberLevel.objects.all()
     keyword = str(request.GET.get('keyword') or '').strip()
     if keyword:
@@ -565,7 +559,7 @@ def member_level_list(request):
 @api_login_required
 @api_permission_required('member_level:add')
 def member_level_create(request):
-    """POST /api/rbac/member-levels/create/."""
+    """POST /api/rbac/member-levels/create/ - 创建会员等级。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     body = get_request_body(request)
@@ -598,7 +592,7 @@ def member_level_create(request):
 @api_permission_required('member_level:view')
 @field_whitelisted('rbac.MemberLevel')
 def member_level_detail(request, pk):
-    """GET/PUT/DELETE /api/rbac/member-levels/<id>/."""
+    """GET/PUT/DELETE /api/rbac/member-levels/<id>/ - 查询、更新或删除会员等级。"""
     try:
         obj = MemberLevel.objects.get(pk=pk)
     except MemberLevel.DoesNotExist:
@@ -746,7 +740,7 @@ def _export_row(resource, obj):
 @csrf_exempt
 @api_login_required
 def data_export(request):
-    """GET /api/rbac/data-export/?resource=departments&format=csv|xlsx."""
+    """GET /api/rbac/data-export/?resource=departments&format=csv|xlsx - 导出数据，支持 CSV 与 XLSX。"""
     import csv
     import io
     from datetime import date
@@ -990,7 +984,7 @@ def _upsert_rows(resource, config, rows, mode, dry_run=False):
 @csrf_exempt
 @api_login_required
 def data_import(request):
-    """POST /api/rbac/data-import/ - import CSV for a data resource."""
+    """POST /api/rbac/data-import/ - 为数据资源导入 CSV 或 XLSX 文件。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     try:
@@ -1022,7 +1016,7 @@ def data_import(request):
 @csrf_exempt
 @api_login_required
 def data_batch_delete(request):
-    """POST /api/rbac/data-batch-delete/ - delete selected data rows."""
+    """POST /api/rbac/data-batch-delete/ - 批量删除选中的数据行。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     body = get_request_body(request)
@@ -1068,7 +1062,7 @@ def data_batch_delete(request):
 @csrf_exempt
 @api_login_required
 def data_batch_status(request):
-    """POST /api/rbac/data-batch-status/ - enable or disable selected rows."""
+    """POST /api/rbac/data-batch-status/ - 批量启用或停用选中行。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     body = get_request_body(request)

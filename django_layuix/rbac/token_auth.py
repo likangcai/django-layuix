@@ -4,13 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : token_auth.py
 # -----------------------------
-"""
-JWT authentication helpers.
-
-Issues standards-compatible HS256 JWTs (header.payload.signature) with a jti,
-persists token state in ``sys_auth_token`` and the Django cache backend
-(Redis when configured), and keeps a verifier for pre-1.4.4 two-part tokens.
-"""
+"""JWT 认证辅助函数。签发兼容标准的 HS256 JWT（header.payload.signature）并附带 jti，将令牌状态保存到 ``sys_auth_token`` 和 Django 缓存后端（配置时为 Redis），同时保留 1.4.4 之前两段式令牌的校验器。"""
 import base64
 import hashlib
 import hmac
@@ -119,7 +113,7 @@ def _active_roles_payload(user, active_roles):
 
 
 def generate_token(user, extra_data=None, active_roles=None, request=None):
-    """Issue a signed HS256 JWT and persist its state."""
+    """签发签名的 HS256 JWT 并持久化其状态。"""
     issued = int(time.time())
     ttl = _token_expire_seconds()
     expires = issued + ttl
@@ -231,7 +225,7 @@ def _verify_standard_token(token):
 
 
 def _verify_legacy_token(token):
-    """Verify pre-1.4.4 two-part tokens during the transition window."""
+    """在过渡期内校验 1.4.4 之前的两段式令牌。"""
     if not _allow_legacy_token():
         return {'valid': False, 'error': 'Legacy tokens are disabled'}
     parts = token.split('.')
@@ -282,7 +276,7 @@ def verify_token(token):
 
 
 def revoke_token(token, reason='logout', user=None):
-    """Revoke a token after verifying it belongs to ``user`` when supplied."""
+    """在提供 ``user`` 时先校验令牌归属，再撤销令牌。"""
     result = verify_token(token)
     if not result.get('valid'):
         return 0
@@ -326,7 +320,7 @@ def revoke_token(token, reason='logout', user=None):
 
 
 def revoke_user_tokens(user, reason='password_change'):
-    """Revoke all active tokens for a user."""
+    """撤销用户的所有有效令牌。"""
     records = list(AuthToken.objects.filter(user=user, status=1))
     revoked_at = timezone.now()
     for record in records:
@@ -352,7 +346,7 @@ def cleanup_expired_tokens():
 
 
 def generate_stream_ticket(user, ttl=60):
-    """Issue a short-lived ticket for EventSource URLs instead of a JWT."""
+    """为 EventSource URL 签发短期票据，避免把 JWT 放入 URL。"""
     ticket = secrets.token_hex(32)
     expires = int(time.time()) + max(1, int(ttl))
     _safe_cache_set('%sstream:%s' % (_cache_prefix(), ticket), {
@@ -373,7 +367,7 @@ def verify_stream_ticket(ticket):
 
 
 def token_authenticate(request):
-    """Resolve a user from Authorization Bearer, X-Token, query or POST body."""
+    """从 Authorization Bearer、X-Token、查询参数或 POST 请求体中解析用户。"""
     token = None
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if auth_header.lower().startswith('bearer '):

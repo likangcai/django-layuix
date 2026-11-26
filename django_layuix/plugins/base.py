@@ -4,12 +4,12 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : base.py
 # -----------------------------
-"""Base class for third-party django-layuix plugins."""
+"""第三方 django-layuix 插件基类。"""
 from django.apps import AppConfig
 
 
 class PluginConfig(AppConfig):
-    """Django AppConfig with plugin metadata, validation and lifecycle hooks."""
+    """带插件元数据、校验和生命周期钩子的 Django AppConfig。"""
 
     plugin_key = None
     plugin_name = None
@@ -67,7 +67,7 @@ class PluginConfig(AppConfig):
             register_plugin_menus(key, self)
 
     def on_enable(self):
-        """Called when the plugin becomes active. Override in subclasses."""
+        """插件启用时调用，子类可覆盖。"""
 
     def on_disable(self):
-        """Called when the plugin is deactivated. Override in subclasses."""
+        """插件停用时调用，子类可覆盖。"""

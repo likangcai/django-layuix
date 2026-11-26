@@ -4,12 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : permission_registry.py
 # -----------------------------
-"""Central permission catalog for built-in pages, buttons and fields.
-
-A permission is usable only after it is registered as an active ``Menu`` row
-with a non-empty ``permission`` code. Role assignment then controls whether a
-user can use the registered permission.
-"""
+"""内置页面、按钮和字段的集中权限目录。权限只有在注册为状态启用的 ``Menu`` 行且权限码非空后才可用；随后由角色分配决定用户是否可使用该权限。"""
 from django.conf import settings
 
 
@@ -62,13 +57,7 @@ def _allow_unregistered():
 
 
 def is_registered_permission(permission_code):
-    """Whether a permission code exists as an active registered Menu entry.
-
-    Built-in codes are available before initialization through the central
-    catalog. Once a matching ``sys_menu`` row exists, its active/visible state
-    is authoritative, so disabling a registered permission takes effect
-    immediately. Custom codes must be registered as active Menu rows.
-    """
+    """判断权限码是否存在为启用的菜单注册项。内置权限码在初始化前通过集中目录可用；一旦存在对应的 ``sys_menu`` 行，其启用/可见状态即为权威状态，因此停用已注册权限会立即生效。自定义权限码必须注册为启用菜单行。"""
     if not permission_code:
         return False
     if _allow_unregistered():
@@ -95,7 +84,7 @@ def is_registered_permission(permission_code):
 
 
 def permission_for_path(path):
-    """Resolve the required permission code for a frontend page path."""
+    """解析前端页面路径所需的权限码。"""
     if not path:
         return ''
     clean = str(path).split('?', 1)[0].split('#', 1)[0]
@@ -108,7 +97,7 @@ def permission_for_path(path):
 
 
 def permission_catalog():
-    """Return all built-in permission codes from the central catalog."""
+    """返回集中目录中的全部内置权限码。"""
     codes = set(PAGE_PERMISSIONS.values())
     for prefix in _button_prefixes():
         for action in BUTTON_ACTIONS:
@@ -130,7 +119,7 @@ def _button_prefixes():
 
 
 def build_permission_code(prefix, action):
-    """Build a canonical permission code for a menu/action pair."""
+    """为菜单/动作组合构建规范权限码。"""
     prefix = str(prefix or '').strip().strip(':').lower()
     action = str(action or '').strip().lower()
     if not prefix or action not in BUTTON_ACTIONS:
@@ -139,7 +128,7 @@ def build_permission_code(prefix, action):
 
 
 def _catalog_node(parent, code, defaults):
-    """Return one catalog row per parent/code and merge legacy duplicates."""
+    """每个上级/权限码只返回一条目录行，并合并历史重复项。"""
     from .models import Menu
 
     rows = list(Menu.objects.filter(parent=parent, permission=code).order_by('id'))
@@ -159,7 +148,7 @@ def _catalog_node(parent, code, defaults):
 
 
 def register_page_permissions():
-    """Register all built-in page and button codes as permission nodes."""
+    """将全部内置页面与按钮权限码注册为权限节点。"""
     from .models import Menu, Role
 
     parent = Menu.objects.filter(name='权限目录').order_by('id').first()

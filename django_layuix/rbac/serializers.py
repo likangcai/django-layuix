@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : serializers.py
 # -----------------------------
-"""Field-whitelist serializer for business API responses."""
+"""业务 API 响应的字段白名单序列化器。"""
 import json
 from datetime import date, datetime, time
 from functools import wraps
@@ -113,7 +113,7 @@ def _clean_value(value):
 
 
 def _safe_fields(fields, resource):
-    """Unknown resources fail closed; explicit fields may only narrow a registry."""
+    """未知资源默认拒绝；显式字段只能收窄注册表。"""
     registered = API_FIELD_REGISTRY.get(resource or '', ())
     if not registered:
         return []
@@ -192,11 +192,7 @@ def _serialize_instance(
 
 
 def serialize_instance(data, request, resource, action='view', fields=None):
-    """Serialize a dict-like row using the registered API field whitelist.
-
-    Explicit ``fields`` narrow the built-in registry; they cannot widen it.
-    ABAC field policies override the default registry visibility.
-    """
+    """按注册的 API 字段白名单序列化类字典行。显式 ``fields`` 只能收窄内置注册表，不能扩大；ABAC 字段策略会覆盖默认可见性。"""
     safe = _safe_fields(fields, resource)
     if not safe or not isinstance(data, dict):
         return {}
@@ -254,7 +250,7 @@ def serialize_payload(payload, request, resource, action='view', keys=('list', '
 
 
 def field_whitelisted(resource, action='view', keys=('list', 'data')):
-    """Automatically apply the registered field whitelist to a successful view."""
+    """自动将已注册字段白名单应用到成功响应。"""
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):

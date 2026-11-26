@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : defaults.py
 # -----------------------------
-"""Single source of truth for SystemConfig default values."""
+"""SystemConfig 默认值的唯一来源。"""
 import json
 
 import django_layuix
@@ -30,7 +30,7 @@ HOME_QUICK_LINKS = [
 
 
 def get_default_configs():
-    """Return all SystemConfig rows in a stable order."""
+    """按稳定顺序返回全部 SystemConfig 行。"""
     return [
         {'key': 'system_name', 'value': 'Django Layuix Admin', 'description': '系统名称，显示在浏览器标题栏和侧边栏', 'config_type': 'string', 'sort': 1},
         {'key': 'system_version', 'value': django_layuix.__version__, 'description': '系统版本号', 'config_type': 'string', 'sort': 2},

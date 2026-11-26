@@ -5,11 +5,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : update_villages_from_npm.py
 # -----------------------------
-"""Refresh level-5 village/community seed data from the china-division package.
-
-The output is gzip-compressed because the raw JSON is about 75MB. Villages whose
-street parent is absent from the current bundled streets are skipped.
-"""
+"""从 china-division 数据包刷新第 5 级村/社区种子。原始 JSON 约 75MB，因此输出文件使用 gzip 压缩。街道父级不在当前街道种子中的村/社区会被跳过。"""
 from __future__ import annotations
 
 import argparse

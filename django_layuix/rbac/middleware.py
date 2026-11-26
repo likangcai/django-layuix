@@ -244,12 +244,7 @@ class OperationLogMiddleware:
 
 
 class ApiOriginGuardMiddleware:
-    """Reject cross-origin browser writes to admin APIs using session cookies.
-
-    Many API views are ``csrf_exempt`` for Bearer-token clients. This
-    middleware compensates by checking Origin/Referer for unsafe
-    session-authenticated API calls. Token-authenticated calls are unaffected.
-    """
+    """拒绝使用会话 Cookie 的跨源浏览器写请求访问后台 API。许多 API 为 Bearer Token 客户端设置了 ``csrf_exempt``；本中间件通过检查 Origin/Referer 补齐会话认证下的不安全请求防护，令牌认证请求不受影响。"""
 
     SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS', 'TRACE')
 

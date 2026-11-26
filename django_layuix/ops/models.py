@@ -4,11 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : models.py
 # -----------------------------
-"""
-django-layuix Ops Models
-Server management for SSH connections
-AI model configuration for intelligent log analysis
-"""
+"""django-layuix 运维模型，包含 SSH 服务器管理和用于智能日志分析的 AI 模型配置。"""
 from django.db import models
 
 

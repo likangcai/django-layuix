@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : button_generator.py
 # -----------------------------
-"""Idempotent auto-generation of button permissions under a menu."""
+"""幂等生成菜单下的按钮权限。"""
 from django.db import transaction
 
 from .permission_registry import BUTTON_ACTIONS, build_permission_code
@@ -12,7 +12,7 @@ from .permissions import has_permission
 
 
 def derive_permission_prefix(menu):
-    """Derive a stable permission prefix from a menu's existing code/path/name."""
+    """根据菜单已有的编码、路径或名称派生稳定权限前缀。"""
     code = str(getattr(menu, 'permission', '') or '').strip()
     if ':' in code:
         return code.split(':', 1)[0]
@@ -25,7 +25,7 @@ def derive_permission_prefix(menu):
 
 
 def existing_actions(menu):
-    """Return action keys already generated under this menu."""
+    """返回该菜单下已生成的动作键。"""
     prefix = derive_permission_prefix(menu)
     records = menu.children.filter(menu_type=3, plugin_key='').values_list('permission', flat=True)
     actions = set()
@@ -36,7 +36,7 @@ def existing_actions(menu):
 
 
 def generate_menu_buttons(menu, actions, replace=False, actor=None):
-    """Create button permission nodes for ``actions``; return changed nodes."""
+    """为 ``actions`` 创建按钮权限节点，并返回发生变化的节点。"""
     from .models import Menu, Role
 
     prefix = derive_permission_prefix(menu)
@@ -106,5 +106,5 @@ def generate_menu_buttons(menu, actions, replace=False, actor=None):
 
 
 def can_generate(actor):
-    """Whether ``actor`` may manage generated button permissions."""
+    """判断 ``actor`` 是否可管理生成的按钮权限。"""
     return has_permission(actor, 'menu:edit')

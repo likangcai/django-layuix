@@ -4,10 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : models.py
 # -----------------------------
-"""
-django-layuix RBAC Models
-Required RBAC engine - add 'django_layuix.rbac' to INSTALLED_APPS to enable
-"""
+"""django-layuix RBAC 模型。必需 RBAC 引擎，将 'django_layuix.rbac' 加入 INSTALLED_APPS 后启用。"""
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
@@ -130,7 +127,7 @@ class RoleMutex(models.Model):
 
 
 class SoDConstraint(RoleMutex):
-    """1.4.1 compatibility proxy for static separation-of-duty constraints."""
+    """1.4.1 静态职责分离约束的兼容代理。"""
 
     class Meta:
         proxy = True
@@ -156,7 +153,7 @@ class RolePrerequisite(models.Model):
 
 
 class ScopeNode(models.Model):
-    """1.4.2 organization node used by the data-scope layer."""
+    """1.4.2 数据范围层使用的组织节点。"""
     code = models.CharField(max_length=100, unique=True, verbose_name='节点编码')
     name = models.CharField(max_length=100, verbose_name='节点名称')
     parent = models.ForeignKey(
@@ -179,7 +176,7 @@ class ScopeNode(models.Model):
 
 
 class AbacPolicy(models.Model):
-    """1.4.2 row/field-level expression policy. Inactive when no policy exists."""
+    """1.4.2 行级/字段级表达式策略。无策略时不生效。"""
     EFFECT_CHOICES = (('allow', '允许'), ('deny', '拒绝'))
     name = models.CharField(max_length=100, verbose_name='策略名称')
     resource = models.CharField(max_length=150, verbose_name='资源标识')
@@ -203,7 +200,7 @@ class AbacPolicy(models.Model):
 
 
 class AuthToken(models.Model):
-    """Persistent state for signed access tokens."""
+    """签名访问令牌的持久化状态。"""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='auth_tokens', verbose_name='用户',
@@ -236,7 +233,7 @@ class AuthToken(models.Model):
 
 
 class PluginRegistry(models.Model):
-    """Registered django-layuix plugin metadata (persisted across restarts)."""
+    """已注册的 django-layuix 插件元数据（重启后保留）。"""
     key = models.CharField(max_length=100, unique=True, verbose_name='插件标识')
     name = models.CharField(max_length=100, verbose_name='插件名称')
     version = models.CharField(max_length=30, default='1.0.0', verbose_name='版本')
@@ -389,7 +386,7 @@ class SystemConfig(models.Model):
 
 
 class Dictionary(models.Model):
-    """Data dictionary: a named group of reusable option values."""
+    """数据字典：一组命名的可复用选项值。"""
     code = models.CharField(max_length=64, unique=True, verbose_name='字典编码')
     name = models.CharField(max_length=100, verbose_name='字典名称')
     description = models.CharField(max_length=200, blank=True, default='', verbose_name='描述')
@@ -410,7 +407,7 @@ class Dictionary(models.Model):
 
 
 class DictionaryItem(models.Model):
-    """A single selectable option inside a data dictionary."""
+    """数据字典中的单个可选项。"""
     dictionary = models.ForeignKey(
         Dictionary, related_name='items', on_delete=models.CASCADE,
         verbose_name='所属字典',
@@ -437,7 +434,7 @@ class DictionaryItem(models.Model):
 
 
 class Department(models.Model):
-    """Hierarchical department / organization unit."""
+    """树形部门或组织单元。"""
     TYPE_CHOICES = [
         (1, '公司'),
         (2, '子公司'),
@@ -471,7 +468,7 @@ class Department(models.Model):
 
 
 class Position(models.Model):
-    """Job position / post."""
+    """岗位。"""
     name = models.CharField(max_length=150, verbose_name='岗位名称')
     code = models.CharField(max_length=64, unique=True, verbose_name='岗位编码')
     sort = models.IntegerField(default=0, verbose_name='排序')
@@ -491,7 +488,7 @@ class Position(models.Model):
 
 
 class PositionAssignment(models.Model):
-    """Position tenure history, including primary-position changes."""
+    """岗位任职历史，包括主岗变更。"""
 
     user = models.ForeignKey(
         'UserProfile', on_delete=models.CASCADE,
@@ -528,7 +525,7 @@ class PositionAssignment(models.Model):
 
 
 class Region(models.Model):
-    """Administrative region tree."""
+    """行政区划树。"""
     LEVEL_CHOICES = [
         (1, '省份'),
         (2, '城市'),
@@ -566,7 +563,7 @@ class Region(models.Model):
 
 
 class MemberLevel(models.Model):
-    """Member level / customer tier."""
+    """会员等级或客户层级。"""
     name = models.CharField(max_length=150, verbose_name='等级名称')
     code = models.CharField(max_length=64, unique=True, verbose_name='等级编码')
     min_points = models.IntegerField(default=0, verbose_name='最低积分')

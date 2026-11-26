@@ -4,16 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : abac.py
 # -----------------------------
-"""1.4.2 dependency-free ABAC expression engine.
-
-Supported syntax:
-    and / or / not
-    == != > >= < <= in / not in / contains
-    parentheses, dotted paths, strings, numbers, true/false/null
-
-Expressions can only read keys from the supplied context. There is no eval(),
-attribute call, import or arbitrary Python execution.
-"""
+"""1.4.2 无依赖 ABAC 表达式引擎。支持 and / or / not、== != > >= < <=、in / not in / contains、括号、点路径、字符串、数字和 true/false/null。表达式只能读取传入上下文中的键，不执行 eval()、属性调用、导入或任意 Python 代码。"""
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -203,13 +194,13 @@ def _compare(left, operator, right, context, validate=False):
 
 
 def validate_expression(expression):
-    """Validate syntax only, without requiring a runtime context."""
+    """仅校验语法，不要求运行时上下文。"""
     _Parser(_tokenize(str(expression or '')), {}, validate=True).parse()
     return True
 
 
 def evaluate_expression(expression, context):
-    """Evaluate a safe boolean expression against a plain context dict."""
+    """基于普通上下文字典求值安全布尔表达式。"""
     if not expression or not str(expression).strip():
         return False
     return bool(_Parser(_tokenize(str(expression)), context or {}).parse())
@@ -302,7 +293,7 @@ def _policies_for(resource, action, field):
 
 
 def load_field_policies(resource, action, fields):
-    """Load field policies once for a batch serialization request."""
+    """为一次批量序列化请求预载字段策略。"""
     from .models import AbacPolicy
 
     fields = list(fields or [])
@@ -320,11 +311,7 @@ def load_field_policies(resource, action, fields):
 
 
 def evaluate_policies(user, action, resource, field=None, extra_context=None, policies=None):
-    """Return an ABAC decision.
-
-    Row-level policies remain backward compatible (no policy means allow).
-    Field-level policies are default-deny: an unregistered field is hidden.
-    """
+    """返回 ABAC 决策。行级策略保持向后兼容（无策略即允许）；字段级策略默认拒绝，未注册字段会被隐藏。"""
     if getattr(user, 'is_superuser', False):
         return AbacDecision(True, [], [])
     if policies is None:
@@ -352,7 +339,7 @@ def evaluate_policies(user, action, resource, field=None, extra_context=None, po
 
 
 def filter_queryset(queryset, user, action, resource, extra_context=None, chunk_size=1000):
-    """Python-level row filter; returns a QuerySet restricted by primary keys."""
+    """Python 层行过滤，返回按主键约束的 QuerySet。"""
     allowed_pks = []
     for obj in queryset.iterator(chunk_size=max(1, int(chunk_size or 1000))):
         context = dict(extra_context or {})
@@ -363,7 +350,7 @@ def filter_queryset(queryset, user, action, resource, extra_context=None, chunk_
 
 
 def has_field_policies(resource, action, fields):
-    """Whether any ABAC field policy exists for the requested fields."""
+    """判断请求字段是否存在 ABAC 字段策略。"""
     for field in fields or []:
         if _policies_for(resource, action, field):
             return True
@@ -371,7 +358,7 @@ def has_field_policies(resource, action, fields):
 
 
 def filter_fields(user, action, resource, fields, extra_context=None):
-    """Return fields visible to the user for the given resource and action."""
+    """返回指定资源和动作下用户可见的字段。"""
     if getattr(user, 'is_superuser', False):
         return list(fields or [])
 

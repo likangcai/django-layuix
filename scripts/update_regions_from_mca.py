@@ -5,16 +5,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : update_regions_from_mca.py
 # -----------------------------
-"""Fetch official province/city/county data from the MCA public endpoint.
-
-Usage:
-    python scripts/update_regions_from_mca.py
-    python scripts/update_regions_from_mca.py --apply
-
-The default endpoint is the public National Place Name Information Database
-operated by China's Ministry of Civil Affairs. It returns province, prefecture
-and county level data when maxLevel=3.
-"""
+"""从民政部公开接口获取官方省/市/县数据。用法：python scripts/update_regions_from_mca.py 或 python scripts/update_regions_from_mca.py --apply。默认接口为民政部国家地名信息库公开接口，maxLevel=3 时返回省、地、县三级数据。"""
 from __future__ import annotations
 
 import argparse

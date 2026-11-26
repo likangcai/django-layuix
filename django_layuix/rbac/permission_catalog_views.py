@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : permission_catalog_views.py
 # -----------------------------
-"""Permission catalog management APIs."""
+"""权限目录管理 API。"""
 from django.db.models import Count
 from django.views.decorators.csrf import csrf_exempt
 
@@ -37,7 +37,7 @@ def _catalog_row(menu):
 @api_login_required
 @api_permission_required('permission:view')
 def permission_catalog_list(request):
-    """GET /api/rbac/permission-catalog/ - list registered permission codes."""
+    """GET /api/rbac/permission-catalog/ - 获取已注册权限码列表。"""
     if request.method != 'GET':
         return error_response('Method not allowed', 405)
     queryset = Menu.objects.filter(
@@ -73,7 +73,7 @@ def permission_catalog_list(request):
 @api_login_required
 @api_permission_required('permission:edit')
 def permission_catalog_set_status(request, pk):
-    """POST /api/rbac/permission-catalog/<id>/status/ - enable or disable a code."""
+    """POST /api/rbac/permission-catalog/<id>/status/ - 启用或停用权限码。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     try:

@@ -72,10 +72,7 @@ def api_permission_required(permission_code):
 
 
 def api_permission_by_method(mapping, default=None):
-    """Require a permission code selected by HTTP method.
-
-    mapping: {'GET': 'x:view', 'POST': 'x:edit', '*': 'x:view'}
-    """
+    """按 HTTP 方法选择 required 权限码。映射示例：{'GET': 'x:view', 'POST': 'x:edit', '*': 'x:view'}。"""
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):

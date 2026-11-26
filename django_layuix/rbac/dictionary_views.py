@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : dictionary_views.py
 # -----------------------------
-"""Data dictionary management APIs."""
+"""数据字典管理 API。"""
 import math
 import re
 
@@ -79,7 +79,7 @@ def _item_payload(obj):
 @api_permission_required('dict:view')
 @field_whitelisted('rbac.Dictionary')
 def dictionary_list(request):
-    """GET /api/rbac/dictionaries/ - list dictionaries."""
+    """GET /api/rbac/dictionaries/ - 获取字典列表。"""
     queryset = Dictionary.objects.annotate(item_count=Count('items'))
     keyword = str(request.GET.get('keyword') or '').strip()
     if keyword:
@@ -107,7 +107,7 @@ def dictionary_list(request):
 @api_login_required
 @api_permission_required('dict:add')
 def dictionary_create(request):
-    """POST /api/rbac/dictionaries/create/ - create a dictionary."""
+    """POST /api/rbac/dictionaries/create/ - 创建字典。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     body = get_request_body(request)
@@ -139,7 +139,7 @@ def dictionary_create(request):
 @api_permission_required('dict:view')
 @field_whitelisted('rbac.Dictionary')
 def dictionary_detail(request, pk):
-    """GET/PUT/DELETE /api/rbac/dictionaries/<id>/."""
+    """GET/PUT/DELETE /api/rbac/dictionaries/<id>/ - 查询、更新或删除字典。"""
     try:
         obj = Dictionary.objects.get(pk=pk)
     except Dictionary.DoesNotExist:
@@ -189,7 +189,7 @@ def dictionary_detail(request, pk):
 @api_login_required
 @api_permission_required('dict:view')
 def dictionary_items(request, pk):
-    """GET /api/rbac/dictionaries/<id>/items/ - list dictionary items."""
+    """GET /api/rbac/dictionaries/<id>/items/ - 获取字典项列表。"""
     if request.method != 'GET':
         return error_response('Method not allowed', 405)
     try:
@@ -230,7 +230,7 @@ def dictionary_items(request, pk):
 @api_login_required
 @api_permission_required('dict:edit')
 def dictionary_item_create(request, pk):
-    """POST /api/rbac/dictionaries/<id>/items/create/."""
+    """POST /api/rbac/dictionaries/<id>/items/create/ - 创建字典项。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     try:
@@ -268,7 +268,7 @@ def dictionary_item_create(request, pk):
 @api_login_required
 @api_permission_required('dict:view')
 def dictionary_item_detail(request, pk):
-    """PUT/DELETE /api/rbac/dictionary-items/<id>/."""
+    """PUT/DELETE /api/rbac/dictionary-items/<id>/ - 更新或删除字典项。"""
     try:
         item = DictionaryItem.objects.select_related('dictionary').get(pk=pk)
     except DictionaryItem.DoesNotExist:
@@ -314,7 +314,7 @@ def dictionary_item_detail(request, pk):
 @api_login_required
 @api_permission_required('dict:view')
 def dictionary_options(request, code):
-    """GET /api/rbac/dictionaries/options/<code>/ - active options for consumers."""
+    """GET /api/rbac/dictionaries/options/<code>/ - 返回调用方使用的启用选项。"""
     dictionary = Dictionary.objects.filter(code=code, status=True).first()
     if not dictionary:
         return error_response('字典不存在或已停用', 404)

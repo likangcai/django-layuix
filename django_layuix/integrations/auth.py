@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : auth.py
 # -----------------------------
-"""Generic authentication bridge for Django-native and third-party APIs."""
+"""面向 Django 原生接口与第三方 API 的通用认证桥接层。"""
 import importlib
 import logging
 
@@ -15,7 +15,7 @@ _AUTHENTICATORS = []
 
 
 def register_authenticator(func, name=None, priority=100):
-    """Register a callable ``func(request) -> user|None``."""
+    """注册一个可调用对象 ``func(request) -> user|None``。"""
     key = name or getattr(func, '__name__', repr(func))
     _AUTHENTICATORS[:] = [
         item for item in _AUTHENTICATORS if item['name'] != key
@@ -47,7 +47,7 @@ def _resolve_callable(path):
 
 
 def load_configured_authenticators():
-    """Load authenticators declared in ``LAYUI_RBAC_AUTHENTICATORS``."""
+    """加载 ``LAYUI_RBAC_AUTHENTICATORS`` 中声明的认证器。"""
     paths = getattr(settings, 'LAYUI_RBAC_AUTHENTICATORS', []) or []
     for index, path in enumerate(paths):
         try:
@@ -78,7 +78,7 @@ register_authenticator(builtin_token_authenticator, name='layuix_token', priorit
 
 
 def authenticate_request(request):
-    """Resolve the API caller using all registered authenticators."""
+    """使用所有已注册认证器解析 API 调用方用户。"""
     for item in list(_AUTHENTICATORS):
         try:
             user = item['func'](request)

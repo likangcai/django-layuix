@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : tests.py
 # -----------------------------
-"""RBAC3 regression tests: inheritance, constraints and server-side enforcement."""
+"""RBAC3 回归测试：继承、约束和服务端强制校验。"""
 import hashlib
 import importlib.util
 import re

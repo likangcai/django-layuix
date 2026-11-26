@@ -5,12 +5,7 @@
 # @FileName  : region_seed.py
 # -----------------------------
 
-"""Load the bundled China region seeds into Region.
-
-The base file contains official MCA province/city/county data. The optional
-street file contains level-4 towns/streets and is kept separate so the MCA
-update script can refresh levels 1-3 without deleting street data.
-"""
+"""将内置中国地区种子加载到 Region。基础文件包含民政部官方省/市/县数据；可选的街道文件包含第 4 级乡镇/街道，单独保存，便于官方更新脚本刷新 1-3 级而不删除街道数据。"""
 import gzip
 import json
 from pathlib import Path

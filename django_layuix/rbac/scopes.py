@@ -4,11 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : scopes.py
 # -----------------------------
-"""1.4.1 optional data-scope layer.
-
-No database query is filtered unless a business model explicitly declares
-``SCOPE_FIELD`` and a role has ``scope_node`` configured.
-"""
+"""1.4.1 可选数据范围层。除非业务模型显式声明 ``SCOPE_FIELD`` 且角色配置了 ``scope_node``，否则不会过滤任何数据库查询。"""
 from django.conf import settings
 from django.db import models
 
@@ -18,7 +14,7 @@ def get_scope_hierarchy():
 
 
 def visible_scope_nodes(node, depth=0):
-    """Expand a scope node to its descendants according to optional config."""
+    """根据可选配置将数据范围节点展开为其后代节点。"""
     node = str(node or '').strip()
     if not node:
         return set()
@@ -55,7 +51,7 @@ def visible_scope_nodes(node, depth=0):
 
 
 def get_user_scope_nodes(user):
-    """Return visible scope nodes, or None when scope filtering is disabled."""
+    """返回可见的数据范围节点；范围过滤未启用时返回 None。"""
     if user is None or not getattr(user, 'is_authenticated', False):
         return set()
     if getattr(user, 'is_superuser', False):
@@ -75,7 +71,7 @@ def get_user_scope_nodes(user):
 
 
 class ScopedManager(models.Manager):
-    """Manager that filters by ``SCOPE_FIELD`` only when scope is configured."""
+    """仅在配置数据范围时按 ``SCOPE_FIELD`` 过滤的 Manager。"""
 
     def for_user(self, user):
         queryset = self.get_queryset()
@@ -91,7 +87,7 @@ class ScopedManager(models.Manager):
 
 
 class ScopedModelMixin(models.Model):
-    """Optional mixin for business models that want data-scope filtering."""
+    """为需要数据范围过滤的业务模型提供的可选 mixin。"""
 
     SCOPE_FIELD = ''
     objects = ScopedManager()

@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : demo_specs.py
 # -----------------------------
-"""Shared declarations for the one-command permission demo."""
+"""一键权限演示的共享声明。"""
 
 DEMO_PARENT_MENU = {
     'name': '演示应用',

@@ -42,7 +42,7 @@ class RbacConfig(AppConfig):
         self._ensure_default_configs()
 
     def _ensure_base_app_registered(self):
-        """Ensure 'django_layuix' is in INSTALLED_APPS for templatetags and static files"""
+        """确保 INSTALLED_APPS 中包含 django_layuix，以加载模板标签和静态文件。"""
         from django.conf import settings
 
         # 配置可能使用元组；修改前先归一化为可变列表。
@@ -100,7 +100,7 @@ class RbacConfig(AppConfig):
         self._register_static_files()
 
     def _register_templatetag_library(self, module_path, tag_name):
-        """Manually register a templatetag library"""
+        """手动注册模板标签库。"""
         try:
             from django.template.backends.django import DjangoTemplates
             from django.template.library import import_library
@@ -115,7 +115,7 @@ class RbacConfig(AppConfig):
             pass
 
     def _register_static_files(self):
-        """Manually register django_layuix's static files directory"""
+        """手动注册 django_layuix 静态文件目录。"""
         try:
             import django_layuix
             base_dir = os.path.dirname(django_layuix.__file__)
@@ -142,7 +142,7 @@ class RbacConfig(AppConfig):
             pass
 
     def _register_template_dirs(self):
-        """Ensure django_layuix templates override Django admin templates"""
+        """确保 django_layuix 模板覆盖 Django admin 模板。"""
         from django.conf import settings
 
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -169,7 +169,7 @@ class RbacConfig(AppConfig):
             pass
 
     def _register_api_urls(self):
-        """Register RBAC and Ops API URLs under Django admin"""
+        """在 Django admin 下注册 RBAC 与运维 API 路由。"""
         from django.contrib.admin import site
         from django.urls import path, include
         from . import urls as rbac_urls
@@ -193,7 +193,7 @@ class RbacConfig(AppConfig):
         site.get_urls = patched_get_urls
 
     def _register_operation_log_middleware(self):
-        """Register OperationLogMiddleware into Django MIDDLEWARE list"""
+        """将 OperationLogMiddleware 注册到 Django MIDDLEWARE 列表。"""
         from django.conf import settings
 
         middleware_path = 'django_layuix.rbac.middleware.OperationLogMiddleware'
@@ -202,7 +202,7 @@ class RbacConfig(AppConfig):
             settings.MIDDLEWARE.append(middleware_path)
 
     def _register_rbac_session_middleware(self):
-        """Register RBAC session middleware after Django authentication."""
+        """在 Django 认证中间件之后注册 RBAC 会话中间件。"""
         from django.conf import settings
 
         middleware_path = 'django_layuix.rbac.middleware.RbacSessionMiddleware'
@@ -217,7 +217,7 @@ class RbacConfig(AppConfig):
             settings.MIDDLEWARE.insert(0, middleware_path)
 
     def _ensure_default_configs(self):
-        """Ensure default system configs exist in database"""
+        """确保数据库中存在默认系统配置。"""
         try:
             from .models import SystemConfig
             # 首次迁移时先检查表是否存在，避免报错

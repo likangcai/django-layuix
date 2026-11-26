@@ -14,7 +14,7 @@ class StoreConfig(AppConfig):
     verbose_name = '商品管理'
 
     def ready(self):
-        """Register URL bridges only; never query the database at startup."""
+        """仅注册 URL 桥接；启动阶段绝不查询数据库。"""
         self._register_store_api_urls()
         post_migrate.connect(
             self._on_post_migrate,
@@ -26,7 +26,7 @@ class StoreConfig(AppConfig):
         self._register_store_menus()
 
     def _register_store_menus(self):
-        """Register demo menus after migrations, when RBAC tables exist."""
+        """迁移完成后再注册演示菜单，此时 RBAC 表已存在。"""
         try:
             from django_layuix.rbac.menu_registry import register_menus
             from django_layuix.rbac.models import Menu
@@ -68,7 +68,7 @@ class StoreConfig(AppConfig):
             print('[StoreConfig] Menu registration skipped: %s' % exc)
 
     def _register_store_api_urls(self):
-        """Register store API URLs under the admin site."""
+        """在 admin 站点下注册商城 API 路由。"""
         from django.contrib.admin import site
         from django.urls import include, path
 

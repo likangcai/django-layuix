@@ -5,13 +5,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : update_streets_from_npm.py
 # -----------------------------
-"""Refresh level-4 town/street seed data from the china-division package.
-
-The official MCA endpoint used by update_regions_from_mca.py exposes only
-province/city/county levels. This script keeps the base file untouched and
-writes django_layuix/rbac/data/china_streets.json. Rows whose county parent is
-absent from the current base seed are skipped.
-"""
+"""从 china-division 数据包刷新第 4 级乡镇/街道种子。update_regions_from_mca.py 使用的民政部官方接口只提供省/市/县三级数据；本脚本不修改基础文件，只写入 django_layuix/rbac/data/china_streets.json。县区父级不在当前基础种子中的行会被跳过。"""
 from __future__ import annotations
 
 import argparse

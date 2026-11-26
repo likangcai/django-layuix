@@ -4,7 +4,5 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : __init__.py
 # -----------------------------
-"""
-django-layuix - A Layui-based Django admin theme
-"""
+"""django-layuix - 基于 Layui 的 Django 后台主题"""
 __version__ = '1.7.0'

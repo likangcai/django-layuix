@@ -4,7 +4,7 @@
 # @Date      : 2026-11-26 22:19
 # @FileName  : drf.py
 # -----------------------------
-"""Optional DRF adapter. Import is safe to skip when DRF is not installed."""
+"""可选的 DRF 适配器。未安装 DRF 时跳过导入是安全的。"""
 try:
     from rest_framework.authentication import BaseAuthentication
     from rest_framework.permissions import BasePermission
@@ -18,7 +18,7 @@ from django_layuix.rbac.permissions import has_permission
 
 
 def simplejwt_authenticator(request):
-    """Bridge SimpleJWT tokens into the generic authentication registry."""
+    """将 SimpleJWT 令牌接入通用认证注册表。"""
     try:
         from rest_framework_simplejwt.authentication import JWTAuthentication
     except ImportError:
@@ -31,7 +31,7 @@ register_authenticator(simplejwt_authenticator, name='simplejwt', priority=50)
 
 
 class SimpleJWTAuthentication(BaseAuthentication):
-    """Drop-in DRF authentication class backed by SimpleJWT."""
+    """基于 SimpleJWT 的可直接替换 DRF 认证类。"""
 
     def authenticate(self, request):
         try:
@@ -42,11 +42,7 @@ class SimpleJWTAuthentication(BaseAuthentication):
 
 
 class LayuiRBACPermission(BasePermission):
-    """DRF permission class backed by django-layuix RBAC.
-
-    Set ``layui_permission`` on a view, or ``layui_permission_map`` keyed by
-    DRF action. Views without a declared code are left untouched.
-    """
+    """基于 django-layuix RBAC 的 DRF 权限类。在视图上设置 ``layui_permission``，或按 DRF action 设置 ``layui_permission_map``；未声明权限码的视图保持不变。"""
 
     def _permission_code(self, view):
         code = getattr(view, 'layui_permission', None) or getattr(view, 'permission_code', None)
