@@ -221,7 +221,7 @@ wheels = [
 
 [[package]]
 name = "build"
-version = "1.4.7"
+version = "1.4.8"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -705,7 +705,7 @@ wheels = [
 
 [[package]]
 name = "django-layuix"
-version = "1.4.7"
+version = "1.4.8"
 source = { editable = "." }
 dependencies = [
     { name = "django", version = "4.2.30", source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }, marker = "python_full_version < '3.10'" },
@@ -732,7 +732,7 @@ all = [
 ]
 dev = [
     { name = "build", version = "1.2.2.post1", source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }, marker = "python_full_version < '3.9'" },
-    { name = "build", version = "1.4.7", source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }, marker = "python_full_version >= '3.9'" },
+    { name = "build", version = "1.4.8", source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }, marker = "python_full_version >= '3.9'" },
     { name = "openai", version = "2.2.0", source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }, marker = "python_full_version < '3.9'" },
     { name = "openai", version = "2.33.0", source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }, marker = "python_full_version >= '3.9'" },
     { name = "paramiko", version = "3.5.1", source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }, marker = "python_full_version < '3.9'" },

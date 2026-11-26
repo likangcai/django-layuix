@@ -15,6 +15,7 @@ PAGE_PERMISSIONS = {
     '/static/layui/pages/user.html': 'user:view',
     '/static/layui/pages/log.html': 'log:view',
     '/static/layui/pages/config.html': 'config:view',
+    '/static/layui/pages/dict.html': 'dict:view',
     '/static/layui/pages/ai-config.html': 'ai_config:view',
     '/static/layui/pages/server.html': 'server:view',
     '/static/layui/pages/abac.html': 'abac:view',
@@ -111,7 +112,7 @@ def _button_prefixes():
         if ':' in code:
             prefixes.add(code.split(':', 1)[0])
     prefixes.update([
-        'menu', 'role', 'user', 'config', 'server', 'ai_config',
+        'menu', 'role', 'user', 'config', 'dict', 'server', 'ai_config',
         'abac', 'scope', 'constraint', 'profile', 'product',
         'category', 'store_order', 'permission_demo',
     ])

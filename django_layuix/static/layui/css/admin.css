@@ -2839,3 +2839,64 @@ textarea:focus-visible,
         margin-top: 8px;
     }
 }
+
+/* 1.4.8 unified admin dialog shell */
+.layui-layer.layui-layer-admin {
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.22);
+}
+.layui-layer.layui-layer-admin .layui-layer-title {
+    height: 52px;
+    line-height: 52px;
+    padding: 0 52px 0 20px;
+    border: 0;
+    background: #1f2937;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+}
+.layui-layer.layui-layer-admin .layui-layer-setwin { top: 18px; right: 16px; }
+.layui-layer.layui-layer-admin .layui-layer-setwin .layui-layer-close { filter: invert(1); opacity: .82; }
+.layui-layer.layui-layer-admin .layui-layer-content { background: var(--card-bg); }
+.layui-layer.layui-layer-admin .layui-layer-btn {
+    padding: 12px 20px;
+    border-top: 1px solid var(--card-border);
+    background: #f8fafc;
+    text-align: right;
+}
+.layui-layer.layui-layer-admin .layui-layer-btn a {
+    height: 34px;
+    line-height: 32px;
+    margin: 0 0 0 8px;
+    padding: 0 18px;
+    border-radius: 6px;
+}
+.layui-layer.layui-layer-admin .layui-layer-btn .layui-layer-btn0 {
+    border-color: #1E9FFF;
+    background: #1E9FFF;
+    color: #ffffff;
+}
+.layui-layer.layui-layer-admin .layui-layer-btn .layui-layer-btn1 {
+    border-color: #dbe3ee;
+    background: #ffffff;
+    color: #475569;
+}
+.layui-layer.layui-layer-admin .layui-form-label {
+    width: 96px;
+    padding: 9px 10px 9px 0;
+    text-align: right;
+    color: var(--text-secondary);
+}
+.layui-layer.layui-layer-admin .layui-input-block { margin-left: 106px; }
+.layui-layer.layui-layer-admin .layui-input-inline { width: 220px; }
+.layui-layer.layui-layer-admin .layui-form-item { margin-bottom: 16px; }
+.layui-layer.layui-layer-admin .admin-dialog-form { padding: 20px 24px 0; }
+.layui-layer.layui-layer-admin .admin-dialog-form .layui-textarea { min-height: 74px; }
+
+[data-theme-mode="dark"] .layui-layer.layui-layer-admin .layui-layer-content { background: var(--card-bg); }
+[data-theme-mode="dark"] .layui-layer.layui-layer-admin .layui-layer-btn {
+    background: var(--bg-secondary);
+    border-top-color: var(--card-border);
+}

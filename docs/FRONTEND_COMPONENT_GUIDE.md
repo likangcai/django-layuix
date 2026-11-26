@@ -1,6 +1,6 @@
 # 前端组件与设计 Token 规范
 
-版本：v2.0　适用版本：django-layuix 1.4.7+
+版本：v2.1　适用版本：django-layuix 1.4.8+
 
 ## 结论（TL;DR）
 【事实】后台统一使用 `admin.css` 中的设计 token 与 `common.js` 暴露的 `LayuiUI.table/dialog/virtualTable` 组件。
@@ -195,8 +195,10 @@ LayuiUI.dialog({
 
 - 1.4.4 起所有历史 `layer.open()` 已迁移到 `LayuiUI.dialog()`；组件会保留原有 `btn/yes/cancel/end` 行为，并统一回填表单、翻译与关闭逻辑。
 - 1.4.5 角色授权使用独立授权弹窗：权限树、搜索、全展开/折叠、选中计数与幂等保存，避免与角色基本信息表单耦合。
+- 1.4.8 起 `LayuiUI.dialog()` 默认使用 `layui-layer-admin` 皮肤，统一标题栏、圆角、按钮区与表单间距；不要在页面内重复定义整套 layer 皮肤。
+- 表单弹窗统一使用 `class="layui-form admin-dialog-form"`；保存/取消优先使用 `standard: true`，不要在页面内自行拼接底部按钮。
 - `standard: true` 时由组件提供保存/取消按钮，取消按钮会显式关闭当前弹窗。
-- 弹窗内容区最大高度 `80vh`。
+- 弹窗内容区最大高度 `80vh`；超出时由组件写入内容区滚动，不再静默溢出。
 - 保存成功后精确关闭当前弹窗，不再使用 `layer.closeAll()`。
 - 特殊弹窗（终端、日志实时刷新、图表）仍通过同一入口进入，但可保留业务专属回调。
 

@@ -33,6 +33,14 @@ API_FIELD_REGISTRY = {
         'max_users', 'scope_node', 'scope_depth', 'create_time',
         'update_time',
     ),
+    'rbac.Dictionary': (
+        'id', 'code', 'name', 'description', 'sort', 'status',
+        'is_system', 'item_count', 'create_time', 'update_time',
+    ),
+    'rbac.DictionaryItem': (
+        'id', 'dictionary_id', 'label', 'value', 'sort', 'status',
+        'is_default', 'css_class', 'remark', 'create_time', 'update_time',
+    ),
     'ops.Server': (
         'id', 'name', 'host', 'port', 'username', 'auth_type',
         'description', 'is_active', 'create_time',

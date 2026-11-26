@@ -1333,6 +1333,7 @@ class RbacFinalAuditTests(TestCase):
         root = Path(__file__).resolve().parents[2]
         sources = [
             (root / 'django_layuix/rbac/views.py').read_text(encoding='utf-8'),
+            (root / 'django_layuix/rbac/dictionary_views.py').read_text(encoding='utf-8'),
             (root / 'django_layuix/ops/views.py').read_text(encoding='utf-8'),
         ]
         from .menu_permissions import MENU_VIEW_PERMISSIONS
@@ -1564,6 +1565,55 @@ class RbacFinalAuditTests(TestCase):
         source = (root / 'django_layuix/static/layui/js/common.js').read_text(encoding='utf-8')
         self.assertIn('settings.escape = settings.escape !== false;', source)
 
+    def test_dictionary_crud_and_options_api(self):
+        create = self.client.post(
+            '/admin/api/rbac/dictionaries/create/',
+            {'code': 'audit_order_status', 'name': '订单状态', 'status': True, 'sort': 1},
+            content_type='application/json',
+        )
+        self.assertEqual(create.status_code, 200)
+        dict_id = create.json()['data']['id']
+
+        item = self.client.post(
+            '/admin/api/rbac/dictionaries/%s/items/create/' % dict_id,
+            {'label': '待支付', 'value': 'pending', 'sort': 1, 'status': True, 'is_default': True},
+            content_type='application/json',
+        )
+        self.assertEqual(item.status_code, 200)
+        item_id = item.json()['data']['id']
+
+        listed = self.client.get('/admin/api/rbac/dictionaries/?keyword=audit_order_status')
+        self.assertEqual(listed.status_code, 200)
+        row = listed.json()['data']['list'][0]
+        self.assertEqual(row['code'], 'audit_order_status')
+        self.assertEqual(row['item_count'], 1)
+
+        options = self.client.get('/admin/api/rbac/dictionaries/options/audit_order_status/')
+        self.assertEqual(options.status_code, 200)
+        self.assertEqual(options.json()['data'][0]['value'], 'pending')
+        self.assertTrue(options.json()['data'][0]['is_default'])
+
+        disabled = self.client.put(
+            '/admin/api/rbac/dictionary-items/%s/' % item_id,
+            {'label': '待支付', 'value': 'pending', 'status': False},
+            content_type='application/json',
+        )
+        self.assertEqual(disabled.status_code, 200)
+        self.assertEqual(
+            self.client.get('/admin/api/rbac/dictionaries/options/audit_order_status/').json()['data'],
+            [],
+        )
+
+    def test_system_dictionary_cannot_be_deleted(self):
+        from .models import Dictionary
+
+        obj = Dictionary.objects.create(
+            code='audit_system_dict', name='系统字典', is_system=True,
+        )
+        response = self.client.delete('/admin/api/rbac/dictionaries/%s/' % obj.pk)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(Dictionary.objects.filter(pk=obj.pk).exists())
+
     def test_role_page_has_reference_style_permission_grant_dialog(self):
         root = Path(__file__).resolve().parents[2]
         source = (root / 'django_layuix/static/layui/pages/role.html').read_text(encoding='utf-8')
@@ -1726,7 +1776,9 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()['data']
         self.assertIn('/static/layui/pages/menu.html', data['page_permissions'])
+        self.assertIn('/static/layui/pages/dict.html', data['page_permissions'])
         self.assertIn('menu:view', data['permission_catalog'])
+        self.assertIn('dict:view', data['permission_catalog'])
         self.assertTrue(any(item['value'] == 'add' for item in data['button_actions']))
 
     def test_generate_menu_buttons_is_idempotent_and_replaces(self):

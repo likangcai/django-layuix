@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import dictionary_views, views
 
 urlpatterns = [
     # User info & menus
@@ -86,6 +86,15 @@ urlpatterns = [
     path('constraints/prerequisite/', views.prerequisite_create, name='rbac_prerequisite_create'),
     path('constraints/prerequisite/<int:pk>/', views.prerequisite_delete, name='rbac_prerequisite_delete'),
     path('active-roles/', views.active_roles, name='rbac_active_roles'),
+
+    # Data dictionary
+    path('dictionaries/', dictionary_views.dictionary_list, name='rbac_dictionary_list'),
+    path('dictionaries/create/', dictionary_views.dictionary_create, name='rbac_dictionary_create'),
+    path('dictionaries/options/<str:code>/', dictionary_views.dictionary_options, name='rbac_dictionary_options'),
+    path('dictionaries/<int:pk>/items/', dictionary_views.dictionary_items, name='rbac_dictionary_items'),
+    path('dictionaries/<int:pk>/items/create/', dictionary_views.dictionary_item_create, name='rbac_dictionary_item_create'),
+    path('dictionaries/<int:pk>/', dictionary_views.dictionary_detail, name='rbac_dictionary_detail'),
+    path('dictionary-items/<int:pk>/', dictionary_views.dictionary_item_detail, name='rbac_dictionary_item_detail'),
 
     # Operation Log
     path('logs/', views.log_list, name='rbac_log_list'),

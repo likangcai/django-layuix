@@ -12,6 +12,7 @@ MENU_VIEW_PERMISSIONS = {
     '用户管理': 'user:view',
     '操作日志': 'log:view',
     '系统配置': 'config:view',
+    '字典管理': 'dict:view',
     '服务器管理': 'server:view',
     'AI 配置': 'ai_config:view',
     'ABAC 策略': 'abac:view',

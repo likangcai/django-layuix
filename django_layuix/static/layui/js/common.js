@@ -330,6 +330,7 @@ function confirmDelete(msg, callback) {
         _layui.layer.confirm(message, {
             icon: 3,
             title: title,
+            skin: 'layui-layer-admin',
             btn: [btn1, btn2]
         }, function(index) {
             _layui.layer.close(index);
@@ -462,6 +463,7 @@ function openStandardDialog(options) {
         title: settings.title || '',
         area: settings.area || ['620px', '520px'],
         maxHeight: settings.maxHeight || '80vh',
+        skin: settings.skin || 'layui-layer-admin',
         closeBtn: settings.closeBtn === undefined ? 1 : settings.closeBtn,
         btnAlign: settings.btnAlign || 'r',
         content: content,
@@ -471,6 +473,13 @@ function openStandardDialog(options) {
             }
             if (form && settings.filter) {
                 form.render(null, settings.filter);
+            }
+            if (settings.maxHeight) {
+                var maxHeight = settings.maxHeight;
+                layero.find('.layui-layer-content').css({
+                    maxHeight: typeof maxHeight === 'number' ? maxHeight + 'px' : maxHeight,
+                    overflow: 'auto'
+                });
             }
             if (typeof renderI18n === 'function') renderI18n();
             if (typeof originalSuccess === 'function') originalSuccess(layero, idx);
@@ -915,6 +924,7 @@ var PAGE_PERMISSION_MAP = {
     '/static/layui/pages/user.html': 'user:view',
     '/static/layui/pages/log.html': 'log:view',
     '/static/layui/pages/config.html': 'config:view',
+    '/static/layui/pages/dict.html': 'dict:view',
     '/static/layui/pages/ai-config.html': 'ai_config:view',
     '/static/layui/pages/server.html': 'server:view',
     '/static/layui/pages/abac.html': 'abac:view',
@@ -1143,6 +1153,12 @@ function renderI18n() {
                 node.textContent = translated;
             }
         }
+        ['placeholder', 'title'].forEach(function (attrName) {
+            var key = node.getAttribute('data-i18n-' + attrName);
+            if (!key || typeof t !== 'function') return;
+            var value = t(key);
+            if (value && value !== key) node.setAttribute(attrName, value);
+        });
 
         for (var child = node.firstChild; child; child = child.nextSibling) {
             walk(child);

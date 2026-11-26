@@ -10,7 +10,9 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django_layuix.rbac.defaults import get_default_configs
-from django_layuix.rbac.models import Menu, Role, SystemConfig
+from django_layuix.rbac.models import (
+    Dictionary, DictionaryItem, Menu, Role, SystemConfig,
+)
 
 
 class Command(BaseCommand):
@@ -57,6 +59,8 @@ class Command(BaseCommand):
             if force and rbac_menu_exists:
                 self.stdout.write(self.style.WARNING('使用 --force 模式，将更新现有 rbac 菜单数据（保留角色权限关联）'))
             self._init_menus(force)
+
+        self._ensure_data_menus()
             
         # 无论菜单是否已存在，都继续执行角色和配置的初始化
         # 这确保了即使其他 app 抢跑了菜单注册，角色和配置也能正确创建
@@ -67,6 +71,7 @@ class Command(BaseCommand):
 
         self._init_roles(force)
         self._init_default_configs(force)
+        self._init_default_dictionaries()
         self.stdout.write(self.style.SUCCESS('\n初始化完成！'))
 
     def _ensure_rbac3_menu(self):
@@ -141,6 +146,37 @@ class Command(BaseCommand):
                 if admin_role:
                     admin_role.menus.add(menu)
 
+    def _ensure_data_menus(self):
+        """Add data dictionary menu to existing installations."""
+        group, group_created = Menu.objects.get_or_create(
+            name='数据管理',
+            defaults={
+                'name_en': 'Data', 'name_zh_hans': '数据管理',
+                'icon': 'layui-icon-table', 'path': '', 'menu_type': 1,
+                'sort': 4, 'parent': None, 'status': True, 'visible': True,
+                'backend_visible': True, 'frontend_visible': True,
+            },
+        )
+        menu, created = Menu.objects.get_or_create(
+            name='字典管理',
+            defaults={
+                'name_en': 'Dictionary', 'name_zh_hans': '字典管理',
+                'icon': 'layui-icon-read', 'path': '/data/dictionary',
+                'permission': 'dict:view', 'menu_type': 2, 'sort': 1,
+                'parent': group, 'status': True, 'visible': True,
+                'backend_visible': True, 'frontend_visible': True,
+            },
+        )
+        if menu.permission != 'dict:view' or menu.parent_id != group.pk:
+            menu.permission = 'dict:view'
+            menu.parent = group
+            menu.save(update_fields=['permission', 'parent'])
+        if created or group_created:
+            admin_role = Role.objects.filter(code='admin').first()
+            if admin_role:
+                admin_role.menus.add(group, menu)
+            self.stdout.write(self.style.SUCCESS('  创建菜单: 数据管理 / 字典管理'))
+
     def _init_menus(self, force=False):
         """初始化菜单数据"""
         # 创建菜单
@@ -164,6 +200,10 @@ class Command(BaseCommand):
             ('操作日志', 'Log', '操作日志', 'layui-icon-log', '/system/log', 2, 2, '系统管理'),
             ('系统配置', 'Config', '系统配置', 'layui-icon-set-sm', '/system/config', 2, 3, '系统管理'),
             ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 2, 6, '权限管理'),
+
+            # ---- 数据管理 ----
+            ('数据管理', 'Data', '数据管理', 'layui-icon-table', '', 1, 4, None),
+            ('字典管理', 'Dictionary', '字典管理', 'layui-icon-read', '/data/dictionary', 2, 1, '数据管理'),
 
             # ---- 运维管理 ----
             ('运维管理', 'Operations', '运维管理', 'layui-icon-console', '', 1, 3, None),
@@ -571,6 +611,46 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'  成功创建 {created_count} 个系统配置。'))
         elif skipped_count > 0:
             self.stdout.write(self.style.WARNING(f'  提示：{skipped_count} 个系统配置已存在，未作修改。如需重置为默认值，请使用 --force 参数。'))
+
+    def _init_default_dictionaries(self):
+        """Seed reusable dictionaries without overwriting later edits."""
+        defaults = [
+            ('sys_common_status', '通用状态', '启用与停用状态', [
+                ('启用', '1', True), ('停用', '0', False),
+            ]),
+            ('sys_user_gender', '用户性别', '用户资料性别选项', [
+                ('男', '1', True), ('女', '2', False), ('保密', '0', False),
+            ]),
+            ('sys_notice_type', '通知类型', '站内通知分类', [
+                ('通知', '1', True), ('公告', '2', False),
+            ]),
+        ]
+        created = 0
+        for code, name, description, options in defaults:
+            dictionary, is_new = Dictionary.objects.get_or_create(
+                code=code,
+                defaults={
+                    'name': name,
+                    'description': description,
+                    'is_system': True,
+                    'status': True,
+                },
+            )
+            if is_new:
+                created += 1
+            for index, (label, value, is_default) in enumerate(options):
+                DictionaryItem.objects.get_or_create(
+                    dictionary=dictionary,
+                    value=value,
+                    defaults={
+                        'label': label,
+                        'sort': index + 1,
+                        'status': True,
+                        'is_default': is_default,
+                    },
+                )
+        if created:
+            self.stdout.write(self.style.SUCCESS('  初始化内置字典 %s 项' % created))
 
     def _fix_icons(self):
         """修复数据库中无效的 Layui 图标（原 fix_icons 命令功能）"""

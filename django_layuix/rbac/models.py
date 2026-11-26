@@ -355,3 +355,51 @@ class SystemConfig(models.Model):
 
     def __str__(self):
         return self.key
+
+
+class Dictionary(models.Model):
+    """Data dictionary: a named group of reusable option values."""
+    code = models.CharField(max_length=64, unique=True, verbose_name='字典编码')
+    name = models.CharField(max_length=100, verbose_name='字典名称')
+    description = models.CharField(max_length=200, blank=True, default='', verbose_name='描述')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    is_system = models.BooleanField(default=False, verbose_name='系统内置')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_dictionary'
+        verbose_name = '数据字典'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class DictionaryItem(models.Model):
+    """A single selectable option inside a data dictionary."""
+    dictionary = models.ForeignKey(
+        Dictionary, related_name='items', on_delete=models.CASCADE,
+        verbose_name='所属字典',
+    )
+    label = models.CharField(max_length=100, verbose_name='显示名称')
+    value = models.CharField(max_length=100, verbose_name='数据值')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    is_default = models.BooleanField(default=False, verbose_name='默认项')
+    css_class = models.CharField(max_length=50, blank=True, default='', verbose_name='样式类')
+    remark = models.CharField(max_length=200, blank=True, default='', verbose_name='备注')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_dictionary_item'
+        verbose_name = '字典项'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+        unique_together = [('dictionary', 'value')]
+
+    def __str__(self):
+        return '%s = %s' % (self.label, self.value)
