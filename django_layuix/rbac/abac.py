@@ -294,13 +294,17 @@ def _policies_for(resource, action, field):
 
 
 def evaluate_policies(user, action, resource, field=None, extra_context=None, policies=None):
-    """Return an ABAC decision. No policy means allow (backward compatible)."""
+    """Return an ABAC decision.
+
+    Row-level policies remain backward compatible (no policy means allow).
+    Field-level policies are default-deny: an unregistered field is hidden.
+    """
     if getattr(user, 'is_superuser', False):
         return AbacDecision(True, [], [])
     if policies is None:
         policies = _policies_for(resource, action, field)
     if not policies:
-        return AbacDecision(True, [], [])
+        return AbacDecision(not bool(field), [], [])
 
     resource_for_context = (extra_context or {}).get('resource', resource)
     context = build_context(user, action, resource_for_context, field, extra_context)
@@ -343,10 +347,12 @@ def filter_fields(user, action, resource, fields, extra_context=None):
             policy for policy in _policies_for(resource, action, field)
             if policy.field == field
         ]
+        if not field_policies:
+            continue
         has_allow_whitelist = any(policy.effect == 'allow' for policy in field_policies)
         decision = evaluate_policies(
             user, action, resource, field, extra_context, policies=field_policies
         )
-        if decision.allowed and (not has_allow_whitelist or decision.matched):
+        if decision.allowed and has_allow_whitelist and decision.matched:
             visible.append(field)
     return visible

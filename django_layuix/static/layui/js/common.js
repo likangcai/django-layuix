@@ -503,7 +503,7 @@ function openStandardDialog(options) {
 }
 
 /**
- * 虚拟滚动表格：只渲染可视区域行，适合大数据量只读列表。
+ * 虚拟滚动表格：支持本地数据、服务端分页混合加载与列宽持久化。
  * cols 使用与 Layui table 相同的 {field,title,width,templet} 结构。
  */
 function renderVirtualTable(options) {
@@ -516,35 +516,102 @@ function renderVirtualTable(options) {
         buffer: 8,
         height: 420,
         data: [],
-        cols: []
+        cols: [],
+        pageMode: 'client',
+        page: 1,
+        pageSize: 100,
+        total: 0,
+        request: {pageName: 'page', limitName: 'page_size'},
+        tableKey: ''
     }, options);
     var columns = settings.cols && settings.cols[0] ? settings.cols[0] : (settings.cols || []);
+    var storageKey = settings.tableKey ? 'layuix:virtual-table:' + settings.tableKey + ':columns' : '';
+    var savedWidths = {};
+    try {
+        savedWidths = storageKey ? (JSON.parse(localStorage.getItem(storageKey) || '{}') || {}) : {};
+    } catch (e) {
+        savedWidths = {};
+    }
+    function normalizeWidth(value) {
+        if (typeof value === 'number' && value >= 60 && value <= 600) return value;
+        if (/^\d{2,3}px$/.test(String(value || ''))) return value;
+        return null;
+    }
+    columns.forEach(function(col, index) {
+        var width = normalizeWidth(savedWidths[index]);
+        if (width) col.width = width;
+    });
+
     var rows = settings.data || [];
+    var total = parseInt(settings.total, 10) || rows.length;
+    var currentPage = parseInt(settings.page, 10) || 1;
+    var loading = false;
+    var loadError = null;
+    var loaded = false;
+    var lastFailedRequest = null;
+    var requestId = 0;
     var root = $('<div class="layuix-virtual-table"></div>');
     var head = $('<div class="layuix-virtual-head"></div>');
     var body = $('<div class="layuix-virtual-body"></div>');
     var topSpacer = $('<div class="layuix-virtual-spacer"></div>');
     var list = $('<div class="layuix-virtual-rows"></div>');
     var bottomSpacer = $('<div class="layuix-virtual-spacer"></div>');
+    var state = $('<div class="layuix-virtual-state"></div>');
 
-    body.css('height', typeof settings.height === 'number' ? settings.height + 'px' : settings.height);
-    head.append(columns.map(function(col) {
-        var width = col.width ? 'width:' + (typeof col.width === 'number' ? col.width + 'px' : col.width) + ';' : 'flex:1;';
-        return '<div class="layuix-virtual-cell" style="' + width + '">' + escapeHtml(col.title || '') + '</div>';
-    }).join(''));
-    body.append(topSpacer).append(list).append(bottomSpacer);
-    root.append(head).append(body);
-    $(settings.elem).html(root);
+    function widthStyle(col) {
+        if (!col.width) return 'flex:1;';
+        return 'width:' + (typeof col.width === 'number' ? col.width + 'px' : col.width) + ';flex:0 0 auto;';
+    }
+
+    function renderHead() {
+        head.empty();
+        columns.forEach(function(col, index) {
+            var cell = $('<div class="layuix-virtual-cell" style="' + widthStyle(col) + '">'
+                + escapeHtml(col.title || '') + '</div>');
+            if (storageKey) {
+                cell.append('<span class="layuix-virtual-resizer" data-index="' + index + '"></span>');
+            }
+            head.append(cell);
+        });
+    }
+
+    function persistWidths() {
+        if (!storageKey) return;
+        var widths = {};
+        columns.forEach(function(col, index) { if (col.width) widths[index] = col.width; });
+        try { localStorage.setItem(storageKey, JSON.stringify(widths)); } catch (e) {}
+    }
+
+    function showState(type, message) {
+        if (!type) {
+            state.hide().empty();
+            return;
+        }
+        var icon = type === 'loading' ? 'layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop' : 'layui-icon-close-fill';
+        state.removeClass('is-loading is-error').addClass('is-' + type)
+            .html('<i class="layui-icon ' + icon + '"></i><span>' + escapeHtml(message || '') + '</span>'
+                + (type === 'error' ? '<button type="button" class="layui-btn layui-btn-xs layui-btn-primary">'
+                    + escapeHtml(typeof t === 'function' ? t('common.retry') : 'Retry') + '</button>' : ''))
+            .show();
+        if (type === 'error') {
+            state.find('button').on('click', function() { instance.retry(); });
+        }
+    }
+
+    function safeTemplateHtml(value) {
+        if (value === null || value === undefined) return '';
+        return value && value.__html ? String(value.__html) : escapeHtml(value);
+    }
 
     function cellHtml(row, col, index) {
         if (typeof col.templet === 'function') {
-            return col.templet(row[col.field], row, index);
+            return safeTemplateHtml(col.templet(row[col.field], row, index));
         }
         if (typeof col.templet === 'string' && api && api.laytpl) {
             var tpl = col.templet.charAt(0) === '#'
                 ? ($(col.templet).html() || '')
                 : col.templet;
-            if (tpl) return api.laytpl(tpl).render(row);
+            if (tpl) return safeTemplateHtml(api.laytpl(tpl).render(row));
         }
         var value = row[col.field];
         return escapeHtml(value === null || value === undefined ? '' : value);
@@ -564,49 +631,218 @@ function renderVirtualTable(options) {
         var html = [];
         for (var i = start; i < end; i++) {
             var cells = columns.map(function(col) {
-                var width = col.width ? 'width:' + (typeof col.width === 'number' ? col.width + 'px' : col.width) + ';' : 'flex:1;';
-                return '<div class="layuix-virtual-cell" style="' + width + '">' + cellHtml(rows[i], col, i) + '</div>';
+                return '<div class="layuix-virtual-cell" style="' + widthStyle(col) + '">'
+                    + cellHtml(rows[i], col, i) + '</div>';
             }).join('');
             html.push('<div class="layuix-virtual-row" style="height:' + rowHeight + 'px">' + cells + '</div>');
         }
         list.html(html.join(''));
+        if (settings.pageMode === 'server' && loaded && !loading && !loadError
+            && rows.length > 0 && rows.length < total
+            && scrollTop + viewport >= rows.length * rowHeight - rowHeight * 2) {
+            instance.loadPage(currentPage + 1, true);
+        }
     }
 
-    body.off('scroll.layuixVirtual').on('scroll.layuixVirtual', renderWindow);
-    renderWindow();
+    function applyPayload(payload, append) {
+        var parsed = typeof settings.parseData === 'function'
+            ? settings.parseData(payload) : payload;
+        var batch = (parsed && parsed.data) || [];
+        if (parsed && (parsed.count !== undefined || parsed.total !== undefined)) {
+            total = parseInt(parsed.count !== undefined ? parsed.count : parsed.total, 10) || 0;
+        }
+        rows = append ? rows.concat(batch) : batch;
+        currentPage = append ? currentPage + 1 : (parseInt(settings.page, 10) || 1);
+        loaded = true;
+        showState(null);
+        renderWindow();
+        if (typeof settings.success === 'function') settings.success(rows, payload);
+    }
 
     var instance = {
         elem: root,
         rows: function() { return rows; },
+        state: function() { return {page: currentPage, total: total, loaded: rows.length, loading: loading, error: loadError}; },
         refresh: renderWindow,
-        setData: function(data) { rows = data || []; body.scrollTop(0); renderWindow(); }
-    };
-    if (settings.url && typeof fetch === 'function') {
-        var headers = Object.assign({}, settings.headers || {});
-        var token = getToken();
-        if (token && !headers.Authorization) {
-            headers.Authorization = 'Bearer ' + token;
+        setData: function(data, meta) {
+            requestId++;
+            rows = data || [];
+            total = meta && meta.total !== undefined ? parseInt(meta.total, 10) || 0 : rows.length;
+            currentPage = meta && meta.page ? parseInt(meta.page, 10) || 1 : 1;
+            loaded = true;
+            loadError = null;
+            lastFailedRequest = null;
+            body.scrollTop(0);
+            showState(null);
+            renderWindow();
+        },
+        loadPage: function(page, append) {
+            if (!settings.url || typeof fetch !== 'function' || loading) return;
+            var currentRequest = ++requestId;
+            loading = true;
+            loadError = null;
+            lastFailedRequest = {page: page, append: !!append};
+            showState('loading', typeof t === 'function' ? t('common.loading') : 'Loading...');
+            var url = settings.url;
+            var request = settings.request || {};
+            var sep = url.indexOf('?') > -1 ? '&' : '?';
+            url += sep + (request.pageName || 'page') + '=' + encodeURIComponent(page)
+                + '&' + (request.limitName || 'page_size') + '=' + encodeURIComponent(settings.pageSize);
+            var headers = Object.assign({}, settings.headers || {});
+            var token = getToken();
+            if (token && !headers.Authorization) headers.Authorization = 'Bearer ' + token;
+            fetch(url, {credentials: 'include', headers: headers})
+                .then(function(response) {
+                    if (response.status === 401) handleLoginExpired({code: 401}, null);
+                    if (!response.ok) throw new Error((typeof t === 'function' ? t('common.loadFailed') : 'Load failed') + ' (' + response.status + ')');
+                    return response.json();
+                })
+                .then(function(payload) {
+                    if (currentRequest !== requestId) return;
+                    if (payload && payload.code !== undefined && payload.code !== 0 && payload.code !== 200) {
+                        throw new Error(payload.msg || 'Request failed');
+                    }
+                    applyPayload(payload, !!append);
+                })
+                .catch(function(error) {
+                    if (currentRequest !== requestId) return;
+                    loadError = error;
+                    showState('error', (error && error.message) || (typeof t === 'function' ? t('common.loadFailed') : 'Load failed'));
+                    if (typeof settings.error === 'function') settings.error(error);
+                })
+                .finally(function() { if (currentRequest === requestId) loading = false; });
+        },
+        retry: function() {
+            if (!lastFailedRequest) return;
+            var target = lastFailedRequest;
+            loadError = null;
+            instance.loadPage(target.page, target.append);
         }
-        fetch(settings.url, {credentials: 'include', headers: headers})
-            .then(function(response) { return response.json(); })
-            .then(function(payload) {
-                var parsed = typeof settings.parseData === 'function'
-                    ? settings.parseData(payload) : payload;
-                instance.setData((parsed && parsed.data) || []);
-            })
-            .catch(function(error) {
-                if (typeof settings.error === 'function') settings.error(error);
-            });
+    };
+
+    body.css('height', typeof settings.height === 'number' ? settings.height + 'px' : settings.height);
+    renderHead();
+    body.append(topSpacer).append(list).append(bottomSpacer);
+    root.append(head).append(body).append(state);
+    $(settings.elem).html(root);
+
+    body.off('scroll.layuixVirtual').on('scroll.layuixVirtual', renderWindow);
+    head.off('mousedown.layuixVirtualResize').on('mousedown.layuixVirtualResize', '.layuix-virtual-resizer', function(e) {
+        if (!storageKey) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var handle = $(this);
+        var index = parseInt(handle.data('index'), 10);
+        var startX = e.clientX;
+        var startWidth = parseInt(columns[index].width, 10) || 120;
+        $(document).on('mousemove.layuixVirtualResize', function(moveEvent) {
+            columns[index].width = Math.max(60, startWidth + moveEvent.clientX - startX);
+            renderHead();
+            renderWindow();
+        });
+        $(document).one('mouseup.layuixVirtualResize', function() {
+            $(document).off('mousemove.layuixVirtualResize');
+            persistWidths();
+            renderHead();
+        });
+    });
+    renderWindow();
+
+    if (settings.url && typeof fetch === 'function') {
+        instance.loadPage(currentPage, false);
     }
     return instance;
+}
+
+var PAGE_PERMISSION_MAP = {
+    '/static/layui/pages/dashboard.html': 'dashboard:view',
+    '/static/layui/pages/menu.html': 'menu:view',
+    '/static/layui/pages/role.html': 'role:view',
+    '/static/layui/pages/user.html': 'user:view',
+    '/static/layui/pages/log.html': 'log:view',
+    '/static/layui/pages/config.html': 'config:view',
+    '/static/layui/pages/ai-config.html': 'ai_config:view',
+    '/static/layui/pages/server.html': 'server:view',
+    '/static/layui/pages/abac.html': 'abac:view',
+    '/static/layui/pages/scope.html': 'scope:view',
+    '/static/layui/pages/constraints.html': 'constraint:view',
+    '/static/layui/pages/profile.html': 'profile:view',
+    '/static/layui/pages/frontend.html': 'frontend:view',
+    '/static/permission_demo/pages/order.html': 'permission_demo:view',
+    '/static/store/pages/product.html': 'product:view',
+    '/static/store/pages/category.html': 'category:view',
+    '/static/store/pages/order.html': 'store_order:view'
+};
+
+function currentUserPermissions() {
+    var root = window.parent && window.parent !== window ? window.parent : window;
+    var user = root.currentUser || window.currentUser || {};
+    return user.permissions || [];
+}
+
+function requiredPagePermission(path) {
+    var clean = String(path || location.pathname).split('?')[0].split('#')[0];
+    var map = PAGE_PERMISSION_MAP;
+    var root = window.parent && window.parent !== window ? window.parent : window;
+    if (root.currentUser && root.currentUser.page_permissions) {
+        map = root.currentUser.page_permissions;
+    }
+    if (map[clean]) return map[clean];
+    var file = clean.split('/').pop();
+    for (var key in map) {
+        if (key.split('/').pop() === file) return map[key];
+    }
+    return '';
+}
+
+function enforcePagePermission() {
+    var path = location.pathname;
+    if (path.indexOf('/static/') !== 0) return true;
+    var publicPages = ['/static/layui/pages/login.html', '/static/layui/pages/register.html', '/static/layui/pages/404.html'];
+    if (publicPages.indexOf(path) > -1) return true;
+    var required = requiredPagePermission(path);
+    if (!required) {
+        deny();
+        return false;
+    }
+
+    function deny() {
+        document.body.innerHTML = '<div class="layuix-page-denied"><i class="layui-icon layui-icon-close-fill"></i><h2>'
+            + escapeHtml((typeof t === 'function' ? t('common.noPermission') : '无权限访问'))
+            + '</h2><p>' + escapeHtml(required) + '</p></div>';
+    }
+
+    function check(user) {
+        if (user && (user.is_superuser || (user.permissions || []).indexOf(required) > -1)) return true;
+        deny();
+        return false;
+    }
+
+    var root = window.parent && window.parent !== window ? window.parent : window;
+    var user = root.currentUser || window.currentUser;
+    if (user && user.permissions) return check(user);
+    if (typeof fetch !== 'function') { deny(); return false; }
+    fetch('/admin/api/rbac/userinfo/', {credentials: 'same-origin'})
+        .then(function(response) { return response.ok ? response.json() : {code: 401}; })
+        .then(function(res) { check(res && res.code === 200 ? res.data : null); })
+        .catch(function() { deny(); });
+    return true;
 }
 
 window.LayuiUI = {
     standardPage: getStandardTablePage,
     table: renderStandardTable,
     virtualTable: renderVirtualTable,
-    dialog: openStandardDialog
+    dialog: openStandardDialog,
+    enforcePagePermission: enforcePagePermission,
+    requiredPagePermission: requiredPagePermission
 };
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', enforcePagePermission);
+} else {
+    enforcePagePermission();
+}
 
 /**
  * 渲染页面中所有 {{ t(...) }} 占位符。

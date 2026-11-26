@@ -42,6 +42,7 @@ urlpatterns = [
     path('menus/frontend/', views.frontend_menu_tree, name='rbac_frontend_menu_tree'),
     path('menus/create/', views.menu_create, name='rbac_menu_create'),
     path('menus/<int:pk>/', views.menu_detail, name='rbac_menu_detail'),
+    path('menus/<int:pk>/generate-permissions/', views.menu_generate_permissions, name='rbac_menu_generate_permissions'),
 
     # Role CRUD
     path('roles/', views.role_list, name='rbac_role_list'),

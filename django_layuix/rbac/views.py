@@ -149,8 +149,14 @@ def user_info(request):
     menus = _get_user_menus(user)
     user_data['menus'] = menus
 
-    # Get permissions count
+    # Get permissions and the catalog subset visible to this user
     user_data['permissions'] = _get_user_permissions(user)
+    page_permissions, button_actions, catalog = _permission_catalog_payload(
+        user, user_data['permissions']
+    )
+    user_data['page_permissions'] = page_permissions
+    user_data['button_actions'] = button_actions
+    user_data['permission_catalog'] = catalog or []
 
     return success_response(user_data)
 
@@ -227,6 +233,26 @@ def _get_user_permissions(user):
     """Get user permission strings (inheritance and active roles included)."""
     from .engine import get_effective_permissions
     return list(get_effective_permissions(user))
+
+
+def _permission_catalog_payload(user, permissions):
+    """Expose only the catalog subset relevant to the current user."""
+    from .permission_registry import BUTTON_ACTIONS, PAGE_PERMISSIONS, permission_catalog
+
+    is_admin = bool(
+        getattr(user, 'is_superuser', False)
+        or 'menu:view' in permissions or 'menu:edit' in permissions
+    )
+    page_permissions = {
+        path: code for path, code in PAGE_PERMISSIONS.items()
+        if is_admin or code in permissions
+    }
+    actions = [
+        {'value': key, 'zh_hans': value[0], 'en': value[1]}
+        for key, value in BUTTON_ACTIONS.items()
+    ] if is_admin else []
+    catalog = permission_catalog() if is_admin else sorted(set(page_permissions.values()))
+    return page_permissions, actions, catalog
 
 
 @csrf_exempt
@@ -1083,6 +1109,31 @@ def menu_create(request):
     return success_response({'id': menu.id}, msg='创建成功')
 
 
+@csrf_exempt
+@api_login_required
+@api_permission_required('menu:edit')
+def menu_generate_permissions(request, pk):
+    """POST /api/rbac/menus/<pk>/generate-permissions/ - 自动生成按钮权限"""
+    from .button_generator import generate_menu_buttons
+    from .models import Menu
+
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    menu = Menu.objects.filter(pk=pk).first()
+    if not menu:
+        return error_response('菜单不存在', 404)
+    if menu.menu_type not in (1, 2):
+        return error_response('只能为目录或菜单生成按钮权限', 400)
+    body = get_request_body(request)
+    result = generate_menu_buttons(
+        menu,
+        body.get('actions') or [],
+        replace=bool(body.get('replace', True)),
+        actor=request.user,
+    )
+    return success_response(result, msg='按钮权限已生成')
+
+
 # ==================== Role CRUD ====================
 
 def _role_payload(role):
@@ -1193,7 +1244,13 @@ def role_detail(request, pk):
 
         role.save()
         if 'menu_ids' in body:
-            role.menus.set(body['menu_ids'])
+            try:
+                from .engine import validate_assignable_menus
+
+                assignable = validate_assignable_menus(body['menu_ids'])
+            except RbacConstraintError as e:
+                return error_response(e.message, 400)
+            role.menus.set(assignable)
         if parent_ids_payload is not None:
             try:
                 parents = validate_role_parents(role.id, parent_ids_payload)
@@ -1277,7 +1334,13 @@ def role_create(request):
             role.save(update_fields=['parent'])
 
     if 'menu_ids' in body and body['menu_ids']:
-        role.menus.set(body['menu_ids'])
+        try:
+            from .engine import validate_assignable_menus
+
+            role.menus.set(validate_assignable_menus(body['menu_ids']))
+        except RbacConstraintError as e:
+            role.delete()
+            return error_response(e.message, 400)
     else:
         from .models import Menu
         default_menus = Menu.objects.filter(
@@ -1936,7 +1999,7 @@ def plugin_manifest(request):
 
 @csrf_exempt
 @api_login_required
-@api_permission_by_method({'GET': 'constraint:view', '*': 'role:edit'})
+@api_permission_by_method({'GET': 'constraint:view', 'POST': 'constraint:add', 'PUT': 'constraint:edit', 'PATCH': 'constraint:edit', 'DELETE': 'constraint:delete'})
 def constraint_list(request):
     """GET /api/rbac/constraints/ - 互斥组、前置角色与全局上限"""
     from .engine import _get_config, DSD_STRATEGY_KEY, PREREQ_STRATEGY_KEY, get_max_roles_per_user
@@ -1992,7 +2055,7 @@ def _sod_payload(group):
 
 @csrf_exempt
 @api_login_required
-@api_permission_by_method({'GET': 'constraint:view', '*': 'role:edit'})
+@api_permission_by_method({'GET': 'constraint:view', 'POST': 'constraint:add', 'PUT': 'constraint:edit', 'PATCH': 'constraint:edit', 'DELETE': 'constraint:delete'})
 def sod_constraint_list(request):
     """GET/POST /api/rbac/sod-constraints/ - 1.4.2 SSD 兼容端点"""
     from .engine import RbacConstraintError, require_roles
@@ -2028,7 +2091,7 @@ def sod_constraint_list(request):
 
 @csrf_exempt
 @api_login_required
-@api_permission_by_method({'GET': 'constraint:view', '*': 'role:edit'})
+@api_permission_by_method({'GET': 'constraint:view', 'POST': 'constraint:add', 'PUT': 'constraint:edit', 'PATCH': 'constraint:edit', 'DELETE': 'constraint:delete'})
 def sod_constraint_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/sod-constraints/<id>/ - 1.4.2 SSD 兼容端点"""
     from .engine import RbacConstraintError, require_roles
@@ -2278,7 +2341,7 @@ def _scope_descendant_ids(node_id):
 
 @csrf_exempt
 @api_login_required
-@api_permission_by_method({'GET': 'scope:view', '*': 'role:edit'})
+@api_permission_by_method({'GET': 'scope:view', 'POST': 'scope:add', 'PUT': 'scope:edit', 'PATCH': 'scope:edit', 'DELETE': 'scope:delete'})
 def scope_node_list(request):
     """GET/POST /api/rbac/scope-nodes/ - 组织节点树与创建入口"""
     from .models import ScopeNode
@@ -2312,7 +2375,7 @@ def scope_node_list(request):
 
 @csrf_exempt
 @api_login_required
-@api_permission_by_method({'GET': 'scope:view', '*': 'role:edit'})
+@api_permission_by_method({'GET': 'scope:view', 'POST': 'scope:add', 'PUT': 'scope:edit', 'PATCH': 'scope:edit', 'DELETE': 'scope:delete'})
 def scope_node_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/scope-nodes/<id>/"""
     from .models import Role, ScopeNode
@@ -2383,7 +2446,7 @@ def _abac_payload(policy, include_expression=True):
 
 @csrf_exempt
 @api_login_required
-@api_permission_by_method({'GET': 'abac:view', '*': 'role:edit'})
+@api_permission_by_method({'GET': 'abac:view', 'POST': 'abac:add', 'PUT': 'abac:edit', 'PATCH': 'abac:edit', 'DELETE': 'abac:delete'})
 def abac_policy_list(request):
     """GET/POST /api/rbac/abac-policies/"""
     from .abac import AbacError, validate_expression
@@ -2419,7 +2482,7 @@ def abac_policy_list(request):
 
 @csrf_exempt
 @api_login_required
-@api_permission_by_method({'GET': 'abac:view', '*': 'role:edit'})
+@api_permission_by_method({'GET': 'abac:view', 'POST': 'abac:add', 'PUT': 'abac:edit', 'PATCH': 'abac:edit', 'DELETE': 'abac:delete'})
 def abac_policy_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/abac-policies/<id>/"""
     from .abac import AbacError, validate_expression
@@ -2525,6 +2588,10 @@ def frontend_permissions(request):
         _abac_payload(row, include_expression=False)
         for row in AbacPolicy.objects.filter(is_active=True)
     ] if can_view_policies else []
+    permissions = _get_user_permissions(request.user)
+    page_permissions, button_actions, catalog = _permission_catalog_payload(
+        request.user, permissions
+    )
     return success_response({
         'user': {
             'id': request.user.pk,
@@ -2532,10 +2599,13 @@ def frontend_permissions(request):
             'language': language,
             'is_superuser': bool(getattr(request.user, 'is_superuser', False)),
         },
-        'permissions': _get_user_permissions(request.user),
+        'permissions': permissions,
         'roles': list(request.user.roles.values('id', 'code', 'name')) if hasattr(request.user, 'roles') else [],
         'menus': _build_menu_tree(menu_rows),
         'plugins': list_plugins(),
         'scope_nodes': _build_scope_tree(scope_nodes),
         'abac_policies': policies,
+        'page_permissions': page_permissions,
+        'button_actions': button_actions,
+        'permission_catalog': catalog,
     })

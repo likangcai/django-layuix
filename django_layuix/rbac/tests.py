@@ -438,7 +438,7 @@ class Rbac4ExtensionTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_has_permission_entry_point(self):
-        self.assertTrue(has_permission(self.admin, 'any:code'))
+        self.assertFalse(has_permission(self.admin, 'any:code'))
         self.assertFalse(has_permission(None, 'any:code'))
 
     @skipUnless(importlib.util.find_spec('rest_framework'), 'DRF not installed')
@@ -448,6 +448,7 @@ class Rbac4ExtensionTests(TestCase):
         class DummyView:
             layui_permission = 'test:drf'
 
+        Menu.objects.create(name='审计 DRF 权限', permission='test:drf', status=True)
         request = mock.Mock(user=self.admin)
         self.assertTrue(LayuiRBACPermission().has_permission(request, DummyView()))
         request.user = self.user
@@ -651,7 +652,7 @@ class Rbac142EnhancementTests(TestCase):
             effect='allow', expression="user.username == 'nobody'", priority=10,
         )
         self.assertEqual(
-            filter_fields(self.user, 'view', 'store.Order', ['id', 'cost']), ['id']
+            filter_fields(self.user, 'view', 'store.Order', ['id', 'cost']), []
         )
 
     def test_abac_api_rejects_invalid_expression(self):
@@ -870,7 +871,7 @@ class RbacFinalAuditTests(TestCase):
             effect='allow', expression='false', priority=2,
         )
         self.assertEqual(
-            filter_fields(self.user, 'view', 'audit.Resource', ['id', 'secret']), ['id']
+            filter_fields(self.user, 'view', 'audit.Resource', ['id', 'secret']), []
         )
 
     def test_abac_boolean_operators_short_circuit(self):
@@ -1513,6 +1514,74 @@ class RbacFinalAuditTests(TestCase):
     def test_new_user_default_theme_is_light(self):
         user = get_user_model().objects.create_user(username='audit_light_theme', password='pass12345')
         self.assertEqual(user.theme, '默认浅色')
+
+    def test_unregistered_permission_is_denied(self):
+        from .permission_registry import is_registered_permission
+
+        self.assertFalse(is_registered_permission('audit:unregistered'))
+        self.assertFalse(has_permission(self.admin, 'audit:unregistered'))
+        self.assertFalse(self.admin.has_perm('audit:unregistered'))
+
+    def test_registered_builtin_permission_is_available(self):
+        from .permission_registry import is_registered_permission
+
+        self.assertTrue(is_registered_permission('menu:view'))
+        self.assertTrue(has_permission(self.admin, 'menu:view'))
+
+    def test_frontend_permissions_expose_catalog(self):
+        response = self.client.get('/admin/api/rbac/frontend/permissions/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()['data']
+        self.assertIn('/static/layui/pages/menu.html', data['page_permissions'])
+        self.assertIn('menu:view', data['permission_catalog'])
+        self.assertTrue(any(item['value'] == 'add' for item in data['button_actions']))
+
+    def test_generate_menu_buttons_is_idempotent_and_replaces(self):
+        from .button_generator import generate_menu_buttons
+        from .models import Menu
+
+        menu = Menu.objects.create(name='审计权限菜单', permission='audit:view', menu_type=2)
+        first = generate_menu_buttons(menu, ['view', 'add'], replace=True)
+        second = generate_menu_buttons(menu, ['view', 'add'], replace=True)
+        self.assertEqual(first['created'], ['audit:view', 'audit:add'])
+        self.assertEqual(second['created'], [])
+        self.assertTrue(Menu.objects.filter(parent=menu, permission='audit:add').exists())
+        generated = generate_menu_buttons(menu, ['delete'], replace=True)
+        self.assertEqual(generated['removed'], ['audit:view', 'audit:add'])
+        self.assertFalse(Menu.objects.filter(parent=menu, permission='audit:add').exists())
+
+    def test_generate_permissions_api_requires_menu_edit(self):
+        from .models import Menu
+
+        menu = Menu.objects.create(name='审计生成权限', permission='auditgen:view', menu_type=2)
+        limited = get_user_model().objects.create_user(username='audit_gen_limited', password='pass12345')
+        client = Client()
+        client.force_login(limited)
+        response = client.post(
+            '/admin/api/rbac/menus/%s/generate-permissions/' % menu.pk,
+            {'actions': ['add']}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 403)
+        response = self.client.post(
+            '/admin/api/rbac/menus/%s/generate-permissions/' % menu.pk,
+            {'actions': ['add']}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Menu.objects.filter(parent=menu, permission='auditgen:add').exists())
+
+    def test_virtual_table_supports_server_paging_and_persisted_widths(self):
+        root = Path(__file__).resolve().parents[2]
+        source = (root / 'django_layuix/static/layui/js/common.js').read_text(encoding='utf-8')
+        for token in ('pageMode', 'loadPage', 'localStorage', 'layuix-virtual-resizer'):
+            self.assertIn(token, source)
+
+    def test_svelte_ssr_prefetch_helper_exists(self):
+        root = Path(__file__).resolve().parents[2]
+        core = (root / 'django_layuix/static/sdk/core/permission-client.js').read_text(encoding='utf-8')
+        server = (root / 'django_layuix/static/sdk/svelte/server.js').read_text(encoding='utf-8')
+        self.assertIn('prefetchPermissions', core)
+        self.assertIn('prefetchServerPermissions', server)
+        self.assertIn('event.fetch', server)
 
 
 class I18nCoverageTests(SimpleTestCase):

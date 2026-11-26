@@ -10,6 +10,7 @@ export function createPermissionClient(options = {}) {
     tokenPrefix: options.tokenPrefix || 'Bearer ',
     credentials: options.credentials === undefined ? 'include' : options.credentials,
     headers: options.headers || {},
+    fetch: options.fetch || null,
   };
 
   let snapshot = {
@@ -20,7 +21,15 @@ export function createPermissionClient(options = {}) {
     plugins: [],
     scope_nodes: [],
     abac_policies: [],
+    page_permissions: {},
+    button_actions: [],
+    permission_catalog: [],
   };
+  let ready = false;
+  if (options.bootstrap) {
+    snapshot = Object.assign({}, snapshot, options.bootstrap);
+    ready = true;
+  }
 
   function buildHeaders() {
     const headers = Object.assign({}, settings.headers);
@@ -32,10 +41,13 @@ export function createPermissionClient(options = {}) {
 
   let loadPromise = null;
 
-  async function load() {
+  async function load(options = {}) {
     if (loadPromise) return loadPromise;
+    if (ready && !options.refresh) return snapshot;
     loadPromise = (async () => {
-      const response = await fetch(settings.endpoint, {
+      const fetchImpl = settings.fetch || (typeof fetch === 'function' ? fetch : null);
+      if (!fetchImpl) throw new Error('fetch is not available; pass options.fetch');
+      const response = await fetchImpl(settings.endpoint, {
         method: 'GET',
         credentials: settings.credentials,
         headers: buildHeaders(),
@@ -48,6 +60,7 @@ export function createPermissionClient(options = {}) {
         throw new Error(payload.msg || 'Permission request failed');
       }
       snapshot = Object.assign({}, snapshot, payload.data || {});
+      ready = true;
       return snapshot;
     })();
     try {
@@ -58,7 +71,7 @@ export function createPermissionClient(options = {}) {
   }
 
   function can(code) {
-    if (!code) return false;
+    if (!ready || !code) return false;
     if (snapshot.user && snapshot.user.is_superuser) return true;
     return (snapshot.permissions || []).indexOf(code) > -1;
   }
@@ -91,6 +104,24 @@ export function createPermissionClient(options = {}) {
     return snapshot.abac_policies || [];
   }
 
+  function pagePermissions() {
+    return snapshot.page_permissions || {};
+  }
+
+  function buttonActions() {
+    return snapshot.button_actions || [];
+  }
+
+  function permissionCatalog() {
+    return snapshot.permission_catalog || [];
+  }
+
+  function canLoadPage(path, options = {}) {
+    const required = pagePermissions()[path] || '';
+    if (!required) return !options.defaultDeny;
+    return can(required);
+  }
+
   return {
     load,
     can,
@@ -101,10 +132,47 @@ export function createPermissionClient(options = {}) {
     pluginManifest,
     scopeNodes,
     abacPolicies,
+    pagePermissions,
+    buttonActions,
+    permissionCatalog,
+    canLoadPage,
     get snapshot() { return snapshot; },
+    get ready() { return ready; },
+    invalidate() {
+      loadPromise = null;
+      ready = false;
+      snapshot = {
+        user: null,
+        permissions: [],
+        roles: [],
+        menus: [],
+        plugins: [],
+        scope_nodes: [],
+        abac_policies: [],
+        page_permissions: {},
+        button_actions: [],
+        permission_catalog: [],
+      };
+      return snapshot;
+    },
     configure(nextOptions) {
       Object.assign(settings, nextOptions || {});
+      this.invalidate();
     },
-    setToken(token) { settings.token = token || ''; },
+    setToken(token) {
+      settings.token = token || '';
+      this.invalidate();
+    },
+    setSnapshot(data) {
+      snapshot = Object.assign({}, snapshot, data || {});
+      ready = true;
+      return snapshot;
+    },
   };
+}
+
+export async function prefetchPermissions(options = {}) {
+  const client = createPermissionClient(options);
+  await client.load({refresh: true});
+  return client.snapshot;
 }

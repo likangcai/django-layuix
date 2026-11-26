@@ -1,15 +1,15 @@
 # 前后端分离权限 SDK 使用指南
 
-版本：v1.0　适用版本：django-layuix 1.4.2+
+版本：v2.0　适用版本：django-layuix 1.4.6+
 
 ## 结论（TL;DR）
-【事实】1.4.2 提供框架无关的 `permission-client.js`，并提供 Vue 3、React、Svelte 与 Angular 适配层。
+【事实】1.4.6 提供框架无关的 `permission-client.js`，并提供 Vue 3、React、Svelte 与 Angular 适配层。
 【判断】前端只负责展示控制，最终安全边界仍是后端 `has_permission()` / `api_permission_required()` / ABAC 策略。
-【事实】当前 SDK 随 Django 静态文件分发，示例中的 `/static/sdk/...` 为可直接复制的模块路径，不是已发布的 npm 包。
-【本期不做】自动把动态路由组件映射纳入 SDK。
-【待确认】是否发布独立 npm 包。
+【事实】当前 SDK 随 Django 静态文件分发，示例中的 `/static/sdk/...` 为可直接复制的模块路径。
+【本期不做】发布独立 npm 包；自动把动态路由组件映射纳入 SDK。
 【待确认】是否提供 Angular standalone bootstrap 示例。
-【待确认】是否提供 SvelteKit SSR 适配。
+【待确认】是否提供 Vue Router 与 React Router 的 SSR 预取示例。
+【待确认】是否在 SDK 中内置权限刷新按钮与状态组件。
 
 ---
 
@@ -170,6 +170,33 @@ const GuardedUsers = withPermission(UsersPage, 'user:view');
   <UserList />
 </Can>
 ```
+
+### 5.1 SvelteKit SSR 服务端预取
+
+在 `+layout.server.js` 中使用框架提供的 `fetch`，让 Cookie、Bearer Token 与 X-Token 在服务端请求中自动转发：
+
+```js
+import { prefetchServerPermissions } from '/static/sdk/svelte/server.js';
+
+export async function load(event) {
+  return {
+    permissionSnapshot: await prefetchServerPermissions(event)
+  };
+}
+```
+
+在 `+layout.svelte` 中把预取快照直接注入 store，避免 SSR 阶段的权限闪烁：
+
+```svelte
+<script>
+  import { createPermissionStore, providePermission } from '/static/sdk/svelte/permission.js';
+  export let data;
+  const permission = createPermissionStore({ bootstrap: data.permissionSnapshot });
+  providePermission(permission);
+</script>
+```
+
+`refresh()` 会强制重新拉取；`invalidate()` 会在退出登录或切换 Token 后清空快照。
 
 ## 6. Angular
 

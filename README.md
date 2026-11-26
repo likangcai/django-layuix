@@ -171,7 +171,7 @@ python manage.py runserver
 LAYUI_CONFIG = {
     # 系统信息
     'system_name': 'Django Layuix Admin',
-    'system_version': '1.4.5',         # 系统版本号（显示在侧边栏）
+    'system_version': '1.4.6',         # 系统版本号（显示在侧边栏）
     'system_description': '',          # 系统描述（显示在登录页）
 
     # Logo
@@ -289,7 +289,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
 | `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
-| `system_version` | 版本号 | 包版本（当前 1.4.5） |
+| `system_version` | 版本号 | 包版本（当前 1.4.6） |
 | `system_description` | 系统描述 | （空） |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |
@@ -318,6 +318,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | `LAYUI_RBAC_PREREQ_STRATEGY` | 前置角色策略（无 DB 配置时生效） | auto_grant |
 | `LAYUI_RBAC_DSD_STRATEGY` | DSD 激活策略（无 DB 配置时生效） | greedy |
 | `LAYUI_RBAC_AUTHENTICATORS` | 自定义认证器导入路径 | `[]` |
+| `LAYUI_RBAC_ALLOW_UNREGISTERED_PERMISSIONS` | 是否允许未注册权限码（不推荐） | False |
 | `LAYUI_ALLOW_REGISTRATION` | 是否开放匿名注册接口 | False |
 | `LAYUIX_DISABLE_API_ORIGIN_GUARD` | 禁用管理 API 跨站来源防护（不推荐） | False |
 | `LAYUIX_API_ALLOWED_ORIGINS` | 管理 API 允许的来源主机白名单 | 未设置（使用 `ALLOWED_HOSTS`） |

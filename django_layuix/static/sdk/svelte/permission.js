@@ -11,14 +11,14 @@ export const PERMISSION_KEY = Symbol('layuix-permission-svelte');
 export function createPermissionStore(options = {}) {
   const client = createPermissionClient(options);
   const store = writable({
-    ready: false,
+    ready: client.ready,
     error: null,
     snapshot: client.snapshot,
   });
 
-  async function load() {
+  async function load({ refresh: force = false } = {}) {
     try {
-      const snapshot = await client.load();
+      const snapshot = await client.load({ refresh: force });
       store.set({ ready: true, error: null, snapshot });
       return snapshot;
     } catch (error) {
@@ -28,7 +28,12 @@ export function createPermissionStore(options = {}) {
   }
 
   function refresh() {
-    return load();
+    return load({ refresh: true });
+  }
+
+  function invalidate() {
+    const snapshot = client.invalidate();
+    store.set({ ready: false, error: null, snapshot });
   }
 
   return {
@@ -36,6 +41,7 @@ export function createPermissionStore(options = {}) {
     client,
     load,
     refresh,
+    invalidate,
     can: (code) => client.can(code),
     canAny: (codes) => client.canAny(codes),
     canAll: (codes) => client.canAll(codes),
@@ -44,6 +50,10 @@ export function createPermissionStore(options = {}) {
     plugins: () => client.pluginManifest(),
     scopeNodes: () => client.scopeNodes(),
     abacPolicies: () => client.abacPolicies(),
+    pagePermissions: () => client.pagePermissions(),
+    buttonActions: () => client.buttonActions(),
+    permissionCatalog: () => client.permissionCatalog(),
+    canLoadPage: (path) => client.canLoadPage(path),
   };
 }
 

@@ -103,7 +103,7 @@ layui-icon-chart         - 图表
 ```python
 LAYUI_CONFIG = {
     'system_name': '我的管理系统',
-    'system_version': '1.4.5',
+    'system_version': '1.4.6',
     'logo_icon': 'layui-icon-code-circle',
     
     # 首页自定义快速链接

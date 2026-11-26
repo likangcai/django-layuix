@@ -110,7 +110,7 @@ AUTH_USER_MODEL = 'django_layuix_rbac.UserProfile'
 # ============================================================
 LAYUI_CONFIG = {
     'system_name': 'Layui Admin 演示',
-    'system_version': '1.4.5',
+    'system_version': '1.4.6',
     'system_description': 'django-layuix 功能演示项目',
     'logo_icon': 'layui-icon-code-circle',
     # 使用自定义图片
@@ -167,6 +167,7 @@ TOKEN_EXPIRE_SECONDS = 24 * 60 * 60
 LAYUI_JWT_ISSUER = 'django-layuix'
 LAYUIX_ALLOW_LEGACY_TOKEN = True
 LAYUIX_TOKEN_CACHE_PREFIX = 'layuix:auth:'
+LAYUI_RBAC_ALLOW_UNREGISTERED_PERMISSIONS = False
 
 # CACHES = {
 #     'default': {

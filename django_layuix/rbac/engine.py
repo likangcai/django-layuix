@@ -287,6 +287,22 @@ def check_conflicts(effective_role_ids, kind):
             )
 
 
+def validate_assignable_menus(menu_ids):
+    """Only active, visible, non-disabled-plugin menus may be assigned to roles."""
+    from .models import Menu
+
+    ids = _as_int_set(menu_ids)
+    if not ids:
+        return []
+    disabled = _disabled_plugin_keys()
+    menus = list(Menu.objects.filter(id__in=ids, status=True, visible=True).exclude(
+        plugin_key__in=disabled
+    ))
+    if len(menus) != len(ids):
+        raise RbacConstraintError('包含未注册、已停用或不可见的菜单', 'invalid_menu')
+    return menus
+
+
 def effective_permission_codes_for_roles(role_ids):
     """Permission codes granted by a role set after inheritance expansion."""
     _, Menu, *_ = _models()

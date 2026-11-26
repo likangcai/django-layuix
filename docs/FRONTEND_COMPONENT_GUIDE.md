@@ -137,8 +137,12 @@ LayuiUI.virtualTable({
 
 - 只渲染可视区域加上下缓冲行。
 - `rowHeight` 必须与实际行高一致。
-- 支持 `url + parseData` 一次性加载数据源。
-- 返回实例提供 `setData()` / `refresh()` / `rows()`。
+- `pageMode: 'server'` 为服务端分页混合模式，滚动到底部时按 `page/pageSize` 续载并保留已加载行。
+- `parseData()` 可返回 `{data, total/count}`；`code` 支持 `0` 与 `200`。
+- `tableKey` 开启列宽拖拽并持久化到 `localStorage`，列宽从本地读取时按白名单校验。
+- 返回实例提供 `setData()` / `refresh()` / `rows()` / `loadPage()` / `retry()` / `state()`。
+- HTTP 401 会触发统一登录过期流程；加载失败显示就地重试按钮。
+- 模板函数返回值默认转义，确需输出 HTML 时返回 `{__html: html}`。
 - 需要编辑、排序、分页的列表仍使用 `LayuiUI.table()`。
 
 ## 5. 弹窗组件

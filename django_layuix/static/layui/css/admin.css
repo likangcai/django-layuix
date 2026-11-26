@@ -768,6 +768,19 @@ a:hover {
     margin-bottom: 10px;
 }
 
+.layuix-page-denied {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+.layuix-page-denied .layui-icon { font-size: 42px; color: var(--error-color); }
+.layuix-page-denied h2 { font-size: 20px; color: var(--text-primary); margin: 0; }
+.layuix-page-denied p { font-family: monospace; font-size: 13px; margin: 0; }
+
 /* 1.4.2 虚拟滚动表格 */
 .layuix-virtual-table {
     border: 1px solid var(--border-color);
@@ -812,6 +825,36 @@ a:hover {
 .layuix-virtual-row { border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
 .layuix-virtual-row:hover { background: var(--bg-secondary); }
 .layuix-virtual-rows { will-change: transform; }
+
+.layuix-virtual-table { position: relative; }
+.layuix-virtual-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 2;
+}
+.layuix-virtual-resizer:hover { background: var(--primary-color); opacity: 0.45; }
+.layuix-virtual-state {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    min-height: 40px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--card-bg, var(--bg-primary));
+    border-top: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+.layuix-virtual-state.is-loading,
+.layuix-virtual-state.is-error { display: flex; }
+.layuix-virtual-state.is-error { color: var(--error-color); }
 
 /* 1.4.2 表单操作区 */
 .form-actions {

@@ -68,6 +68,22 @@ export class PermissionService {
   abacPolicies(): unknown[] {
     return this.client.abacPolicies();
   }
+
+  pagePermissions(): Record<string, string> {
+    return this.client.pagePermissions();
+  }
+
+  buttonActions(): unknown[] {
+    return this.client.buttonActions();
+  }
+
+  permissionCatalog(): string[] {
+    return this.client.permissionCatalog();
+  }
+
+  canLoadPage(path: string): boolean {
+    return this.client.canLoadPage(path);
+  }
 }
 
 @Directive({

@@ -55,6 +55,10 @@ export function usePermission() {
     plugins: () => (client ? client.pluginManifest() : []),
     scopeNodes: () => (client ? client.scopeNodes() : []),
     abacPolicies: () => (client ? client.abacPolicies() : []),
+    pagePermissions: () => (client ? client.pagePermissions() : {}),
+    buttonActions: () => (client ? client.buttonActions() : []),
+    permissionCatalog: () => (client ? client.permissionCatalog() : []),
+    canLoadPage: (path) => !!client && client.canLoadPage(path),
   };
 }
 

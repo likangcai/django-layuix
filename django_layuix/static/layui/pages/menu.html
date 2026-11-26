@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>菜单管理 - 软件测试管理后台</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126a">
     <script>
         // 同步父页面主题
         function syncParentTheme() {
@@ -49,6 +49,9 @@
         }
         .menu-tree-panel .panel-title i { color: var(--primary-color); }
         .menu-table-panel { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+        .permission-shuttle { display: grid; grid-template-columns: 1fr 80px 1fr; gap: 8px; align-items: center; }
+        .permission-shuttle select { height: 180px; }
+        .permission-shuttle-actions { display: flex; flex-direction: column; gap: 8px; }
         .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
         .layui-input-block { margin-left: 130px; }
         .icon-preview { display: inline-block; width: 20px; text-align: center; margin-right: 5px; }
@@ -179,6 +182,22 @@
                 <input type="text" name="permission" placeholder="{{ t('menu.permission') }}" autocomplete="off" class="layui-input">
             </div>
         </div>
+        <div class="layui-form-item menu-field" data-types="1,2">
+            <label class="layui-form-label">{{ t('menu.buttonPermissions') }}</label>
+            <div class="layui-input-block">
+                <div class="permission-shuttle">
+                    <select id="availableActions" multiple></select>
+                    <div class="permission-shuttle-actions">
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="addAllActions">&gt;&gt;</button>
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="addAction">&gt;</button>
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="removeAction">&lt;</button>
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="removeAllActions">&lt;&lt;</button>
+                    </div>
+                    <select id="selectedActions" name="generated_actions" multiple></select>
+                </div>
+                <div class="layui-form-mid layui-word-aux" style="padding-left:0;">{{ t('menu.autoGenerateHint') }}</div>
+            </div>
+        </div>
         <div class="layui-form-item">
             <label class="layui-form-label">{{ t('menu.sort') }}</label>
             <div class="layui-input-block">
@@ -233,7 +252,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261126"></script>
+    <script src="/static/layui/js/common.js?v=20261126a"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -423,6 +442,90 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         });
     }
 
+    function derivePermissionPrefix(menuData) {
+        var code = String((menuData && menuData.permission) || '').trim();
+        if (code.indexOf(':') > -1) return code.split(':')[0];
+        var path = String((menuData && menuData.path) || '').replace(/^\/+|\/+$/g, '');
+        if (path) {
+            var segment = path.split('/').pop().replace('.html', '').replace(/-/g, '_');
+            if (segment) return segment.toLowerCase();
+        }
+        return 'menu';
+    }
+
+    function actionLabel(action, lang) {
+        return lang === 'en' ? (action.en || action.value) : (action.zh_hans || action.value);
+    }
+
+    function initPermissionShuttle(layero, menuData, treeData) {
+        var root = $(layero);
+        var currentUser = (window.parent && window.parent.currentUser) || {};
+        var actions = currentUser.button_actions || [];
+        var selected = {};
+
+        function renderShuttle() {
+            if (menuData) {
+                var prefix = derivePermissionPrefix(menuData);
+                function visit(nodes) {
+                    (nodes || []).forEach(function(node) {
+                        if (node.menu_type === 3 && node.permission && node.permission.indexOf(prefix + ':') === 0) {
+                            var key = node.permission.split(':')[1];
+                            if (key) selected[key] = true;
+                        }
+                        visit(node.children);
+                    });
+                }
+                visit(treeData);
+            }
+            var availableHtml = actions.filter(function(a) { return !selected[a.value]; }).map(function(a) {
+                return '<option value="' + escapeHtml(a.value) + '">' + escapeHtml(actionLabel(a, currentUser.language)) + '</option>';
+            }).join('');
+            var selectedHtml = actions.filter(function(a) { return selected[a.value]; }).map(function(a) {
+                return '<option value="' + escapeHtml(a.value) + '">' + escapeHtml(actionLabel(a, currentUser.language)) + '</option>';
+            }).join('');
+            root.find('#availableActions').html(availableHtml);
+            root.find('#selectedActions').html(selectedHtml);
+
+            function move(from, to) {
+                root.find(from + ' option:selected').each(function() {
+                    root.find(to).append($(this).clone());
+                    $(this).remove();
+                });
+            }
+            root.find('#addAction').off('click').on('click', function() { move('#availableActions', '#selectedActions'); });
+            root.find('#removeAction').off('click').on('click', function() { move('#selectedActions', '#availableActions'); });
+            root.find('#addAllActions').off('click').on('click', function() { move('#availableActions', '#selectedActions'); });
+            root.find('#removeAllActions').off('click').on('click', function() { move('#selectedActions', '#availableActions'); });
+        }
+
+        if (!actions.length) {
+            getApi('/admin/api/rbac/userinfo/', function(res) {
+                if (res.code === 200 && res.data) {
+                    currentUser = res.data;
+                    actions = currentUser.button_actions || [];
+                }
+                renderShuttle();
+            });
+        } else {
+            renderShuttle();
+        }
+    }
+
+    function selectedButtonActions(layero) {
+        return $(layero).find('#selectedActions option').map(function() { return $(this).val(); }).get();
+    }
+
+    function generateButtons(menuId, layero, done) {
+        var actions = selectedButtonActions(layero);
+        if (!actions.length) { done(); return; }
+        postApi('/admin/api/rbac/menus/' + menuId + '/generate-permissions/', {
+            actions: actions, replace: true
+        }, function(res) {
+            if (res.code !== 200) layer.msg(res.msg || t('common.fail'), {icon: 2});
+            done();
+        });
+    }
+
     // 打开菜单表单弹窗
     function openMenuForm(menuData) {
         var isEdit = !!menuData;
@@ -476,6 +579,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                         });
                     }
 
+                    initPermissionShuttle(layero, menuData, treeData);
                     form.render(null, 'menuForm');
 
                     // ===== 联动逻辑：visible 总开关控制 =====
@@ -548,31 +652,33 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
 
             if (id) {
                 putApi('/admin/api/rbac/menus/' + id + '/', submitData, function(res) {
-                    // 恢复按钮状态
-                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
-                    
-                    if (res.code === 200) {
+                    if (res.code !== 200) {
+                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
+                    }
+                    generateButtons(id, $btn.closest('.layui-layer'), function() {
+                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
                         layer.msg(t('common.updateSuccess'), {icon: 1});
                         layer.closeAll();
                         loadMenuTree();
                         loadTable();
-                    } else {
-                        layer.msg(res.msg || t('common.fail'), {icon: 2});
-                    }
+                    });
                 });
             } else {
                 postApi('/admin/api/rbac/menus/create/', submitData, function(res) {
-                    // 恢复按钮状态
-                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
-                    
-                    if (res.code === 200) {
+                    if (res.code !== 200) {
+                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                        layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
+                    }
+                    generateButtons(res.data.id, $btn.closest('.layui-layer'), function() {
+                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
                         layer.msg(t('common.addSuccess'), {icon: 1});
                         layer.closeAll();
                         loadMenuTree();
                         loadTable();
-                    } else {
-                        layer.msg(res.msg || t('common.fail'), {icon: 2});
-                    }
+                    });
                 });
             }
             return false;

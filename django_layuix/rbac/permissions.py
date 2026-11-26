@@ -36,8 +36,12 @@ def resolve_api_user(request):
 
 
 def has_permission(user, permission_code, request=None):
-    """统一权限判定入口，供 Django 视图与第三方框架适配器复用。"""
+    """统一权限判定入口；未注册权限码默认拒绝。"""
     if user is None or not getattr(user, 'is_authenticated', False):
+        return False
+    from .permission_registry import is_registered_permission
+
+    if not is_registered_permission(permission_code):
         return False
     checker = getattr(user, 'has_perm', None)
     if not callable(checker):
@@ -73,8 +77,9 @@ def api_permission_by_method(mapping, default=None):
             if user is None or not getattr(user, 'is_authenticated', False):
                 return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
             request.user = user
-            code = mapping.get(request.method) or mapping.get('*') or default
-            if code and not has_permission(user, code, request):
+            method = 'GET' if request.method == 'HEAD' else request.method
+            code = mapping.get(method) or default
+            if not code or not has_permission(user, code, request):
                 return JsonResponse({'code': 403, 'msg': '无权限'}, status=403)
             return view_func(request, *args, **kwargs)
         return wrapper

@@ -277,19 +277,26 @@ class UserProfile(AbstractUser):
 
     def has_perm(self, perm, obj=None):
         from .engine import get_effective_permissions, is_full_access
+        from .permission_registry import is_registered_permission
+
+        if not perm or not is_registered_permission(perm):
+            return False
         if is_full_access(self):
             return True
         if perm in get_effective_permissions(self):
             return True
-        return super().has_perm(perm, obj)
+        return False
 
     def has_module_perms(self, app_label):
         from .engine import get_effective_permissions, is_full_access
+        from .permission_registry import is_registered_permission
+
+        effective = [p for p in get_effective_permissions(self) if is_registered_permission(p)]
         if is_full_access(self):
-            return True
-        if any(p.startswith(app_label) for p in get_effective_permissions(self)):
-            return True
-        return super().has_module_perms(app_label)
+            return any(is_registered_permission(p) for p in effective) or any(
+                p.startswith(str(app_label)) for p in effective
+            )
+        return any(p.startswith(str(app_label)) for p in effective)
 
 
 class OperationLog(models.Model):

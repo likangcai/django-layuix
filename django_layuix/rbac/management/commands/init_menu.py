@@ -60,6 +60,11 @@ class Command(BaseCommand):
             
         # 无论菜单是否已存在，都继续执行角色和配置的初始化
         # 这确保了即使其他 app 抢跑了菜单注册，角色和配置也能正确创建
+        from django_layuix.rbac.permission_registry import register_page_permissions
+        created_permissions = register_page_permissions()
+        if created_permissions:
+            self.stdout.write(self.style.SUCCESS('  注册页面权限 %s 项' % len(created_permissions)))
+
         self._init_roles(force)
         self._init_default_configs(force)
         self.stdout.write(self.style.SUCCESS('\n初始化完成！'))

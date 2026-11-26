@@ -9,7 +9,7 @@ var I18N = {
         'zh-hans': {
             // 通用
             'app.name': 'Django Layuix Admin',
-            'app.version': 'V1.4.5',
+            'app.version': 'V1.4.6',
             'common.language': '中文',
             'frontend.title': '前台首页',
             'frontend.brand': '前台系统',
@@ -165,6 +165,8 @@ var I18N = {
             'menu.visible': '可见',
             'menu.status': '状态',
             'menu.permission': '权限标识',
+            'menu.buttonPermissions': '按钮权限',
+            'menu.autoGenerateHint': '选择按钮动作后自动生成并注册权限码，已注册权限才会出现在角色授权树中',
             'menu.parent': '上级菜单',
             'menu.path': '路由地址',
             'menu.component': '组件路径',
@@ -652,7 +654,7 @@ var I18N = {
         'en': {
             // 通用
             'app.name': 'Django Layuix Admin',
-            'app.version': 'V1.4.5',
+            'app.version': 'V1.4.6',
             'common.language': 'English',
             'frontend.title': 'Frontend Home',
             'frontend.brand': 'Frontend',
@@ -796,6 +798,8 @@ var I18N = {
             'menu.visible': 'Visible',
             'menu.status': 'Status',
             'menu.permission': 'Permission',
+            'menu.buttonPermissions': 'Button permissions',
+            'menu.autoGenerateHint': 'Selected actions are generated and registered as permission codes; only registered permissions appear in role grants',
             'menu.permission.menu': 'Menu Management',
             'menu.permission.role': 'Role Management',
             'menu.permission.user': 'User Management',
