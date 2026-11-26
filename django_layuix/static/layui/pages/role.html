@@ -52,6 +52,9 @@
         }
         .permission-tree-set-hidden { display: none !important; }
         .btn-disabled { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
+        .role-row-actions { display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
+        .role-row-actions .layui-btn { margin-left: 0; }
+        .role-more-btn .layui-icon { margin-left: 2px; font-size: 12px; }
         .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
         .layui-card-header { border-bottom: 1px solid var(--card-border); }
         /* 半选状态样式 */
@@ -108,22 +111,16 @@
 <!-- 操作列模板 -->
 <script type="text/html" id="operateTpl">
     {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
-    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
-    {{# if(layui.$.inArray('role:edit', perms) > -1){ }}
-    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="grant">{{ t('role.grantPermissions') }}</a>
+    {{# var isSuper = cu.is_superuser || false; }}
+    {{# var canEdit = isSuper || layui.$.inArray('role:edit', perms) > -1; }}
+    <div class="role-row-actions">
+    <a class="layui-btn layui-btn-xs layui-btn-primary action-chip" lay-event="view">{{ t('common.view') }}</a>
+    {{# if(canEdit){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-normal action-chip" lay-event="grant">{{ t('role.grantPermissions') }}</a>
+    <a class="layui-btn layui-btn-xs layui-btn-primary action-chip" lay-event="edit">{{ t('common.edit') }}</a>
     {{# } }}
-    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="permissions">{{ t('role.permissions') }}</a>
-    {{# if(layui.$.inArray('role:edit', perms) > -1){ }}
-    <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
-    {{# } }}
-    {{# if(layui.$.inArray('role:copy', perms) > -1){ }}
-    <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="copy">{{ t('role.copy.title') }}</a>
-    {{# } }}
-    {{# if(d.is_system){ }}
-    <a class="layui-btn layui-btn-xs layui-btn-danger btn-disabled" title="{{ t('role.systemCannotDelete') }}">{{ t('common.delete') }}</a>
-    {{# } else if(layui.$.inArray('role:delete', perms) > -1){ }}
-    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">{{ t('common.delete') }}</a>
-    {{# } }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary action-chip role-more-btn" data-id="{{d.id}}">{{ t('common.more') }}<i class="layui-icon layui-icon-down"></i></a>
+    </div>
 </script>
 
 <!-- 角色表单弹窗模板 -->
@@ -266,12 +263,13 @@ if (window.parent && window.parent.I18N) {
     I18N.getLang();
 }
 
-layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
+layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
     var table = layui.table;
     var tree = layui.tree;
     var form = layui.form;
     var layer = layui.layer;
     var element = layui.element;
+    var dropdown = layui.dropdown;
     var $ = layui.$;
 
     // 初始化 data-i18n 和 {{ t() }} 占位符
@@ -283,6 +281,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
     var permissionTreeReady = false;
     var permissions = currentUser.permissions || [];
     var allRoles = [];
+    var tableRoles = [];
 
     function loadAllRoles(callback) {
         if (allRoles.length) {
@@ -417,6 +416,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
         getApi('/admin/api/rbac/roles/', function(res) {
             if (res.code !== 200) return;
             var roles = res.data || [];
+            tableRoles = roles;
             var byId = buildRoleIndex(roles);
             var hasAdvanced = roles.some(function(role) {
                 return role.parent_id || (role.parent_ids || []).length || role.scope_node;
@@ -444,7 +444,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
                         : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
                 }},
                 {field: 'create_time', title: t('user.createTime'), width: 170, align: 'center'},
-                {title: t('common.operation'), width: 420, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+                {title: t('common.operation'), width: 260, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
             ]];
             if (hasAdvanced) {
                 cols[0].splice(4, 0, {title: t('role.permissionCount'), width: 150, align: 'center', templet: function(d) {
@@ -938,71 +938,142 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
         }
     });
 
+    // 查看角色已有与继承权限
+    function showRolePermissions(data) {
+        getApi('/admin/api/rbac/roles/' + data.id + '/effective_permissions/', function(res) {
+            if (res.code !== 200) {
+                layer.msg(res.msg || t('common.loadFailed'), {icon: 2});
+                return;
+            }
+            var payload = res.data || {};
+            var ownHtml = (payload.own || []).map(function(item) {
+                return '<div class="permission-line"><span>' + escapeHtml(item.name) + '</span><code>' + escapeHtml(item.permission) + '</code></div>';
+            }).join('') || '<div class="muted">' + t('role.noOwnPermissions') + '</div>';
+            var inheritedHtml = (payload.inherited || []).map(function(item) {
+                return '<div class="permission-line"><span>' + escapeHtml(item.name) + '</span><code>' + escapeHtml(item.permission) + '</code><small>' + t('role.sourceRole') + escapeHtml(item.source_role_name) + '</small></div>';
+            }).join('') || '<div class="muted">' + t('role.noInheritedPermissions') + '</div>';
+            var content = '<div class="layui-tab" lay-filter="rolePermissionTab" style="padding:12px 20px 0;">'
+                + '<ul class="layui-tab-title"><li class="layui-this">' + t('role.ownPermissions', [(payload.own || []).length]) + '</li><li>' + t('role.inheritedPermissions', [(payload.inherited || []).length]) + '</li></ul>'
+                + '<div class="layui-tab-content"><div class="layui-tab-item layui-show">' + ownHtml + '<p class="muted">' + t('role.ownPermissionHint') + '</p></div>'
+                + '<div class="layui-tab-item">' + inheritedHtml + '<p class="muted">' + t('role.inheritedPermissionHint') + '</p></div></div></div>';
+            LayuiUI.dialog({type: 1, title: t('role.viewPermissions', [escapeHtml(data.name)]), area: ['620px', '520px'], content: content});
+            element.render('tab', 'rolePermissionTab');
+        });
+    }
+
+    // 查看角色详情
+    function showRoleDetail(data) {
+        var content = '<div style="padding: 20px 30px;">' +
+            '<div class="layui-form-item"><label class="layui-form-label">' + t('role.name') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">' + t('role.code') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.code || '') + '" class="layui-input" readonly></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">' + t('role.description') + '</label><div class="layui-input-block"><textarea class="layui-textarea" readonly style="height:80px;">' + escapeHtml(data.description || '') + '</textarea></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">' + t('role.isSystem') + '</label><div class="layui-input-block"><input type="text" value="' + (data.is_system ? t('role.system') : t('role.normal')) + '" class="layui-input" readonly></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">' + t('common.status') + '</label><div class="layui-input-block"><input type="text" value="' + (data.status ? t('common.enable') : t('common.disable')) + '" class="layui-input" readonly></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">' + t('user.createTime') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.create_time || '') + '" class="layui-input" readonly></div></div>' +
+            '</div>';
+        LayuiUI.dialog({
+            type: 1,
+            title: t('common.view') + ' ' + t('role.title') + ' - ' + escapeHtml(data.name),
+            area: ['550px', 'auto'],
+            content: content,
+            btn: [t('common.cancel')]
+        });
+    }
+
+    // 删除角色
+    function deleteRole(data) {
+        if (data.is_system) {
+            layer.msg(t('role.systemCannotDelete'), {icon: 2});
+            return;
+        }
+        layer.confirm(t('common.confirmDelete') + '<br><b>' + escapeHtml(data.name) + '</b>', {
+            icon: 3,
+            title: t('common.deleteConfirm.title'),
+            btn: [t('common.confirm'), t('common.cancel')]
+        }, function(index) {
+            deleteApi('/admin/api/rbac/roles/' + data.id + '/delete/', function(res) {
+                if (res.code === 200) {
+                    layer.msg(t('common.deleteSuccess'), {icon: 1});
+                    layer.close(index);
+                    loadTable();
+                } else {
+                    layer.msg(res.msg || t('common.fail'), {icon: 2});
+                }
+            });
+        });
+    }
+
+    // 更多菜单动作
+    function handleRoleMoreAction(action, data) {
+        if (action === 'permissions') {
+            showRolePermissions(data);
+        } else if (action === 'copy') {
+            openCopyForm(data);
+        } else if (action === 'del') {
+            deleteRole(data);
+        }
+    }
+
+    // 打开更多下拉菜单
+    function openRoleMoreMenu(elem, data) {
+        var $elem = $(elem);
+        var cu = window.currentUser || window.parent.currentUser || {};
+        var perms = cu.permissions || [];
+        var isSuper = cu.is_superuser || false;
+        var menu = [{id: 'permissions', title: t('role.permissions')}];
+        if (isSuper || layui.$.inArray('role:copy', perms) > -1) {
+            menu.push({id: 'copy', title: t('role.copy.title')});
+        }
+        if (!data.is_system && (isSuper || layui.$.inArray('role:delete', perms) > -1)) {
+            menu.push({id: 'del', title: t('common.delete')});
+        }
+        var dropdownId = $elem.data('dropdownId');
+        if (!dropdownId) {
+            dropdownId = 'role-more-' + data.id + '-' + Date.now();
+            $elem.data('dropdownId', dropdownId);
+        }
+        var options = {
+            id: dropdownId,
+            elem: elem,
+            data: menu,
+            click: function(item) {
+                handleRoleMoreAction(item.id, data);
+            }
+        };
+        if ($elem.attr('lay-dropdown-id')) {
+            dropdown.reload(dropdownId, options);
+        } else {
+            dropdown.render(options);
+        }
+        dropdown.open(dropdownId);
+    }
+
+    // 更多按钮使用事件委托，避免固定列复制导致事件绑定到隐藏节点
+    $(document).on('click', '.role-more-btn', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        var roleId = Number($(this).data('id'));
+        var data = null;
+        for (var i = 0; i < tableRoles.length; i++) {
+            if (Number(tableRoles[i].id) === roleId) {
+                data = tableRoles[i];
+                break;
+            }
+        }
+        if (data) {
+            openRoleMoreMenu(this, data);
+        }
+    });
+
     // 操作列事件
     table.on('tool(roleTable)', function(obj) {
         var data = obj.data;
         if (obj.event === 'grant') {
             openPermissionDialog(data);
-        } else if (obj.event === 'permissions') {
-            getApi('/admin/api/rbac/roles/' + data.id + '/effective_permissions/', function(res) {
-                if (res.code !== 200) {
-                    layer.msg(res.msg || t('common.loadFailed'), {icon: 2});
-                    return;
-                }
-                var payload = res.data || {};
-                var ownHtml = (payload.own || []).map(function(item) {
-                    return '<div class="permission-line"><span>' + escapeHtml(item.name) + '</span><code>' + escapeHtml(item.permission) + '</code></div>';
-                }).join('') || '<div class="muted">' + t('role.noOwnPermissions') + '</div>';
-                var inheritedHtml = (payload.inherited || []).map(function(item) {
-                    return '<div class="permission-line"><span>' + escapeHtml(item.name) + '</span><code>' + escapeHtml(item.permission) + '</code><small>' + t('role.sourceRole') + escapeHtml(item.source_role_name) + '</small></div>';
-                }).join('') || '<div class="muted">' + t('role.noInheritedPermissions') + '</div>';
-                var content = '<div class="layui-tab" lay-filter="rolePermissionTab" style="padding:12px 20px 0;">'
-                    + '<ul class="layui-tab-title"><li class="layui-this">' + t('role.ownPermissions', [(payload.own || []).length]) + '</li><li>' + t('role.inheritedPermissions', [(payload.inherited || []).length]) + '</li></ul>'
-                    + '<div class="layui-tab-content"><div class="layui-tab-item layui-show">' + ownHtml + '<p class="muted">' + t('role.ownPermissionHint') + '</p></div>'
-                    + '<div class="layui-tab-item">' + inheritedHtml + '<p class="muted">' + t('role.inheritedPermissionHint') + '</p></div></div></div>';
-                LayuiUI.dialog({type: 1, title: t('role.viewPermissions', [escapeHtml(data.name)]), area: ['620px', '520px'], content: content});
-                element.render('tab', 'rolePermissionTab');
-            });
         } else if (obj.event === 'view') {
-            var content = '<div style="padding: 20px 30px;">' +
-                '<div class="layui-form-item"><label class="layui-form-label">' + t('role.name') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.name || '') + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">' + t('role.code') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.code || '') + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">' + t('role.description') + '</label><div class="layui-input-block"><textarea class="layui-textarea" readonly style="height:80px;">' + escapeHtml(data.description || '') + '</textarea></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">' + t('role.isSystem') + '</label><div class="layui-input-block"><input type="text" value="' + (data.is_system ? t('role.system') : t('role.normal')) + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">' + t('common.status') + '</label><div class="layui-input-block"><input type="text" value="' + (data.status ? t('common.enable') : t('common.disable')) + '" class="layui-input" readonly></div></div>' +
-                '<div class="layui-form-item"><label class="layui-form-label">' + t('user.createTime') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.create_time || '') + '" class="layui-input" readonly></div></div>' +
-                '</div>';
-            LayuiUI.dialog({
-                type: 1,
-                title: t('common.view') + ' ' + t('role.title') + ' - ' + escapeHtml(data.name),
-                area: ['550px', 'auto'],
-                content: content,
-                btn: [t('common.cancel')]
-            });
+            showRoleDetail(data);
         } else if (obj.event === 'edit') {
             openRoleForm(data);
-        } else if (obj.event === 'copy') {
-            openCopyForm(data);
-        } else if (obj.event === 'del') {
-            if (data.is_system) {
-                layer.msg(t('role.systemCannotDelete'), {icon: 2});
-                return;
-            }
-            layer.confirm(t('common.confirmDelete') + '<br><b>' + escapeHtml(data.name) + '</b>', {
-                icon: 3,
-                title: t('common.deleteConfirm.title'),
-                btn: [t('common.confirm'), t('common.cancel')]
-            }, function(index) {
-                deleteApi('/admin/api/rbac/roles/' + data.id + '/delete/', function(res) {
-                    if (res.code === 200) {
-                        layer.msg(t('common.deleteSuccess'), {icon: 1});
-                        layer.close(index);
-                        loadTable();
-                    } else {
-                        layer.msg(res.msg || t('common.fail'), {icon: 2});
-                    }
-                });
-            });
         }
     });
 
