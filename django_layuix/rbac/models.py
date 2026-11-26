@@ -251,10 +251,10 @@ class UserProfile(AbstractUser):
     
     # 主题配置 - 深色/浅色双模式
     THEME_CHOICES = [
-        ('默认深色', '默认深色'),
         ('默认浅色', '默认浅色'),
+        ('默认深色', '默认深色'),
     ]
-    theme = models.CharField(max_length=20, default='默认深色', choices=THEME_CHOICES, verbose_name='主题')
+    theme = models.CharField(max_length=20, default='默认浅色', choices=THEME_CHOICES, verbose_name='主题')
     language = models.CharField(max_length=10, default='zh-hans', choices=(('zh-hans', '简体中文'), ('en', 'English')), verbose_name='语言')
     is_tester = models.BooleanField(default=False, verbose_name='是否测试人员')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')

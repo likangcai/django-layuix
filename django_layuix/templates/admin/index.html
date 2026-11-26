@@ -8,7 +8,7 @@
     <title>{% system_name %}</title>
     <script>
         (function() {
-            var theme = localStorage.getItem('theme') || 'dark';
+            var theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme-mode', theme === 'dark' ? 'dark' : 'light');
         })();
     </script>
@@ -196,7 +196,7 @@
 
     // ==================== Global Variables ====================
     var currentUser = null;
-    var currentTheme = 'dark';
+    var currentTheme = 'light';
     var tabs = {};
     var activeTabUrl = '';
     var sidebarCollapsed = false;
@@ -280,7 +280,7 @@
             if (res.code === 200) {
                 currentUser = res.data;
                 window.currentUser = currentUser;
-                var rawTheme = res.data.theme || 'dark';
+                var rawTheme = res.data.theme || 'light';
                 var themeAliasMap = {'默认深色': 'dark', '默认浅色': 'light'};
                 currentTheme = themeAliasMap[rawTheme] || rawTheme;
                 renderMenu(res.data.menus);

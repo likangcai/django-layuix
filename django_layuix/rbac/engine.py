@@ -168,28 +168,43 @@ def is_full_access(user):
     ).exists()
 
 
+def _disabled_plugin_keys():
+    """Plugin keys whose effective state is disabled."""
+    from .models import PluginRegistry
+
+    try:
+        return set(PluginRegistry.objects.filter(
+            is_active=False
+        ).values_list('key', flat=True))
+    except Exception:
+        logger.exception('Failed to read disabled plugin keys')
+        return set()
+
+
 def get_effective_permissions(user):
     """Permission strings granted by effective roles (inheritance included)."""
     _, Menu, *_ = _models()
+    disabled = _disabled_plugin_keys()
     if is_full_access(user):
         return set(Menu.objects.filter(
             status=True, permission__gt=''
-        ).values_list('permission', flat=True))
+        ).exclude(plugin_key__in=disabled).values_list('permission', flat=True))
     return set(Menu.objects.filter(
         status=True, permission__gt='', roles__id__in=get_effective_role_ids(user)
-    ).values_list('permission', flat=True).distinct())
+    ).exclude(plugin_key__in=disabled).values_list('permission', flat=True).distinct())
 
 
 def visible_menu_queryset(user, scope='backend'):
-    """Menu queryset for sidebar / frontend menus, respecting effective roles."""
+    """Menu queryset for sidebar / frontend menus, respecting roles and plugin state."""
     _, Menu, *_ = _models()
     visibility_field = 'frontend_visible' if scope == 'frontend' else 'backend_visible'
     filters = {'status': True, 'visible': True, visibility_field: True}
+    disabled = _disabled_plugin_keys()
     if is_full_access(user):
-        return Menu.objects.filter(**filters)
+        return Menu.objects.filter(**filters).exclude(plugin_key__in=disabled)
     return Menu.objects.filter(
         **filters, roles__id__in=get_effective_role_ids(user)
-    ).distinct()
+    ).exclude(plugin_key__in=disabled).distinct()
 
 
 def get_max_roles_per_user():

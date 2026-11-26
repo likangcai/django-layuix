@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 公共JS工具 - django-layuix
  */
 
@@ -30,6 +30,25 @@ function clearToken() {
 }
 
 // ==================== API请求封装 ====================
+
+function handleLoginExpired(payload, callback) {
+    clearToken();
+    if (window.LayuiUI && typeof window.LayuiUI.realtime === 'object') {
+        window.LayuiUI.realtime.disconnect();
+    }
+    if (window.layer) {
+        window.layer.msg((typeof t === 'function' ? t('login.expired') : '登录已过期，请重新登录'), {icon: 2});
+    }
+    setTimeout(function() {
+        var loginUrl = window.ADMIN_LOGIN_URL || '/admin/login/';
+        if (window.top) {
+            window.top.location.href = loginUrl;
+        } else {
+            window.location.href = loginUrl;
+        }
+    }, 1200);
+    if (callback) callback(payload || {code: 401, msg: '未登录'});
+}
 
 // 获取layui模块的引用（延迟获取，因为子页面可能在iframe中）
 function _getLayui() {
@@ -151,17 +170,7 @@ function api(method, url, data, callback) {
         },
         success: function(res) {
             if (res.code === 401) {
-                if (layer) layer.msg((typeof t === 'function' ? t('login.expired') : '登录已过期，请重新登录'), {icon: 2});
-                setTimeout(function() {
-                    // BUG-35 FIX: 使用动态 admin 登录路径而非硬编码 /login/
-                    var loginUrl = (window.ADMIN_LOGIN_URL || '/admin/login/');
-                    if (window.top) {
-                        window.top.location.href = loginUrl;
-                    } else {
-                        window.location.href = loginUrl;
-                    }
-                }, 1500);
-                if (callback) callback(res);
+                handleLoginExpired(res, callback);
                 return;
             }
             if (res.code === 403) {
@@ -172,6 +181,13 @@ function api(method, url, data, callback) {
             if (callback) callback(res);
         },
         error: function(xhr) {
+            // 401 由后端直接返回 HTTP 状态码，必须走统一登录过期流程
+            if (xhr && xhr.status === 401) {
+                var expiredRes = {code: 401, msg: '未登录'};
+                try { expiredRes = JSON.parse(xhr.responseText) || expiredRes; } catch (e) {}
+                handleLoginExpired(expiredRes, callback);
+                return;
+            }
             // 尝试解析后端返回的JSON错误信息
             var errMsg = (typeof t === 'function' ? t('common.networkError') : '网络请求失败');
             try {
@@ -243,7 +259,7 @@ function inheritTheme() {
         var themeMode = parentRoot ? parentRoot.getAttribute('data-theme-mode') : null;
         var legacyTheme = parentRoot ? parentRoot.getAttribute('data-theme') : null;
         if (!themeMode) {
-            themeMode = localStorage.getItem('theme') || 'dark';
+            themeMode = localStorage.getItem('theme') || 'light';
         }
         if (themeMode !== 'dark' && themeMode !== 'light') {
             themeMode = 'dark';
@@ -457,6 +473,7 @@ function openStandardDialog(options) {
         },
         cancel: function(idx) {
             if (typeof originalCancel === 'function' && originalCancel(idx) === false) return false;
+            layer.close(idx);
         }
     });
 
@@ -523,6 +540,12 @@ function renderVirtualTable(options) {
         if (typeof col.templet === 'function') {
             return col.templet(row[col.field], row, index);
         }
+        if (typeof col.templet === 'string' && api && api.laytpl) {
+            var tpl = col.templet.charAt(0) === '#'
+                ? ($(col.templet).html() || '')
+                : col.templet;
+            if (tpl) return api.laytpl(tpl).render(row);
+        }
         var value = row[col.field];
         return escapeHtml(value === null || value === undefined ? '' : value);
     }
@@ -559,12 +582,20 @@ function renderVirtualTable(options) {
         setData: function(data) { rows = data || []; body.scrollTop(0); renderWindow(); }
     };
     if (settings.url && typeof fetch === 'function') {
-        fetch(settings.url, {credentials: 'include'})
+        var headers = Object.assign({}, settings.headers || {});
+        var token = getToken();
+        if (token && !headers.Authorization) {
+            headers.Authorization = 'Bearer ' + token;
+        }
+        fetch(settings.url, {credentials: 'include', headers: headers})
             .then(function(response) { return response.json(); })
             .then(function(payload) {
                 var parsed = typeof settings.parseData === 'function'
                     ? settings.parseData(payload) : payload;
                 instance.setData((parsed && parsed.data) || []);
+            })
+            .catch(function(error) {
+                if (typeof settings.error === 'function') settings.error(error);
             });
     }
     return instance;
@@ -742,58 +773,47 @@ var SSEManager = {
      */
     connect: function(url, onMessage, onError) {
         var self = this;
-        self.disconnect(); // 先断开旧连接
-        
-        var token = getToken();
-        var sseUrl = url;
-        
-        // 如果有token，添加到URL参数
-        if (token) {
-            sseUrl += (url.indexOf('?') > -1 ? '&' : '?') + 'token=' + encodeURIComponent(token);
-        }
-        
-        try {
-            console.log(' 正在建立SSE连接:', sseUrl);
-            self.evtSource = new EventSource(sseUrl);
-            
-            self.evtSource.onmessage = function(e) {
-                try {
-                    var res = JSON.parse(e.data);
-                    if (res.code === 200 && res.data) {
-                        onMessage(res.data);
-                    } else if (res.code === 401) {
-                        console.error('SSE认证失败，切换为轮询模式');
-                        self.disconnect();
-                        self.startPolling(url, onMessage);
+        self.disconnect();
+
+        function open(ticket) {
+            var sseUrl = url;
+            if (ticket) {
+                sseUrl += (url.indexOf('?') > -1 ? '&' : '?') + 'stream_ticket=' + encodeURIComponent(ticket);
+            }
+            try {
+                self.evtSource = new EventSource(sseUrl);
+                self.evtSource.onmessage = function(e) {
+                    try {
+                        var res = JSON.parse(e.data);
+                        if (res.code === 200 && res.data) {
+                            onMessage(res.data);
+                        } else if (res.code === 401) {
+                            self.disconnect();
+                            self.startPolling(url, onMessage);
+                        }
+                    } catch(err) {
+                        console.error('SSE消息解析错误:', err);
                     }
-                } catch(err) {
-                    console.error('SSE消息解析错误:', err);
-                }
-            };
-            
-            self.evtSource.onerror = function(e) {
-                console.error('SSE连接错误:', e);
-                if (self.evtSource) {
-                    self.evtSource.close();
-                    self.evtSource = null;
-                }
-                
-                // SSE连接失败，降级到轮询
-                if (!self.isPolling) {
-                    console.warn('️ SSE不可用，降级为5秒轮询模式');
-                    self.startPolling(url, onMessage);
-                }
-                
-                if (onError) onError(e);
-            };
-            
-            self.evtSource.onopen = function() {
-                console.log('✅ SSE 连接已建立，实时数据推送已启用');
-            };
-            
-        } catch(err) {
-            console.error('SSE 初始化失败，使用轮询模式:', err);
-            self.startPolling(url, onMessage);
+                };
+                self.evtSource.onerror = function(e) {
+                    if (self.evtSource) {
+                        self.evtSource.close();
+                        self.evtSource = null;
+                    }
+                    if (!self.isPolling) self.startPolling(url, onMessage);
+                    if (onError) onError(e);
+                };
+            } catch(err) {
+                self.startPolling(url, onMessage);
+            }
+        }
+
+        if (typeof getApi === 'function') {
+            getApi('/admin/api/rbac/system/info/stream-ticket/', function(res) {
+                open(res && res.code === 200 && res.data ? res.data.ticket : '');
+            });
+        } else {
+            open('');
         }
     },
     
@@ -882,3 +902,5 @@ var SSEManager = {
         return 'disconnected';
     }
 };
+
+window.LayuiUI.realtime = SSEManager;

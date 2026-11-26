@@ -51,9 +51,11 @@ class LayuiRBACPermission(BasePermission):
         return mapping.get(getattr(view, 'action', None))
 
     def has_permission(self, request, view):
+        if getattr(view, 'layui_permission_exempt', False):
+            return True
         code = self._permission_code(view)
         if not code:
-            return True
+            return False
         return has_permission(getattr(request, 'user', None), code, request)
 
     def has_object_permission(self, request, view, obj):

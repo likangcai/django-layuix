@@ -8,6 +8,7 @@ urlpatterns = [
     # System info
     path('system/info/', views.system_info, name='rbac_system_info'),
     path('system/info/stream/', views.system_info_stream, name='rbac_system_info_stream'),  # SSE流式推送
+    path('system/info/stream-ticket/', views.system_info_stream_ticket, name='rbac_system_info_stream_ticket'),
     path('system/public-config/', views.public_config, name='rbac_public_config'),         # 公开配置(无需登录)
     path('system/config/', views.system_config, name='rbac_system_config'),                # 需要登录
 

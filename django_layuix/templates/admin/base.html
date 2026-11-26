@@ -1,9 +1,15 @@
 {% load i18n static layui_tags %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}" data-theme="theme-default-dark" data-theme-mode="dark" id="htmlRoot">
+<html lang="{{ LANGUAGE_CODE }}" data-theme="theme-default-light" data-theme-mode="light" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme-mode', theme === 'dark' ? 'dark' : 'light');
+        })();
+    </script>
     <title>{% block title %}{% endblock %} | {% system_name %}</title>
     <link rel="icon" type="image/x-icon" href="{% static 'layui/favicon.ico' %}">
     <link rel="stylesheet" href="{% static 'layui/lib/layui.css' %}">
@@ -138,7 +144,7 @@
     <script>
     // Theme toggle (Dark/Light dual mode only)
     (function(){
-        var theme = localStorage.getItem('theme') || 'dark';
+        var theme = localStorage.getItem('theme') || 'light';
         var isDark = theme === 'dark';
 
         function applyThemeMode(isDarkMode) {

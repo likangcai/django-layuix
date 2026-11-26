@@ -11,7 +11,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils.timezone import localtime
 
 from django_layuix.rbac.permissions import (
-    api_login_required, api_permission_required, resolve_api_user,
+    api_login_required, api_permission_required, has_permission, resolve_api_user,
 )
 
 
@@ -555,7 +555,6 @@ def ai_config_get(request):
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('ai_config:edit')
 def ai_config_save(request):
     """Create or update AI config.
     POST body: {id?, name, provider, api_key, base_url, model, is_default?}
@@ -565,7 +564,10 @@ def ai_config_save(request):
         return error_response('Method not allowed', 405)
 
     body = get_request_body(request)
-    config_id = body.get('id', '').strip()
+    config_id = str(body.get('id') or '').strip()
+    required_code = 'ai_config:edit' if config_id else 'ai_config:add'
+    if not has_permission(request.user, required_code, request):
+        return error_response('无权限', 403)
     name = body.get('name', '').strip()
     provider = body.get('provider', 'custom').strip()
     api_key = body.get('api_key', '').strip()

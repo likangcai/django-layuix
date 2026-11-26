@@ -18,6 +18,15 @@ class LayuiNinjaAuth(HttpBearer):
     """Ninja auth class backed by the generic django-layuix authenticator registry."""
 
     def authenticate(self, request, token):
+        if token:
+            from django_layuix.rbac.token_auth import verify_token
+
+            result = verify_token(token)
+            user = result.get('user') if result.get('valid') else None
+            if user is not None and getattr(user, 'is_authenticated', False):
+                request.user = user
+                return user
+            return None
         user = resolve_api_user(request)
         if user is not None and getattr(user, 'is_authenticated', False):
             return user

@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="role.title">角色管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261125">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'light';
                 }
             } catch(e) {}
             document.documentElement.setAttribute('data-theme-mode', themeMode);
@@ -34,6 +34,23 @@
             max-height: 300px; overflow-y: auto; padding: 10px;
             background: var(--bg-primary);
         }
+        .permission-assign-dialog { padding: 16px 20px 0; }
+        .permission-assign-toolbar {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+        }
+        .permission-assign-toolbar .layui-input { width: 240px; }
+        .permission-tree-wrap {
+            height: 360px; overflow: auto; padding: 12px 14px;
+            border: 1px solid var(--card-border); border-radius: var(--radius-md);
+            background: var(--bg-primary);
+        }
+        .permission-tree-wrap .layui-tree-set { margin-bottom: 2px; }
+        .permission-tree-wrap .permission-code { color: var(--text-muted); font-size: 12px; margin-left: 6px; }
+        .permission-assign-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0 4px; color: var(--text-secondary); font-size: 13px;
+        }
+        .permission-tree-set-hidden { display: none !important; }
         .btn-disabled { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
         .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
         .layui-card-header { border-bottom: 1px solid var(--card-border); }
@@ -92,7 +109,10 @@
 <script type="text/html" id="operateTpl">
     {{# var cu = (window.parent && window.parent.currentUser) || {}; var perms = cu.permissions || []; }}
     <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">{{ t('common.view') }}</a>
-    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="permissions">{{ t('role.permissions') }}</a>
+    {{# if(layui.$.inArray('role:edit', perms) > -1){ }}
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="grant">{{ t('role.grantPermissions') }}</a>
+    {{# } }}
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="permissions">{{ t('role.permissions') }}</a>
     {{# if(layui.$.inArray('role:edit', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs" lay-event="edit">{{ t('common.edit') }}</a>
     {{# } }}
@@ -178,6 +198,26 @@
     </form>
 </script>
 
+<!-- 角色授权弹窗模板 -->
+<script type="text/html" id="permissionDialogTpl">
+    <div class="permission-assign-dialog">
+        <div class="permission-assign-toolbar">
+            <input type="text" id="permissionSearch" class="layui-input" placeholder="{{ t('role.permissionSearch') }}" autocomplete="off">
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="permissionExpandAll">
+                <i class="layui-icon layui-icon-down"></i> {{ t('role.expandAll') }}
+            </button>
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="permissionCollapseAll">
+                <i class="layui-icon layui-icon-up"></i> {{ t('role.collapseAll') }}
+            </button>
+        </div>
+        <div class="permission-tree-wrap" id="permissionTree"></div>
+        <div class="permission-assign-footer">
+            <span id="permissionSelectedCount">{{ t('role.selectedCount', [0]) }}</span>
+            <span class="layui-word-aux">{{ t('role.permissionHint') }}</span>
+        </div>
+    </div>
+</script>
+
 <!-- 复制权限弹窗模板 -->
 <script type="text/html" id="copyFormTpl">
     <form class="layui-form" lay-filter="copyForm" style="padding: 20px 30px 0;">
@@ -213,8 +253,8 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261125"></script>
-    <script src="/static/layui/js/i18n.js?v=20261125"></script>
+    <script src="/static/layui/js/common.js?v=20261126"></script>
+    <script src="/static/layui/js/i18n.js?v=20261126"></script>
     <script>
 inheritTheme();
 
@@ -447,6 +487,135 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
             return result;
         }
         return convert(menuTree || []);
+    }
+
+    // 参考项目式角色授权：独立弹窗 + 勾选树 + 展开/折叠 + 幂等保存
+    function openPermissionDialog(roleData) {
+        getApi('/admin/api/rbac/menus/tree/', function(res) {
+            if (res.code !== 200) {
+                layer.msg(res.msg || t('common.loadFailed'), {icon: 2});
+                return;
+            }
+            var checkedSet = {};
+            (roleData.menu_ids || []).forEach(function(id) { checkedSet[String(id)] = true; });
+            var treeData = buildPermTreeData(res.data || [], checkedSet);
+            var selectedIds = [];
+
+            function updateSelectedCount() {
+                var count = layeroCache.find('#permissionTree input[type="checkbox"]:checked').length;
+                layeroCache.find('#permissionSelectedCount').text(t('role.selectedCount', [count]));
+            }
+
+            function setNodeState($set, checked) {
+                var $input = $set.find('input[type="checkbox"]').first();
+                var $checkbox = $input.next('.layui-form-checkbox');
+                $input.prop('checked', checked);
+                $checkbox.toggleClass('layui-form-checked', checked).removeClass('layui-form-halfchecked');
+                $set.children('.layui-tree-child').children('.layui-tree-set').each(function() {
+                    setNodeState($(this), checked);
+                });
+            }
+
+            function syncParentState($set) {
+                var $children = $set.children('.layui-tree-child').children('.layui-tree-set');
+                if (!$children.length) return;
+                var checkedCount = 0;
+                $children.each(function() {
+                    if ($(this).find('input[type="checkbox"]').first().prop('checked')) checkedCount++;
+                });
+                var all = checkedCount === $children.length;
+                var some = checkedCount > 0 && !all;
+                var $input = $set.find('input[type="checkbox"]').first();
+                var $checkbox = $input.next('.layui-form-checkbox');
+                $input.prop('checked', all);
+                $checkbox.toggleClass('layui-form-checked', all).toggleClass('layui-form-halfchecked', some);
+                syncParentState($set.parent().closest('.layui-tree-set'));
+            }
+
+            function filterTree(keyword) {
+                keyword = String(keyword || '').trim().toLowerCase();
+                function walk($set) {
+                    var ownMatch = !keyword || $set.text().toLowerCase().indexOf(keyword) > -1;
+                    var childMatch = false;
+                    $set.children('.layui-tree-child').children('.layui-tree-set').each(function() {
+                        if (walk($(this))) childMatch = true;
+                    });
+                    var visible = ownMatch || childMatch;
+                    $set.toggleClass('permission-tree-set-hidden', !visible);
+                    return visible;
+                }
+                layeroCache.find('#permissionTree > .layui-tree-set').each(function() { walk($(this)); });
+            }
+
+            var layeroCache = $();
+            var dialogIndex = LayuiUI.dialog({
+                type: 1,
+                title: t('role.grantPermissions') + ' - ' + escapeHtml(roleData.name || ''),
+                area: ['720px', '620px'],
+                btn: [t('common.save'), t('common.cancel')],
+                content: renderTpl('permissionDialogTpl'),
+                yes: function(index, layero) {
+                    layeroCache = $(layero);
+                    selectedIds = [];
+                    layeroCache.find('#permissionTree .layui-tree-set').each(function() {
+                        var $set = $(this);
+                        var $input = $set.find('input[type="checkbox"]').first();
+                        if ($input.prop('checked') && !$input.next('.layui-form-checkbox').hasClass('layui-form-halfchecked')) {
+                            selectedIds.push($set.data('id'));
+                        }
+                    });
+                    var $btn = layeroCache.find('.layui-layer-btn0');
+                    $btn.prop('disabled', true).addClass('layui-btn-disabled');
+                    putApi('/admin/api/rbac/roles/' + roleData.id + '/update/', {
+                        name: roleData.name,
+                        code: roleData.code,
+                        description: roleData.description || '',
+                        status: !!roleData.status,
+                        max_users: roleData.max_users || 0,
+                        parent_ids: roleData.parent_ids || [],
+                        scope_node: roleData.scope_node || '',
+                        scope_depth: roleData.scope_depth || 0,
+                        menu_ids: selectedIds
+                    }, function(saveRes) {
+                        $btn.prop('disabled', false).removeClass('layui-btn-disabled');
+                        if (saveRes.code !== 200) {
+                            layer.msg(saveRes.msg || t('common.fail'), {icon: 2});
+                            return;
+                        }
+                        layer.msg(t('role.grantSuccess'), {icon: 1});
+                        layer.close(index);
+                        loadTable();
+                    });
+                },
+                success: function(layero, index) {
+                    layeroCache = $(layero);
+                    tree.render({
+                        elem: layeroCache.find('#permissionTree')[0],
+                        data: treeData,
+                        showCheckbox: true,
+                        showLine: true,
+                        id: 'rolePermissionGrantTree'
+                    });
+                    layeroCache.find('#permissionSearch').on('input', function() { filterTree($(this).val()); });
+                    layeroCache.find('#permissionExpandAll').on('click', function() {
+                        layeroCache.find('#permissionTree .layui-tree-child').show();
+                    });
+                    layeroCache.find('#permissionCollapseAll').on('click', function() {
+                        layeroCache.find('#permissionTree .layui-tree-child').hide();
+                    });
+                    layeroCache.find('#permissionTree').off('click.permissionGrant').on('click.permissionGrant', '.layui-form-checkbox', function(e) {
+                        var $checkbox = $(this);
+                        var $set = $checkbox.closest('.layui-tree-set');
+                        var checked = !$set.find('input[type="checkbox"]').first().prop('checked');
+                        setNodeState($set, checked);
+                        syncParentState($set.parent().closest('.layui-tree-set'));
+                        updateSelectedCount();
+                    });
+                    updateSelectedCount();
+                    renderI18n();
+                }
+            });
+        });
     }
 
     // 打开角色表单弹窗
@@ -714,7 +883,9 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
     // 操作列事件
     table.on('tool(roleTable)', function(obj) {
         var data = obj.data;
-        if (obj.event === 'permissions') {
+        if (obj.event === 'grant') {
+            openPermissionDialog(data);
+        } else if (obj.event === 'permissions') {
             getApi('/admin/api/rbac/roles/' + data.id + '/effective_permissions/', function(res) {
                 if (res.code !== 200) {
                     layer.msg(res.msg || t('common.loadFailed'), {icon: 2});

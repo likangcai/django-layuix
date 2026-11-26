@@ -2,9 +2,32 @@ from functools import wraps
 from django.http import JsonResponse
 
 
+def _has_explicit_token(request):
+    if request.META.get('HTTP_AUTHORIZATION', '').lower().startswith('bearer '):
+        return True
+    if request.META.get('HTTP_X_TOKEN'):
+        return True
+    query_token = request.GET.get('token')
+    if not query_token:
+        return False
+    from django.conf import settings
+    return bool(
+        getattr(settings, 'LAYUI_ALLOW_QUERY_TOKEN', False)
+        or str(request.path).endswith('/system/info/stream/')
+    )
+
+
 def resolve_api_user(request):
-    """统一解析 API 调用者，委托给通用认证桥接层。"""
+    """统一解析 API 调用者；显式 Token 优先于 Session，避免身份混淆。"""
     from django_layuix.integrations.auth import authenticate_request
+
+    if _has_explicit_token(request):
+        from .token_auth import token_authenticate
+
+        user = token_authenticate(request)
+        if user is not None:
+            request.user = user
+        return user
 
     user = getattr(request, 'user', None)
     if user is not None and getattr(user, 'is_authenticated', False):
@@ -30,6 +53,7 @@ def api_permission_required(permission_code):
             user = resolve_api_user(request)
             if user is None or not getattr(user, 'is_authenticated', False):
                 return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
+            request.user = user
             if not has_permission(user, permission_code, request):
                 return JsonResponse({'code': 403, 'msg': '无权限'}, status=403)
             return view_func(request, *args, **kwargs)

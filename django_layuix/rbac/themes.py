@@ -77,7 +77,7 @@ def normalize_theme(theme_value):
     - Other legacy themes: fallback to dark mode
     """
     if not theme_value:
-        return '默认深色'
+        return '默认浅色'
 
     if theme_value in THEME_ALIAS_MAP:
         return THEME_ALIAS_MAP[theme_value]

@@ -1,6 +1,6 @@
 # 纯跨域 Token 认证接入指南
 
-版本：v2.0　适用版本：django-layuix 1.4.4+
+版本：v3.0　适用版本：django-layuix 1.4.5+
 
 ## 结论（TL;DR）
 【事实】`api_login_required` 与 `api_permission_required` 统一通过 `resolve_api_user()` 解析 Session 或 Bearer Token。
@@ -36,7 +36,7 @@ base64url(header).base64url(payload).base64url(HMAC-SHA256)
 
 payload 包含 `sub / user_id / username / iat / exp / jti / iss`，以及可选 `active_roles`。`TOKEN_EXPIRE_SECONDS` 控制有效期，默认 24 小时；`iss` 由 `LAYUI_JWT_ISSUER` 配置。
 
-每次签发都会在 `sys_auth_token` 写入 `jti`、签发/过期时间和来源信息，并同步写入 Django cache。配置为 Redis 后，多实例共享撤销状态。退出登录撤销当前 Token；修改密码、管理员重置密码、禁用用户会撤销该用户全部 Token。
+每次签发都会在 `sys_auth_token` 写入 `jti`、签发/过期时间和来源信息，并同步写入 Django cache。配置为 Redis 后，多实例共享撤销状态。撤销操作先验签并绑定当前用户，防止伪造 `jti` 吊销他人 Token；旧版两段式 Token 的撤销指纹同样落库。退出登录撤销当前 Token；修改密码、管理员重置密码、禁用用户会撤销该用户全部 Token。
 
 ## 3. 请求携带
 
@@ -46,7 +46,9 @@ fetch('/admin/api/rbac/userinfo/', {
 });
 ```
 
-同时支持 `X-Token` 请求头。`?token=` 查询参数仅对系统信息 SSE 端点开放；其他接口默认拒绝。如需临时开放，可设置 `LAYUI_ALLOW_QUERY_TOKEN=True`，但不推荐生产使用。
+同时支持 `X-Token` 请求头。显式 Token 优先于 Session，避免同一请求携带两种身份时主体混淆。普通 API 不再从 POST body 读取 Token。
+
+`?token=` 查询参数默认关闭。SSE 使用短时 `stream_ticket`：先调用 `/admin/api/rbac/system/info/stream-ticket/` 获取 60 秒票据，再用 `?stream_ticket=...` 建立 EventSource，避免把 JWT 写入 URL、浏览器历史或访问日志。
 
 ## 4. 前端权限数据流
 

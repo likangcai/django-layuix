@@ -42,6 +42,8 @@ export function createPermissionStore(options = {}) {
     hasRole: (code) => client.hasRole(code),
     menus: () => client.menuTree(),
     plugins: () => client.pluginManifest(),
+    scopeNodes: () => client.scopeNodes(),
+    abacPolicies: () => client.abacPolicies(),
   };
 }
 

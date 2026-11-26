@@ -1453,6 +1453,67 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertTrue(ScopeNode.objects.filter(pk=node.pk).exists())
 
+    def test_explicit_token_is_preferred_over_session(self):
+        from django.test import Client
+
+        from .token_auth import generate_token
+
+        low = get_user_model().objects.create_user(username='audit_session_low', password='pass12345')
+        client = Client()
+        client.force_login(low)
+        response = client.get(
+            '/admin/api/rbac/userinfo/',
+            HTTP_AUTHORIZATION='Bearer ' + generate_token(self.admin),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['username'], self.admin.username)
+
+    def test_revoke_token_requires_matching_user(self):
+        from .token_auth import generate_token, revoke_token, verify_token
+
+        token = generate_token(self.user)
+        self.assertEqual(revoke_token(token, reason='attack', user=self.admin), 0)
+        self.assertTrue(verify_token(token)['valid'])
+        self.assertEqual(revoke_token(token, reason='logout', user=self.user), 1)
+        self.assertFalse(verify_token(token)['valid'])
+
+    def test_stream_ticket_authenticates_sse_without_jwt_in_url(self):
+        from django.test import RequestFactory
+
+        from .token_auth import generate_stream_ticket, token_authenticate
+
+        ticket = generate_stream_ticket(self.admin)
+        request = RequestFactory().get(
+            '/admin/api/rbac/system/info/stream/', {'stream_ticket': ticket}
+        )
+        self.assertEqual(token_authenticate(request).pk, self.admin.pk)
+
+    def test_disabled_plugin_menus_are_hidden(self):
+        from .engine import visible_menu_queryset
+        from .models import PluginRegistry
+
+        menu = Menu.objects.create(
+            name='审计禁用插件菜单', menu_type=2, path='/audit-disabled',
+            plugin_key='audit_disabled_plugin',
+        )
+        PluginRegistry.objects.create(
+            key='audit_disabled_plugin', name='Disabled Plugin', is_active=False
+        )
+        visible = visible_menu_queryset(self.admin, 'backend')
+        self.assertFalse(visible.filter(pk=menu.pk).exists())
+
+    def test_role_page_has_reference_style_permission_grant_dialog(self):
+        root = Path(__file__).resolve().parents[2]
+        source = (root / 'django_layuix/static/layui/pages/role.html').read_text(encoding='utf-8')
+        self.assertIn('permissionDialogTpl', source)
+        self.assertIn("lay-event=\"grant\"", source)
+        self.assertIn('permissionSearch', source)
+        self.assertIn('permissionExpandAll', source)
+
+    def test_new_user_default_theme_is_light(self):
+        user = get_user_model().objects.create_user(username='audit_light_theme', password='pass12345')
+        self.assertEqual(user.theme, '默认浅色')
+
 
 class I18nCoverageTests(SimpleTestCase):
 

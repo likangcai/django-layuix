@@ -134,7 +134,7 @@ def user_info(request):
         'email': getattr(user, 'email', ''),
         'is_superuser': user.is_superuser,
         'is_active': user.is_active,
-        'theme': getattr(user, 'theme', '默认深色'),
+        'theme': getattr(user, 'theme', '默认浅色'),
         'language': getattr(user, 'language', 'zh-hans'),
         'ip': get_client_ip(request),
     }
@@ -353,6 +353,19 @@ def system_info(request):
         data['database'] = {}
 
     return success_response(data)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('config:view')
+def system_info_stream_ticket(request):
+    """Issue a short-lived ticket for EventSource, avoiding JWT in URLs."""
+    from .token_auth import generate_stream_ticket
+
+    return success_response({
+        'ticket': generate_stream_ticket(request.user),
+        'expires_in': 60,
+    })
 
 
 @csrf_exempt
@@ -878,7 +891,7 @@ def logout(request):
     if not token:
         token = request.META.get('HTTP_X_TOKEN') or ''
     if token:
-        revoke_token(token, reason='logout')
+        revoke_token(token, reason='logout', user=request.user)
     django_logout(request)
     return success_response(msg='已退出登录')
 

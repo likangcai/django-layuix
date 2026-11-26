@@ -237,8 +237,11 @@ def _verify_legacy_token(token):
         payload = json.loads(payload_str)
     except Exception:
         return {'valid': False, 'error': 'Invalid token encoding'}
-    legacy_state = _safe_cache_get(_token_cache_key(_legacy_fingerprint(payload_str)))
+    legacy_jti = _legacy_fingerprint(payload_str)
+    legacy_state = _safe_cache_get(_token_cache_key(legacy_jti))
     if legacy_state and legacy_state.get('status') == 0:
+        return {'valid': False, 'error': 'Token revoked'}
+    if AuthToken.objects.filter(jti=legacy_jti, status=0).exists():
         return {'valid': False, 'error': 'Token revoked'}
     if 'exp' not in payload or payload['exp'] < time.time():
         return {'valid': False, 'error': 'Token expired'}
@@ -272,37 +275,46 @@ def verify_token(token):
         return {'valid': False, 'error': 'Token verification failed: %s' % exc}
 
 
-def revoke_token(token, reason='logout'):
-    """Revoke a standard JWT or blacklist a legacy two-part token."""
-    parts = token.split('.') if token else []
-    if len(parts) == 2:
-        try:
-            payload_str = _b64url_decode(parts[0]).decode()
-            payload = json.loads(payload_str)
-            jti = _legacy_fingerprint(payload_str)
-            remaining = max(1, int(payload.get('exp', 0) - time.time()))
-            _safe_cache_set(_token_cache_key(jti), {
-                'status': 0, 'user_id': payload.get('user_id'), 'exp': payload.get('exp', 0),
-            }, remaining)
-            return 1
-        except Exception:
-            return 0
-    if len(parts) != 3:
+def revoke_token(token, reason='logout', user=None):
+    """Revoke a token after verifying it belongs to ``user`` when supplied."""
+    result = verify_token(token)
+    if not result.get('valid'):
         return 0
-    try:
-        payload = json.loads(_b64url_decode(parts[1]).decode())
-    except Exception:
+    token_user = result['user']
+    if user is not None and getattr(user, 'pk', None) != token_user.pk:
         return 0
-    jti = payload.get('jti')
+
+    payload = result['payload']
+    parts = token.split('.')
+    jti = payload.get('jti') or (
+        _legacy_fingerprint(_b64url_decode(parts[0]).decode())
+        if len(parts) == 2 else None
+    )
     if not jti:
         return 0
-    revoked_at = timezone.now()
-    updated = AuthToken.objects.filter(jti=jti, status=1).update(
-        status=0, revoked_at=revoked_at, revoke_reason=reason,
-    )
     remaining = max(1, int(payload.get('exp', 0) - time.time()))
+    revoked_at = timezone.now()
+    expires_at = revoked_at + timedelta(seconds=remaining)
+    record, created = AuthToken.objects.get_or_create(
+        jti=jti,
+        defaults={
+            'user': token_user,
+            'token_type': 'legacy' if len(parts) == 2 else 'access',
+            'status': 0,
+            'issued_at': revoked_at,
+            'expires_at': expires_at,
+            'revoked_at': revoked_at,
+            'revoke_reason': reason,
+        },
+    )
+    if not created:
+        updated = AuthToken.objects.filter(jti=jti).update(
+            status=0, revoked_at=revoked_at, revoke_reason=reason,
+        )
+    else:
+        updated = 1
     _safe_cache_set(_token_cache_key(jti), {
-        'status': 0, 'user_id': payload.get('user_id'), 'exp': payload.get('exp', 0),
+        'status': 0, 'user_id': token_user.id, 'exp': payload.get('exp', 0),
     }, remaining)
     return updated
 
@@ -316,9 +328,10 @@ def revoke_user_tokens(user, reason='password_change'):
         record.revoked_at = revoked_at
         record.revoke_reason = reason
         record.save(update_fields=['status', 'revoked_at', 'revoke_reason', 'update_time'])
+        remaining = max(1, int((record.expires_at - timezone.now()).total_seconds()))
         _safe_cache_set(_token_cache_key(record.jti), {
             'status': 0, 'user_id': user.id, 'exp': int(record.expires_at.timestamp()),
-        }, _token_expire_seconds())
+        }, remaining)
     _safe_cache_delete(_user_index_key(user.id))
     return len(records)
 
@@ -332,6 +345,27 @@ def cleanup_expired_tokens():
     return deleted
 
 
+def generate_stream_ticket(user, ttl=60):
+    """Issue a short-lived ticket for EventSource URLs instead of a JWT."""
+    ticket = secrets.token_hex(32)
+    expires = int(time.time()) + max(1, int(ttl))
+    _safe_cache_set('%sstream:%s' % (_cache_prefix(), ticket), {
+        'user_id': user.id, 'exp': expires,
+    }, expires - int(time.time()))
+    return ticket
+
+
+def verify_stream_ticket(ticket):
+    if not ticket:
+        return None
+    data = _safe_cache_get('%sstream:%s' % (_cache_prefix(), ticket))
+    if not data or data.get('exp', 0) < time.time():
+        return None
+    User = get_user_model()
+    user = User.objects.filter(id=data.get('user_id'), is_active=True).first()
+    return user
+
+
 def token_authenticate(request):
     """Resolve a user from Authorization Bearer, X-Token, query or POST body."""
     token = None
@@ -340,19 +374,12 @@ def token_authenticate(request):
         token = auth_header[7:].strip()
     if not token:
         token = request.META.get('HTTP_X_TOKEN')
-    if not token:
-        query_allowed = (
-            getattr(settings, 'LAYUI_ALLOW_QUERY_TOKEN', False)
-            or str(request.path).endswith('/system/info/stream/')
-        )
-        if query_allowed:
-            token = request.GET.get('token')
-    if not token and request.method == 'POST':
-        try:
-            body = json.loads(request.body)
-            token = body.get('token')
-        except (json.JSONDecodeError, TypeError, AttributeError, ValueError):
-            pass
+    if not token and str(request.path).endswith('/system/info/stream/'):
+        user = verify_stream_ticket(request.GET.get('stream_ticket'))
+        if user is not None:
+            return user
+    if not token and getattr(settings, 'LAYUI_ALLOW_QUERY_TOKEN', False):
+        token = request.GET.get('token')
     if not token:
         return None
     result = verify_token(token)

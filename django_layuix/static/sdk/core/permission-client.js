@@ -58,7 +58,7 @@ export function createPermissionClient(options = {}) {
   }
 
   function can(code) {
-    if (!code) return true;
+    if (!code) return false;
     if (snapshot.user && snapshot.user.is_superuser) return true;
     return (snapshot.permissions || []).indexOf(code) > -1;
   }

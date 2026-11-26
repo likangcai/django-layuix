@@ -23,6 +23,7 @@ export class PermissionService {
 
   configure(options: LayuiPermissionOptions): void {
     this.client.configure(options);
+    this.ready = false;
   }
 
   async load(): Promise<void> {
@@ -58,6 +59,14 @@ export class PermissionService {
 
   plugins(): unknown[] {
     return this.client.pluginManifest();
+  }
+
+  scopeNodes(): unknown[] {
+    return this.client.scopeNodes();
+  }
+
+  abacPolicies(): unknown[] {
+    return this.client.abacPolicies();
   }
 }
 

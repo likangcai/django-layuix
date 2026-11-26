@@ -171,7 +171,7 @@ python manage.py runserver
 LAYUI_CONFIG = {
     # 系统信息
     'system_name': 'Django Layuix Admin',
-    'system_version': '1.4.4',         # 系统版本号（显示在侧边栏）
+    'system_version': '1.4.5',         # 系统版本号（显示在侧边栏）
     'system_description': '',          # 系统描述（显示在登录页）
 
     # Logo
@@ -289,7 +289,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
 | `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
-| `system_version` | 版本号 | 包版本（当前 1.4.4） |
+| `system_version` | 版本号 | 包版本（当前 1.4.5） |
 | `system_description` | 系统描述 | （空） |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |

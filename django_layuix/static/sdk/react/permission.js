@@ -40,6 +40,8 @@ export function usePermission() {
     hasRole: (code) => !!client && client.hasRole(code),
     menus: () => (client ? client.menuTree() : []),
     plugins: () => (client ? client.pluginManifest() : []),
+    scopeNodes: () => (client ? client.scopeNodes() : []),
+    abacPolicies: () => (client ? client.abacPolicies() : []),
   };
 }
 
