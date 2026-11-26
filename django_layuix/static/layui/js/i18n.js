@@ -155,6 +155,9 @@ var I18N = {
             // 菜单管理
             'menu.title': '菜单管理',
             'menu.name': '菜单名称',
+            'menu.searchPlaceholder': '搜索菜单名称或权限码',
+            'menu.expandAll': '全部展开',
+            'menu.collapseAll': '全部折叠',
             'menu.name.directory': '目录名称',
             'menu.name.menu': '菜单名称',
             'menu.name.button': '按钮名称',
@@ -944,6 +947,9 @@ var I18N = {
             // 菜单管理
             'menu.title': 'Menu Management',
             'menu.name': 'Name',
+            'menu.searchPlaceholder': 'Search menu name or permission code',
+            'menu.expandAll': 'Expand all',
+            'menu.collapseAll': 'Collapse all',
             'menu.name.directory': 'Directory Name',
             'menu.name.menu': 'Menu Name',
             'menu.name.button': 'Button Name',

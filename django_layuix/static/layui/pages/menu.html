@@ -48,6 +48,10 @@
             display: flex; align-items: center; gap: 6px;
         }
         .menu-tree-panel .panel-title i { color: var(--primary-color); }
+        .menu-tree-toolbar { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+        .menu-tree-toolbar .layui-input { flex: 1; min-width: 0; height: 30px; padding: 0 8px; }
+        .menu-tree-toolbar .layui-btn { margin-left: 0; padding: 0 8px; }
+        .menu-tree-toolbar .layui-btn i { font-size: 14px; }
         .menu-table-panel { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
         .permission-shuttle { display: grid; grid-template-columns: 1fr 80px 1fr; gap: 8px; align-items: center; }
         .permission-shuttle select { height: 180px; }
@@ -73,6 +77,11 @@
                 <div class="menu-tree-panel">
                     <div class="panel-title">
                         <i class="layui-icon layui-icon-template"></i> <span data-i18n="menu.tree">菜单树</span>
+                    </div>
+                    <div class="menu-tree-toolbar">
+                        <input type="text" id="menuTreeSearch" class="layui-input" data-i18n-placeholder="menu.searchPlaceholder" placeholder="搜索菜单名称或权限码" autocomplete="off">
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="menuTreeExpand" data-i18n-title="menu.expandAll" title="全部展开"><i class="layui-icon layui-icon-down"></i></button>
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="menuTreeCollapse" data-i18n-title="menu.collapseAll" title="全部折叠"><i class="layui-icon layui-icon-up"></i></button>
                     </div>
                     <div id="menuTree"></div>
                 </div>
@@ -341,6 +350,31 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         return html;
     }
 
+    // 按菜单名过滤树节点，命中子级时保留父级路径
+    function filterMenuTree(keyword) {
+        keyword = String(keyword || '').trim().toLowerCase();
+        function walk($set) {
+            var ownText = ($set.find('.layui-tree-txt').first().text() || '').toLowerCase();
+            var ownMatch = !keyword || ownText.indexOf(keyword) > -1;
+            var childMatch = false;
+            $set.children('.layui-tree-pack').children('.layui-tree-set').each(function() {
+                if (walk($(this))) childMatch = true;
+            });
+            var visible = ownMatch || childMatch;
+            $set.toggle(visible);
+            if (visible && childMatch && !ownMatch) {
+                $set.children('.layui-tree-pack').show();
+            }
+            return visible;
+        }
+        $('#menuTree > .layui-tree > .layui-tree-set').each(function() { walk($(this)); });
+    }
+
+    // 展开或折叠全部菜单节点
+    function setMenuTreeSpread(spread) {
+        $('#menuTree .layui-tree-pack').toggle(!!spread);
+    }
+
     // 加载菜单树
     function loadMenuTree() {
         getApi('/admin/api/rbac/menus/tree/', function(res) {
@@ -377,6 +411,15 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     click: function(obj) {
                         openMenuForm(obj.data);
                     }
+                });
+                $('#menuTreeSearch').val('').off('input.menuTree').on('input.menuTree', function() {
+                    filterMenuTree($(this).val());
+                });
+                $('#menuTreeExpand').off('click.menuTree').on('click.menuTree', function() {
+                    setMenuTreeSpread(true);
+                });
+                $('#menuTreeCollapse').off('click.menuTree').on('click.menuTree', function() {
+                    setMenuTreeSpread(false);
                 });
             }
         });

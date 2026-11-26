@@ -17,6 +17,7 @@ _GT = chr(62)
 MENU_PATH_MAP = {
     "/permission/menu": "/static/layui/pages/menu.html",
     "/permission/role": "/static/layui/pages/role.html",
+    "/permission/catalog": "/static/layui/pages/permission.html",
     "/permission/user": "/static/layui/pages/user.html",
     "/system/rbac-constraints": "/static/layui/pages/constraints.html",
     "/permission/abac": "/static/layui/pages/abac.html",
