@@ -6,7 +6,7 @@
     <title>菜单管理 - 软件测试管理后台</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126s">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126v">
     <script>
         // 同步父页面主题
         function syncParentTheme() {
@@ -57,6 +57,8 @@
         .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
         .layui-input-block { margin-left: 130px; }
         .icon-preview { display: inline-block; width: 20px; text-align: center; margin-right: 5px; }
+        .menu-form-actions { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; gap: 8px; margin: 0 -30px -1px; padding: 12px 30px 14px; background: var(--bg-primary); border-top: 1px solid var(--card-border); }
+        .menu-form-actions .layui-btn { margin-left: 0; }
         .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
         .layui-card-header { border-bottom: 1px solid var(--card-border); }
     </style>
@@ -223,7 +225,7 @@
                 <span style="color: var(--text-muted); font-size: 12px; line-height: 30px;">仅控制前台菜单显示（受"可见"总开关影响）</span>
             </div>
         </div>
-        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;">
+        <div class="menu-form-actions">
             <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="menuSubmit">{{ t('common.confirm') }}</button>
             <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.reset') }}</button>
         </div>
@@ -243,7 +245,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261126s"></script>
+    <script src="/static/layui/js/common.js?v=20261126v"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -479,7 +481,8 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             var layerIndex = LayuiUI.dialog({
                 type: 1,
                 title: title,
-                area: ['600px', '580px'],
+                area: ['600px', 'auto'],
+                maxHeight: '80vh',
                 content: renderTpl('menuFormTpl'),
                 success: function(layero, index) {
                     var excludeId = isEdit ? menuData.id : null;

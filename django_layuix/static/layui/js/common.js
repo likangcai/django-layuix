@@ -494,6 +494,11 @@ function openStandardDialog(options) {
                 } else {
                     $content.css('overflow', 'visible');
                 }
+                var layerEl = layero[0] || layero;
+                var actualHeight = layerEl.getBoundingClientRect().height;
+                if (actualHeight && actualHeight <= window.innerHeight) {
+                    layerEl.style.top = Math.max(10, (window.innerHeight - actualHeight) / 2) + 'px';
+                }
             }
             if (typeof renderI18n === 'function') renderI18n();
             if (typeof originalSuccess === 'function') originalSuccess(layero, idx);
