@@ -74,7 +74,13 @@ def is_registered_permission(permission_code):
         return rows.filter(status=True, visible=True).exists()
     if not rows.exists():
         return True
-    return rows.filter(status=True, visible=True).exists()
+    catalog_rows = rows.filter(plugin_key='permission_catalog')
+    if catalog_rows.exists():
+        return catalog_rows.filter(status=True, visible=True).exists()
+    business_rows = rows.exclude(plugin_key='permission_catalog')
+    if business_rows.exists():
+        return business_rows.filter(status=True, visible=True).exists()
+    return builtin
 
 
 def permission_for_path(path):
@@ -122,7 +128,7 @@ def build_permission_code(prefix, action):
 
 
 def register_page_permissions():
-    """Register built-in page codes as hidden permission nodes."""
+    """Register all built-in page and button codes as permission nodes."""
     from .models import Menu, Role
 
     parent, _ = Menu.objects.get_or_create(
@@ -130,6 +136,7 @@ def register_page_permissions():
         defaults={
             'icon': 'layui-icon-vercode',
             'menu_type': 1,
+            'plugin_key': 'permission_catalog',
             'sort': 9999,
             'status': True,
             'visible': True,
@@ -137,13 +144,29 @@ def register_page_permissions():
             'frontend_visible': False,
         },
     )
+    button_parent, _ = Menu.objects.get_or_create(
+        parent=parent,
+        name='按钮权限目录',
+        defaults={
+            'icon': 'layui-icon-vercode',
+            'menu_type': 1,
+            'plugin_key': 'permission_catalog',
+            'sort': 2,
+            'status': True,
+            'visible': True,
+            'backend_visible': False,
+            'frontend_visible': False,
+        },
+    )
     created = []
+    page_codes = set(PAGE_PERMISSIONS.values())
     for path, code in sorted(PAGE_PERMISSIONS.items()):
         menu, is_new = Menu.objects.get_or_create(
-            parent=parent, name=code,
+            parent=parent, permission=code,
             defaults={
+                'name': code,
                 'menu_type': 3,
-                'permission': code,
+                'plugin_key': 'permission_catalog',
                 'sort': 1,
                 'status': True,
                 'visible': True,
@@ -154,9 +177,38 @@ def register_page_permissions():
         )
         if is_new:
             created.append(code)
+
+    for code in permission_catalog():
+        if code in page_codes:
+            continue
+        menu, is_new = Menu.objects.get_or_create(
+            parent=button_parent,
+            permission=code,
+            defaults={
+                'name': code,
+                'menu_type': 3,
+                'plugin_key': 'permission_catalog',
+                'sort': 2,
+                'status': True,
+                'visible': True,
+                'backend_visible': False,
+                'frontend_visible': False,
+                'path': '',
+            },
+        )
+        if is_new:
+            created.append(code)
+    Menu.objects.filter(pk__in=[parent.pk, button_parent.pk]).update(
+        plugin_key='permission_catalog'
+    )
+    Menu.objects.filter(parent_id__in=[parent.pk, button_parent.pk]).update(
+        plugin_key='permission_catalog'
+    )
     admin_role = Role.objects.filter(code='admin').first()
     if admin_role:
         admin_role.menus.add(parent)
-        for menu in Menu.objects.filter(parent=parent, permission__in=PAGE_PERMISSIONS.values()):
+        admin_role.menus.add(button_parent)
+        catalog_codes = permission_catalog()
+        for menu in Menu.objects.filter(permission__in=catalog_codes):
             admin_role.menus.add(menu)
     return created

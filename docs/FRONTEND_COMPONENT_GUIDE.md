@@ -1,15 +1,12 @@
 # 前端组件与设计 Token 规范
 
-版本：v1.0　适用版本：django-layuix 1.4.2+
+版本：v2.0　适用版本：django-layuix 1.4.7+
 
 ## 结论（TL;DR）
 【事实】后台统一使用 `admin.css` 中的设计 token 与 `common.js` 暴露的 `LayuiUI.table/dialog/virtualTable` 组件。
 【判断】通用列表和表单弹窗应复用组件，树、卡片、图表、详情内嵌表格等特殊情况保留独立实现。
-【事实】大数据量只读列表可改用 `LayuiUI.virtualTable()`，只渲染可视行。
-【本期不做】强制重写所有历史页面为虚拟滚动表格；不引入新的前端框架。
-【待确认】是否发布独立 npm 包。
-【待确认】是否为虚拟滚动表格增加列宽拖拽与列配置持久化。
-【待确认】是否提供虚拟滚动表格的服务端分页混合模式。
+【事实】大数据量只读列表可改用 `LayuiUI.virtualTable()`，只渲染可视行；1.4.7 支持服务端分页混合模式与列配置持久化。
+【本期不做】强制重写所有历史页面为虚拟滚动表格；不引入新的前端框架；不发布独立 npm 包。
 
 ---
 
@@ -139,11 +136,40 @@ LayuiUI.virtualTable({
 - `rowHeight` 必须与实际行高一致。
 - `pageMode: 'server'` 为服务端分页混合模式，滚动到底部时按 `page/pageSize` 续载并保留已加载行。
 - `parseData()` 可返回 `{data, total/count}`；`code` 支持 `0` 与 `200`。
-- `tableKey` 开启列宽拖拽并持久化到 `localStorage`，列宽从本地读取时按白名单校验。
-- 返回实例提供 `setData()` / `refresh()` / `rows()` / `loadPage()` / `retry()` / `state()`。
+- `tableKey` 开启列宽拖拽并持久化到 `localStorage`；1.4.7 还会持久化列顺序与可见列。
+- `columnsConfigurable: true` 显示“列配置”按钮，弹窗中可排序、显示/隐藏列；至少保留一列。
+- 返回实例提供 `setData()` / `refresh()` / `rows()` / `allColumns()` / `columns()` / `setColumnConfig()` / `openColumnSettings()` / `loadPage()` / `retry()` / `state()`。
 - HTTP 401 会触发统一登录过期流程；加载失败显示就地重试按钮。
 - 模板函数返回值默认转义，确需输出 HTML 时返回 `{__html: html}`。
 - 需要编辑、排序、分页的列表仍使用 `LayuiUI.table()`。
+
+## 4.2 参考式列表工具栏
+
+数据列表优先使用以下结构，替代把新增/批量操作散落在表格工具栏：
+
+```html
+<div class="ref-toolbar">
+    <form class="layui-form">
+        <div class="layui-form-item">
+            <div class="layui-inline"><!-- label + input/select --></div>
+            <div class="layui-inline search-btns">
+                <button class="layui-btn layui-btn-sm layui-btn-normal">查询</button>
+                <button class="layui-btn layui-btn-sm layui-btn-normal">新增</button>
+                <button class="layui-btn layui-btn-sm layui-btn-danger">批量删除</button>
+                <button class="layui-btn layui-btn-sm layui-btn-primary">重置</button>
+            </div>
+        </div>
+    </form>
+</div>
+```
+
+规范：
+
+- 查询条件与主操作在同一卡片；按钮区独占一行，避免挤压输入框。
+- 需要批量操作时表格首列使用 `type: 'checkbox'`，操作前用 `table.checkStatus()` 校验选择。
+- 状态类字段优先使用行内 `lay-skin="switch"`；请求失败必须回滚开关 UI 状态。
+- 操作列按钮统一 `layui-btn-xs action-chip`：查看用灰、编辑用蓝、重置/复制用橙、删除用红。
+- 按钮权限仍由后端返回的权限码控制；前端只做显隐，不做安全边界。
 
 ## 5. 弹窗组件
 

@@ -1503,6 +1503,67 @@ class RbacFinalAuditTests(TestCase):
         visible = visible_menu_queryset(self.admin, 'backend')
         self.assertFalse(visible.filter(pk=menu.pk).exists())
 
+    def test_disabled_business_node_blocks_builtin_permission(self):
+        from .permission_registry import register_page_permissions
+
+        register_page_permissions()
+        catalog = Menu.objects.get(
+            permission='user:view', plugin_key='permission_catalog', status=True
+        )
+        business = Menu.objects.create(
+            name='审计用户业务按钮', menu_type=3, permission='user:view',
+            status=True, visible=True,
+        )
+        role = Role.objects.create(name='审计按钮角色', code='audit_button_role')
+        role.menus.add(business)
+        self.user.roles.add(role)
+        self.assertTrue(has_permission(self.user, 'user:view'))
+
+        business.status = False
+        business.save()
+        self.assertFalse(has_permission(self.user, 'user:view'))
+        self.assertTrue(catalog.status)
+
+    def test_role_code_conflict_is_rejected_atomically(self):
+        from .permission_registry import register_page_permissions
+
+        register_page_permissions()
+        catalog = Menu.objects.get(permission='user:view', plugin_key='permission_catalog')
+        role = Role.objects.create(name='审计原子角色', code='audit_atomic_role')
+        role.menus.add(catalog)
+        Role.objects.create(name='冲突管理员', code='admin')
+
+        response = self.client.put(
+            '/admin/api/rbac/roles/%s/update/' % role.pk,
+            {'name': '冲突角色', 'code': 'admin', 'menu_ids': [catalog.id]},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        role.refresh_from_db()
+        self.assertEqual(role.name, '审计原子角色')
+        self.assertEqual(role.code, 'audit_atomic_role')
+        self.assertEqual(list(role.menus.values_list('id', flat=True)), [catalog.id])
+
+    def test_unknown_resource_serializer_fails_closed(self):
+        from .serializers import serialize_instance
+
+        request = RequestFactory().get('/admin/api/example/')
+        request.user = self.admin
+        self.assertEqual(
+            serialize_instance(
+                {'id': 1, 'password': 'should-not-leak', 'secret': 'x'},
+                request, 'rbac.Unknown',
+            ),
+            {},
+        )
+
+    def test_standard_table_defaults_to_html_escape(self):
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2]
+        source = (root / 'django_layuix/static/layui/js/common.js').read_text(encoding='utf-8')
+        self.assertIn('settings.escape = settings.escape !== false;', source)
+
     def test_role_page_has_reference_style_permission_grant_dialog(self):
         root = Path(__file__).resolve().parents[2]
         source = (root / 'django_layuix/static/layui/pages/role.html').read_text(encoding='utf-8')
@@ -1511,9 +1572,141 @@ class RbacFinalAuditTests(TestCase):
         self.assertIn('permissionSearch', source)
         self.assertIn('permissionExpandAll', source)
 
+    def test_user_page_has_reference_style_list_interactions(self):
+        root = Path(__file__).resolve().parents[2]
+        source = (root / 'django_layuix/static/layui/pages/user.html').read_text(encoding='utf-8')
+        self.assertIn('ref-toolbar', source)
+        self.assertIn('batchDeleteBtn', source)
+        self.assertIn("lay-filter=\"userStatus\"", source)
+        self.assertIn("type: 'checkbox'", source)
+        self.assertIn('action-chip', source)
+
     def test_new_user_default_theme_is_light(self):
         user = get_user_model().objects.create_user(username='audit_light_theme', password='pass12345')
         self.assertEqual(user.theme, '默认浅色')
+
+    def test_builtin_button_permissions_are_pre_registered(self):
+        from .permission_registry import permission_catalog, register_page_permissions
+
+        created = register_page_permissions()
+        self.assertGreater(len(created), 0)
+        for code in permission_catalog():
+            self.assertTrue(
+                Menu.objects.filter(permission=code, status=True, visible=True).exists(),
+                'permission %s is not registered' % code,
+            )
+
+    def test_business_api_field_whitelist_removes_unregistered_fields(self):
+        from .serializers import serialize_instance
+
+        request = RequestFactory().get('/admin/api/rbac/users/')
+        request.user = self.admin
+        row = {
+            'id': 1,
+            'username': 'whitelist',
+            'password_hash': 'should-not-leak',
+            'internal_marker': 'should-not-leak',
+            'roles': [{
+                'id': 2, 'name': '审计角色', 'code': 'audit_role',
+                'description': 'should-not-leak', 'max_users': 10,
+            }],
+        }
+        data = serialize_instance(row, request, 'rbac.User')
+        self.assertEqual(data['id'], 1)
+        self.assertEqual(data['username'], 'whitelist')
+        self.assertNotIn('password_hash', data)
+        self.assertNotIn('internal_marker', data)
+        self.assertEqual(
+            data['roles'],
+            [{'id': 2, 'name': '审计角色', 'code': 'audit_role'}],
+        )
+
+    def test_abac_field_policy_can_hide_registered_field(self):
+        from .models import AbacPolicy
+        from .serializers import serialize_instance
+
+        AbacPolicy.objects.create(
+            name='hide phone', resource='rbac.User', action='view',
+            field='phone', effect='allow', expression="user.username == 'nobody'",
+            priority=1,
+        )
+        request = RequestFactory().get('/admin/api/rbac/users/')
+        request.user = self.user
+        data = serialize_instance(
+            {'id': 1, 'username': 'audit_user', 'phone': '13800000000'},
+            request, 'rbac.User',
+        )
+        self.assertIn('username', data)
+        self.assertNotIn('phone', data)
+
+    def test_angular_standalone_bootstrap_example_exists(self):
+        root = Path(__file__).resolve().parents[2]
+        source = (root / 'django_layuix/static/sdk/angular/standalone.ts').read_text(encoding='utf-8')
+        self.assertIn('provideLayuiPermission', source)
+        self.assertIn('layuiPermissionGuard', source)
+        self.assertIn('bootstrapLayuiStandalone', source)
+
+    def test_virtual_table_supports_column_configuration(self):
+        root = Path(__file__).resolve().parents[2]
+        source = (root / 'django_layuix/static/layui/js/common.js').read_text(encoding='utf-8')
+        self.assertIn('columnsConfigurable', source)
+        self.assertIn('setColumnConfig', source)
+        self.assertIn('openColumnSettings', source)
+
+    def test_user_batch_delete_protects_current_and_admins(self):
+        User = get_user_model()
+        target = User.objects.create_user(username='audit_batch_target', password='pass12345')
+        superuser = User.objects.create_user(username='audit_batch_admin', password='pass12345')
+        superuser.is_superuser = True
+        superuser.save()
+
+        response = self.client.post(
+            '/admin/api/rbac/users/batch-delete/',
+            {'ids': [target.id, superuser.id, self.admin.id]},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()['data']
+        self.assertEqual(data['deleted'], 1)
+        self.assertEqual(data['deleted_ids'], [target.id])
+        self.assertEqual(len(data['skipped']), 2)
+        self.assertFalse(User.objects.filter(pk=target.pk).exists())
+        self.assertTrue(User.objects.filter(pk=superuser.pk).exists())
+        self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())
+
+        invalid = self.client.post(
+            '/admin/api/rbac/users/batch-delete/',
+            {'ids': []},
+            content_type='application/json',
+        )
+        self.assertEqual(invalid.status_code, 400)
+
+    def test_server_detail_never_returns_credentials(self):
+        from django.test import Client
+
+        from django_layuix.ops.models import Server
+
+        server = Server.objects.create(
+            name='audit-secret-server', host='127.0.0.1', port=22,
+            username='root', auth_type='password', password='secret-password',
+            private_key='secret-key',
+        )
+        client = Client()
+        client.force_login(self.admin)
+        response = client.get('/admin/api/ops/servers/%s/detail/' % server.pk)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()['data']
+        self.assertIn('host', data)
+        self.assertNotIn('password', data)
+        self.assertNotIn('private_key', data)
+
+    def test_role_permission_tree_echoes_exact_parent_ids(self):
+        root = Path(__file__).resolve().parents[2]
+        source = (root / 'django_layuix/static/layui/pages/role.html').read_text(encoding='utf-8')
+        self.assertIn('syncTreeParentStates', source)
+        self.assertIn('applyExactTreeChecks', source)
+        self.assertIn('Object.keys(checkedSet)', source)
+        self.assertIn('idSet[String(checkedIds[i])]', source)
 
     def test_unregistered_permission_is_denied(self):
         from .permission_registry import is_registered_permission

@@ -13,6 +13,7 @@ from django.utils.timezone import localtime
 from django_layuix.rbac.permissions import (
     api_login_required, api_permission_required, has_permission, resolve_api_user,
 )
+from django_layuix.rbac.serializers import field_whitelisted
 
 
 def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
@@ -45,6 +46,7 @@ def error_response(msg='error', code=400):
 @csrf_exempt
 @api_login_required
 @api_permission_required('server:view')
+@field_whitelisted('ops.Server')
 def server_list(request):
     """Get server list"""
     from .models import Server
@@ -131,8 +133,9 @@ def server_update(request, pk):
 @csrf_exempt
 @api_login_required
 @api_permission_required('server:view')
+@field_whitelisted('ops.Server')
 def server_detail(request, pk):
-    """Get server detail (with password/private_key for edit form)"""
+    """Get server detail; credential fields are never returned"""
     from .models import Server
     try:
         server = Server.objects.get(pk=pk)

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="role.title">角色管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126a">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126c">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -253,8 +253,8 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261126a"></script>
-    <script src="/static/layui/js/i18n.js?v=20261126a"></script>
+    <script src="/static/layui/js/common.js?v=20261126c"></script>
+    <script src="/static/layui/js/i18n.js?v=20261126c"></script>
     <script>
 inheritTheme();
 
@@ -280,6 +280,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
     document.title = t('role.title');
 
     var currentUser = window.parent.currentUser || {};
+    var permissionTreeReady = false;
     var permissions = currentUser.permissions || [];
     var allRoles = [];
 
@@ -489,9 +490,67 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
         return convert(menuTree || []);
     }
 
+    function applyExactTreeChecks($container, checkedSet) {
+        $container.find('.layui-tree-set').each(function() {
+            var $input = $(this).find('input[type="checkbox"]').first();
+            var $checkbox = $input.next('.layui-form-checkbox');
+            $input.prop('checked', false);
+            $checkbox.removeClass('layui-form-checked').removeClass('layui-form-halfchecked');
+        });
+        $container.find('.layui-tree-set').each(function() {
+            var nodeId = String($(this).data('id') || '');
+            if (checkedSet[nodeId]) {
+                var $input = $(this).find('input[type="checkbox"]').first();
+                var $checkbox = $input.next('.layui-form-checkbox');
+                $input.prop('checked', true);
+                $checkbox.addClass('layui-form-checked');
+            }
+        });
+        syncTreeParentStates($container, Object.keys(checkedSet));
+    }
+
+    function syncTreeParentStates($container, pinnedIds) {
+        var pinned = {};
+        (pinnedIds || []).forEach(function(id) { pinned[String(id)] = true; });
+
+        function visit($set) {
+            var nodeId = String($set.data('id') || '');
+            var $children = $set.children('.layui-tree-child').children('.layui-tree-set');
+            var $input = $set.find('input[type="checkbox"]').first();
+            var $checkbox = $input.next('.layui-form-checkbox');
+            var state;
+            if (!$children.length) {
+                state = {checked: !!$input.prop('checked'), half: false};
+            } else {
+                var checkedCount = 0;
+                var childHalf = false;
+                $children.each(function() {
+                    var childState = visit($(this));
+                    if (childState.checked || childState.half) checkedCount++;
+                    if (childState.half) childHalf = true;
+                });
+                var all = checkedCount === $children.length;
+                state = {checked: all, half: (checkedCount > 0 && !all) || childHalf};
+            }
+            if (pinned[nodeId]) state = {checked: true, half: false};
+            $input.prop('checked', state.checked);
+            $checkbox.toggleClass('layui-form-checked', state.checked)
+                .toggleClass('layui-form-halfchecked', state.half);
+            return state;
+        }
+
+        $container.children('.layui-tree-set').each(function() { visit($(this)); });
+    }
+
+    function menuTreeUrl(roleData) {
+        var keepIds = roleData && roleData.menu_ids ? roleData.menu_ids.join(',') : '';
+        return '/admin/api/rbac/menus/tree/?exclude_catalog=1'
+            + (keepIds ? '&keep_ids=' + encodeURIComponent(keepIds) : '');
+    }
+
     // 参考项目式角色授权：独立弹窗 + 勾选树 + 展开/折叠 + 幂等保存
     function openPermissionDialog(roleData) {
-        getApi('/admin/api/rbac/menus/tree/', function(res) {
+        getApi(menuTreeUrl(roleData), function(res) {
             if (res.code !== 200) {
                 layer.msg(res.msg || t('common.loadFailed'), {icon: 2});
                 return;
@@ -596,6 +655,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
                         showLine: true,
                         id: 'rolePermissionGrantTree'
                     });
+                    applyExactTreeChecks(layeroCache.find('#permissionTree'), checkedSet);
                     layeroCache.find('#permissionSearch').on('input', function() { filterTree($(this).val()); });
                     layeroCache.find('#permissionExpandAll').on('click', function() {
                         layeroCache.find('#permissionTree .layui-tree-child').show();
@@ -608,7 +668,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
                         var $set = $checkbox.closest('.layui-tree-set');
                         var checked = !$set.find('input[type="checkbox"]').first().prop('checked');
                         setNodeState($set, checked);
-                        syncParentState($set.parent().closest('.layui-tree-set'));
+                        syncTreeParentStates(layeroCache.find('#permissionTree'));
                         updateSelectedCount();
                     });
                     updateSelectedCount();
@@ -623,7 +683,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
         var isEdit = !!roleData;
         var title = isEdit ? t('common.edit') + t('role.title') : t('common.add') + t('role.title');
 
-        getApi('/admin/api/rbac/menus/tree/', function(res) {
+        getApi(menuTreeUrl(roleData), function(res) {
             if (res.code !== 200) return;
             var menuTree = res.data || [];
             
@@ -674,37 +734,30 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
                         renderParentRoles(layero, isEdit ? roleData.id : null, isEdit ? (roleData.parent_ids || []) : []);
                     });
                     
-                    // 在 tree 渲染后，设置选中状态
-                    setTimeout(function() {
-                        var $treeContainer = layero.find('#menuPermTree');
-                        
-                        // 先清除所有勾选状态
-                        $treeContainer.find('.layui-tree-set').each(function() {
-                            var $input = $(this).find('input[type="checkbox"]').first();
-                            var $checkbox = $input.next('.layui-form-checkbox');
-                            $input.prop('checked', false);
-                            $checkbox.removeClass('layui-form-checked');
-                        });
-                        
-                        // 设置选中的节点
-                        if (checkedIds.length > 0) {
+                    // 在 tree 渲染后，按精确 ID 回显，避免父节点级联污染
+                    permissionTreeReady = false;
+                    layero.find('[lay-filter="roleSubmit"]').prop('disabled', true).addClass('layui-btn-disabled');
+                    (function applyWhenReady(attempts) {
+                        var $tree = layero.find('#menuPermTree');
+                        if ($tree.find('.layui-tree-set').length || attempts <= 0) {
+                            if (!$tree.find('.layui-tree-set').length) {
+                                layer.msg(t('common.loadFailed'), {icon: 2});
+                                return;
+                            }
                             var idSet = {};
                             for (var i = 0; i < checkedIds.length; i++) {
                                 idSet[String(checkedIds[i])] = true;
                             }
-                            
-                            $treeContainer.find('.layui-tree-set').each(function() {
-                                var $set = $(this);
-                                var nodeId = $set.data('id');
-                                if (nodeId !== undefined && nodeId !== null && idSet[String(nodeId)]) {
-                                    var $input = $set.find('input[type="checkbox"]').first();
-                                    var $checkbox = $input.next('.layui-form-checkbox');
-                                    $input.prop('checked', true);
-                                    $checkbox.addClass('layui-form-checked');
-                                }
-                            });
+                            applyExactTreeChecks($tree, idSet);
+                            permissionTreeReady = true;
+                            layero.find('[lay-filter="roleSubmit"]').prop('disabled', false).removeClass('layui-btn-disabled');
+                            return;
                         }
-                    }, 300);
+                        setTimeout(function() { applyWhenReady(attempts - 1); }, 50);
+                    })(60);
+
+
+
                     
                     // 添加 checkbox 点击事件，实现父节点勾选联动子节点
                     layero.off('click.menuPermTree').on('click.menuPermTree', '#menuPermTree .layui-form-checkbox', function(e) {
@@ -742,6 +795,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
                         
                         // 联动子节点
                         setChildrenChecked($treeSet, isChecked);
+                        syncTreeParentStates(layero.find('#menuPermTree'));
                     });
                 }
             });
@@ -749,6 +803,10 @@ layui.use(['table', 'tree', 'form', 'layer', 'element'], function(){
 
         // 角色表单提交（绑定一次，避免重复绑定）
         bindFormOnce('submit(roleSubmit)', function(data) {
+            if (!permissionTreeReady) {
+                layer.msg(t('common.loadFailed'), {icon: 2});
+                return false;
+            }
             var field = data.field;
             var id = field.id;
 

@@ -175,7 +175,7 @@ def _disabled_plugin_keys():
     try:
         return set(PluginRegistry.objects.filter(
             is_active=False
-        ).values_list('key', flat=True))
+        ).exclude(key='permission_catalog').values_list('key', flat=True))
     except Exception:
         logger.exception('Failed to read disabled plugin keys')
         return set()

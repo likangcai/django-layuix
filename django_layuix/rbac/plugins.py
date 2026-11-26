@@ -140,12 +140,25 @@ def _was_active(key):
         return False
 
 
+RESERVED_PLUGIN_KEYS = {'permission_catalog'}
+
+
 def register_plugin(key, name, version='1.0.0', description='',
                     api_prefix='', menu_path='', app_label='',
                     dependencies=(), is_active=True, source='app',
                     validation_error='', validation_errors=None):
     """Register or update plugin metadata. Safe to call from AppConfig.ready()."""
     errors = list(validation_errors or [])
+    if key in RESERVED_PLUGIN_KEYS:
+        errors.append('插件键 %s 为系统保留键' % key)
+        return {
+            'key': key, 'name': name, 'version': version,
+            'description': description, 'api_prefix': api_prefix,
+            'menu_path': menu_path, 'app_label': app_label,
+            'dependencies': _as_lines(dependencies), 'source': source,
+            'validation_error': '\n'.join(errors), 'desired_active': False,
+            'is_active': False,
+        }
     if validation_error:
         errors.append(validation_error)
     error_text = '\n'.join(errors)
@@ -212,6 +225,9 @@ def register_plugin(key, name, version='1.0.0', description='',
 
 
 def unregister_plugin(key):
+    if key in RESERVED_PLUGIN_KEYS:
+        logger.warning('Refused to unregister reserved plugin key %s', key)
+        return False
     data = _PLUGINS.get(key)
     was_active = bool(data and data.get('is_active')) or _was_active(key)
     try:
@@ -272,6 +288,9 @@ def set_plugin_active(key, active):
 
 def register_plugin_menus(key, plugin_instance):
     """Register menus and buttons declared by a PluginConfig."""
+    if key in RESERVED_PLUGIN_KEYS:
+        logger.warning('Refused to register menus for reserved plugin key %s', key)
+        return
     menus = list(getattr(plugin_instance, 'plugin_menus', ()) or ())
     buttons = list(getattr(plugin_instance, 'plugin_buttons', ()) or ())
     if not menus and not buttons:

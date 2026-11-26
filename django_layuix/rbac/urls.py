@@ -55,6 +55,7 @@ urlpatterns = [
 
     # User CRUD
     path('users/', views.user_list, name='rbac_user_list'),
+    path('users/batch-delete/', views.user_batch_delete, name='rbac_user_batch_delete'),
     path('users/create/', views.user_create, name='rbac_user_create'),
     path('users/<int:pk>/update/', views.user_update, name='rbac_user_update'),
     path('users/<int:pk>/delete/', views.user_delete, name='rbac_user_delete'),

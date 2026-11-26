@@ -63,7 +63,7 @@ class Command(BaseCommand):
         from django_layuix.rbac.permission_registry import register_page_permissions
         created_permissions = register_page_permissions()
         if created_permissions:
-            self.stdout.write(self.style.SUCCESS('  注册页面权限 %s 项' % len(created_permissions)))
+            self.stdout.write(self.style.SUCCESS('  注册权限目录 %s 项' % len(created_permissions)))
 
         self._init_roles(force)
         self._init_default_configs(force)

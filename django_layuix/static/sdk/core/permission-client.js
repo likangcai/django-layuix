@@ -40,11 +40,13 @@ export function createPermissionClient(options = {}) {
   }
 
   let loadPromise = null;
+  let generation = 0;
 
   async function load(options = {}) {
-    if (loadPromise) return loadPromise;
+    if (loadPromise && !options.refresh) return loadPromise;
     if (ready && !options.refresh) return snapshot;
-    loadPromise = (async () => {
+    const requestGeneration = ++generation;
+    const request = (async () => {
       const fetchImpl = settings.fetch || (typeof fetch === 'function' ? fetch : null);
       if (!fetchImpl) throw new Error('fetch is not available; pass options.fetch');
       const response = await fetchImpl(settings.endpoint, {
@@ -59,14 +61,16 @@ export function createPermissionClient(options = {}) {
       if (payload.code !== 200) {
         throw new Error(payload.msg || 'Permission request failed');
       }
+      if (requestGeneration !== generation) return snapshot;
       snapshot = Object.assign({}, snapshot, payload.data || {});
       ready = true;
       return snapshot;
     })();
+    loadPromise = request;
     try {
-      return await loadPromise;
+      return await request;
     } finally {
-      loadPromise = null;
+      if (loadPromise === request) loadPromise = null;
     }
   }
 
@@ -76,12 +80,17 @@ export function createPermissionClient(options = {}) {
     return (snapshot.permissions || []).indexOf(code) > -1;
   }
 
+  function codeList(codes) {
+    if (Array.isArray(codes)) return codes;
+    return codes ? [codes] : [];
+  }
+
   function canAny(codes) {
-    return (codes || []).some(can);
+    return codeList(codes).some(can);
   }
 
   function canAll(codes) {
-    return (codes || []).every(can);
+    return codeList(codes).every(can);
   }
 
   function hasRole(code) {
@@ -139,6 +148,7 @@ export function createPermissionClient(options = {}) {
     get snapshot() { return snapshot; },
     get ready() { return ready; },
     invalidate() {
+      generation++;
       loadPromise = null;
       ready = false;
       snapshot = {
@@ -164,6 +174,8 @@ export function createPermissionClient(options = {}) {
       this.invalidate();
     },
     setSnapshot(data) {
+      generation++;
+      loadPromise = null;
       snapshot = Object.assign({}, snapshot, data || {});
       ready = true;
       return snapshot;

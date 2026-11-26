@@ -7,9 +7,10 @@
 【判断】前端只负责展示控制，最终安全边界仍是后端 `has_permission()` / `api_permission_required()` / ABAC 策略。
 【事实】当前 SDK 随 Django 静态文件分发，示例中的 `/static/sdk/...` 为可直接复制的模块路径。
 【本期不做】发布独立 npm 包；自动把动态路由组件映射纳入 SDK。
-【待确认】是否提供 Angular standalone bootstrap 示例。
+【事实】1.4.7 提供 Angular standalone 启动助手、函数式路由守卫与核心 SDK TypeScript 声明。
 【待确认】是否提供 Vue Router 与 React Router 的 SSR 预取示例。
 【待确认】是否在 SDK 中内置权限刷新按钮与状态组件。
+【待确认】是否提供路由权限映射的可视化检查工具。
 
 ---
 
@@ -225,7 +226,38 @@ permissionService.configure({
 <button [layuiPermission]="['user:add', 'role:add']" [requireAll]="true">全部满足</button>
 ```
 
-`PermissionService` 同时提供 `can / canAny / canAll / hasRole / menus / plugins`。
+`PermissionService` 同时提供 `can / canAny / canAll / hasRole / menus / plugins / scopeNodes / abacPolicies / pagePermissions / buttonActions / permissionCatalog / canLoadPage`。
+
+### 6.1 Angular standalone 启动
+
+`/static/sdk/angular/standalone.ts` 提供 3 个能力：
+
+```ts
+import { bootstrapLayuiStandalone, layuiPermissionGuard } from '/static/sdk/angular/standalone';
+
+bootstrapLayuiStandalone(AppComponent, {
+  endpoint: '/admin/api/rbac/frontend/permissions/',
+}, routes);
+```
+
+路由可以显式声明权限码，也可以走页面路径映射：
+
+```ts
+const routes: Routes = [
+  {
+    path: 'users',
+    component: UserListComponent,
+    canActivate: [layuiPermissionGuard],
+    data: { permissions: 'user:view' },
+  },
+];
+```
+
+`layuiPermissionGuard` 会先加载权限快照，失败时自动重试一次；仍未通过则跳转 `/403`。
+
+### 6.2 TypeScript 类型
+
+`/static/sdk/core/permission-client.d.ts` 提供 `PermissionClientOptions`、`PermissionSnapshot` 与客户端方法类型，Angular/React/Vue 项目可直接获得类型提示。
 
 ## 7. 后端仍必须校验
 
@@ -237,7 +269,21 @@ def order_update(request, pk):
     ...
 ```
 
-ABAC 场景还需调用：
+字段级响应优先使用统一白名单序列化器：
+
+```python
+from django_layuix.rbac.serializers import field_whitelisted
+
+@api_login_required
+@api_permission_required('order:view')
+@field_whitelisted('store.Order')
+def order_detail(request, pk):
+    ...
+```
+
+`field_whitelisted()` 会根据 `API_FIELD_REGISTRY` 过滤字段；显式传入字段只能收窄，不能放大白名单。ABAC 字段策略可以进一步隐藏已注册字段。
+
+ABAC 场景也可直接调用底层方法：
 
 ```python
 from django_layuix.rbac.abac import evaluate_policies, filter_fields, filter_queryset

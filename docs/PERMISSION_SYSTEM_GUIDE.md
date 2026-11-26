@@ -188,7 +188,19 @@ LAYUI_CONFIG = {
 
 ## 3. 权限标识规范
 
-### 3.1 命名规则
+### 3.1 注册优先原则
+
+【事实】1.4.7 起，权限码必须先在后端注册后才能生效。页面、菜单、按钮和 API 字段都遵循“默认拒绝”。
+
+- 页面路径：`permission_registry.PAGE_PERMISSIONS` 映射到 `sys_menu`。
+- 按钮/动作：`permission_registry.BUTTON_ACTIONS` 与各模块前缀组成权限码；`init_menu` 会全量预注册到“权限目录 / 按钮权限目录”。
+- 自定义权限：在权限管理中创建启用且可见的 `sys_menu` 记录。
+- 字段白名单：在 `rbac/serializers.py` 的 `API_FIELD_REGISTRY` 中注册业务资源字段；未注册字段不会出现在响应中。嵌套集合通过 `API_NESTED_FIELD_REGISTRY` 声明，例如用户角色与订单明细。
+- 路由守卫：`/static/` 页面由 `enforcePagePermission()` 检查；未登记静态页面默认拒绝。
+
+【判断】新增功能时先补注册，再写前端按钮和接口，可避免“前端可点但后端 403”或“接口未授权可访问”。
+
+### 3.2 命名规则
 
 ```
 格式：模块:操作
@@ -196,7 +208,7 @@ LAYUI_CONFIG = {
 长度：建议不超过 30 个字符
 ```
 
-### 3.2 命名示例
+### 3.3 命名示例
 
 #### ✅ 正确示例
 
@@ -227,7 +239,7 @@ LAYUI_CONFIG = {
 'a_very_long_permission_name_that_exceeds_reasonable_length'  # ❌ 过长
 ```
 
-### 3.3 操作动词推荐
+### 3.4 操作动词推荐
 
 | 动词 | 含义 | 适用场景 |
 |------|------|----------|

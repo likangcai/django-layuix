@@ -371,10 +371,13 @@ function getCurrentTime() {
 
 // HTML转义
 function escapeHtml(str) {
+    if (str === 0 || str === false) str = String(str);
     if (!str) return '';
     var div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
+    return div.innerHTML
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 /**
@@ -429,6 +432,7 @@ function renderStandardTable(options) {
     var page = settings.page;
     delete settings.page;
     settings.defaultToolbar = settings.defaultToolbar || [];
+    settings.escape = settings.escape !== false;
     settings.height = settings.height || 'full-220';
     settings.even = settings.even !== false;
     settings.page = getStandardTablePage(page === undefined ? true : page);
@@ -522,25 +526,90 @@ function renderVirtualTable(options) {
         pageSize: 100,
         total: 0,
         request: {pageName: 'page', limitName: 'page_size'},
-        tableKey: ''
+        tableKey: '',
+        columnsConfigurable: false
     }, options);
-    var columns = settings.cols && settings.cols[0] ? settings.cols[0] : (settings.cols || []);
+    var allColumns = (settings.cols && settings.cols[0] ? settings.cols[0] : (settings.cols || [])).slice();
+    allColumns.forEach(function(col, index) {
+        if (!col.field && !col.__layuixKey) col.__layuixKey = '__col_' + index;
+    });
+    var columns = allColumns.slice();
     var storageKey = settings.tableKey ? 'layuix:virtual-table:' + settings.tableKey + ':columns' : '';
-    var savedWidths = {};
-    try {
-        savedWidths = storageKey ? (JSON.parse(localStorage.getItem(storageKey) || '{}') || {}) : {};
-    } catch (e) {
-        savedWidths = {};
+    var columnConfig = {order: [], hidden: [], widths: {}};
+
+    function columnKey(col) {
+        return col.field || col.__layuixKey;
     }
+
     function normalizeWidth(value) {
         if (typeof value === 'number' && value >= 60 && value <= 600) return value;
-        if (/^\d{2,3}px$/.test(String(value || ''))) return value;
+        var raw = String(value || '').trim();
+        if (/^\d{2,4}px$/.test(raw)) raw = raw.slice(0, -2);
+        if (/^\d{2,4}$/.test(raw)) {
+            var width = parseInt(raw, 10);
+            return width >= 60 && width <= 600 ? width : null;
+        }
         return null;
     }
-    columns.forEach(function(col, index) {
-        var width = normalizeWidth(savedWidths[index]);
-        if (width) col.width = width;
-    });
+
+    function readColumnConfig() {
+        if (!storageKey) return {order: [], hidden: [], widths: {}};
+        var raw;
+        try {
+            raw = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        } catch (e) {
+            raw = null;
+        }
+        if (!raw) return {order: [], hidden: [], widths: {}};
+        if (raw.order || raw.hidden || raw.widths) {
+            return {
+                order: Array.isArray(raw.order) ? raw.order.filter(function(item) {
+                    return typeof item === 'string';
+                }) : [],
+                hidden: Array.isArray(raw.hidden) ? raw.hidden.filter(function(item) {
+                    return typeof item === 'string';
+                }) : [],
+                widths: raw.widths && typeof raw.widths === 'object' ? raw.widths : {}
+            };
+        }
+        // Compatible with the 1.4.6 index-width storage format.
+        var widths = {};
+        Object.keys(raw).forEach(function(index) {
+            var col = allColumns[parseInt(index, 10)];
+            if (col && normalizeWidth(raw[index])) widths[columnKey(col)] = normalizeWidth(raw[index]);
+        });
+        return {order: [], hidden: [], widths: widths};
+    }
+    columnConfig = readColumnConfig();
+
+    function applyColumnConfig() {
+        var originalKeys = allColumns.map(columnKey);
+        var orderedKeys = (columnConfig.order || []).filter(function(key) {
+            return originalKeys.indexOf(key) > -1;
+        });
+        originalKeys.forEach(function(key) {
+            if (orderedKeys.indexOf(key) < 0) orderedKeys.push(key);
+        });
+        var byKey = {};
+        allColumns.forEach(function(col, index) { byKey[columnKey(col)] = col; });
+        allColumns = orderedKeys.map(function(key) { return byKey[key]; });
+
+        var hidden = new Set((columnConfig.hidden || []).filter(function(key) {
+            return originalKeys.indexOf(key) > -1;
+        }));
+        columns = allColumns.filter(function(col, index) {
+            return !hidden.has(columnKey(col));
+        });
+        if (!columns.length) {
+            hidden.clear();
+            columns = allColumns.slice();
+        }
+        allColumns.forEach(function(col, index) {
+            var width = normalizeWidth((columnConfig.widths || {})[columnKey(col)]);
+            if (width) col.width = width;
+        });
+    }
+    applyColumnConfig();
 
     var rows = settings.data || [];
     var total = parseInt(settings.total, 10) || rows.length;
@@ -548,6 +617,7 @@ function renderVirtualTable(options) {
     var loading = false;
     var loadError = null;
     var loaded = false;
+    var exhausted = false;
     var lastFailedRequest = null;
     var requestId = 0;
     var root = $('<div class="layuix-virtual-table"></div>');
@@ -569,17 +639,30 @@ function renderVirtualTable(options) {
             var cell = $('<div class="layuix-virtual-cell" style="' + widthStyle(col) + '">'
                 + escapeHtml(col.title || '') + '</div>');
             if (storageKey) {
-                cell.append('<span class="layuix-virtual-resizer" data-index="' + index + '"></span>');
+                cell.append('<span class="layuix-virtual-resizer" data-key="' + escapeHtml(columnKey(col)) + '"></span>');
             }
             head.append(cell);
         });
+        if (storageKey && settings.columnsConfigurable) {
+            head.append('<div class="layuix-virtual-cell layuix-virtual-column-action" title="'
+                + escapeHtml(typeof t === 'function' ? t('virtual.columnSettings') : 'Columns')
+                + '"><button type="button" class="layuix-virtual-column-settings"><i class="layui-icon layui-icon-set"></i></button></div>');
+        }
     }
 
     function persistWidths() {
         if (!storageKey) return;
-        var widths = {};
-        columns.forEach(function(col, index) { if (col.width) widths[index] = col.width; });
-        try { localStorage.setItem(storageKey, JSON.stringify(widths)); } catch (e) {}
+        var visibleKeys = {};
+        columns.forEach(function(col, index) { visibleKeys[columnKey(col)] = true; });
+        columnConfig.order = allColumns.map(function(col, index) { return columnKey(col); });
+        columnConfig.hidden = allColumns
+            .filter(function(col, index) { return !visibleKeys[columnKey(col)]; })
+            .map(function(col, index) { return columnKey(col); });
+        columnConfig.widths = {};
+        allColumns.forEach(function(col, index) {
+            if (col.width) columnConfig.widths[columnKey(col)] = col.width;
+        });
+        try { localStorage.setItem(storageKey, JSON.stringify(columnConfig)); } catch (e) {}
     }
 
     function showState(type, message) {
@@ -634,10 +717,13 @@ function renderVirtualTable(options) {
                 return '<div class="layuix-virtual-cell" style="' + widthStyle(col) + '">'
                     + cellHtml(rows[i], col, i) + '</div>';
             }).join('');
+            if (storageKey && settings.columnsConfigurable) {
+                cells += '<div class="layuix-virtual-cell layuix-virtual-column-action"></div>';
+            }
             html.push('<div class="layuix-virtual-row" style="height:' + rowHeight + 'px">' + cells + '</div>');
         }
         list.html(html.join(''));
-        if (settings.pageMode === 'server' && loaded && !loading && !loadError
+        if (settings.pageMode === 'server' && loaded && !loading && !loadError && !exhausted
             && rows.length > 0 && rows.length < total
             && scrollTop + viewport >= rows.length * rowHeight - rowHeight * 2) {
             instance.loadPage(currentPage + 1, true);
@@ -654,6 +740,7 @@ function renderVirtualTable(options) {
         rows = append ? rows.concat(batch) : batch;
         currentPage = append ? currentPage + 1 : (parseInt(settings.page, 10) || 1);
         loaded = true;
+        if (!batch.length) exhausted = true;
         showState(null);
         renderWindow();
         if (typeof settings.success === 'function') settings.success(rows, payload);
@@ -666,10 +753,12 @@ function renderVirtualTable(options) {
         refresh: renderWindow,
         setData: function(data, meta) {
             requestId++;
+            loading = false;
             rows = data || [];
             total = meta && meta.total !== undefined ? parseInt(meta.total, 10) || 0 : rows.length;
             currentPage = meta && meta.page ? parseInt(meta.page, 10) || 1 : 1;
             loaded = true;
+            exhausted = false;
             loadError = null;
             lastFailedRequest = null;
             body.scrollTop(0);
@@ -681,6 +770,7 @@ function renderVirtualTable(options) {
             var currentRequest = ++requestId;
             loading = true;
             loadError = null;
+            if (!append) exhausted = false;
             lastFailedRequest = {page: page, append: !!append};
             showState('loading', typeof t === 'function' ? t('common.loading') : 'Loading...');
             var url = settings.url;
@@ -717,7 +807,21 @@ function renderVirtualTable(options) {
             var target = lastFailedRequest;
             loadError = null;
             instance.loadPage(target.page, target.append);
-        }
+        },
+        allColumns: function() { return allColumns.slice(); },
+        columns: function() { return columns.slice(); },
+        setColumnConfig: function(nextConfig) {
+            columnConfig.order = Array.isArray(nextConfig && nextConfig.order) ? nextConfig.order : columnConfig.order;
+            columnConfig.hidden = Array.isArray(nextConfig && nextConfig.hidden) ? nextConfig.hidden : columnConfig.hidden;
+            if (nextConfig && nextConfig.widths && typeof nextConfig.widths === 'object') {
+                columnConfig.widths = Object.assign({}, columnConfig.widths, nextConfig.widths);
+            }
+            applyColumnConfig();
+            persistWidths();
+            renderHead();
+            renderWindow();
+        },
+        openColumnSettings: function() { if (storageKey) openColumnSettings(); }
     };
 
     body.css('height', typeof settings.height === 'number' ? settings.height + 'px' : settings.height);
@@ -726,17 +830,66 @@ function renderVirtualTable(options) {
     root.append(head).append(body).append(state);
     $(settings.elem).html(root);
 
+    function openColumnSettings() {
+        var text = function(key, fallback) {
+            return typeof t === 'function' ? t(key) : fallback;
+        };
+        var rows = allColumns.map(function(col, index) {
+            var key = columnKey(col);
+            var visible = columns.indexOf(col) > -1;
+            return '<div class="layuix-column-config-item" data-key="' + escapeHtml(key) + '">'
+                + '<label><input type="checkbox"' + (visible ? ' checked' : '') + '> ' + escapeHtml(col.title || key) + '</label>'
+                + '<span><button type="button" class="layui-btn layui-btn-xs layui-btn-primary column-move-up"><i class="layui-icon layui-icon-up"></i></button>'
+                + '<button type="button" class="layui-btn layui-btn-xs layui-btn-primary column-move-down"><i class="layui-icon layui-icon-down"></i></button></span>'
+                + '</div>';
+        }).join('');
+        LayuiUI.dialog({
+            title: text('virtual.columnSettings', 'Column settings'),
+            area: ['360px', 'auto'],
+            btn: [text('common.save', 'Save'), text('common.cancel', 'Cancel')],
+            content: '<div class="layuix-column-config">' + rows + '</div>',
+            success: function(dialogLayero) {
+                var $layero = $(dialogLayero);
+                $layero.off('click.layuixColumnMove').on('click.layuixColumnMove', '.column-move-up, .column-move-down', function() {
+                    var $item = $(this).closest('.layuix-column-config-item');
+                    var $target = $(this).hasClass('column-move-up') ? $item.prev() : $item.next();
+                    if ($target.length) {
+                        $(this).hasClass('column-move-up') ? $item.insertBefore($target) : $item.insertAfter($target);
+                    }
+                });
+            },
+            yes: function(index, layero) {
+                var orderedKeys = [];
+                var visibleKeys = [];
+                $(layero).find('.layuix-column-config-item').each(function() {
+                    var key = $(this).data('key');
+                    orderedKeys.push(key);
+                    if ($(this).find('input[type="checkbox"]').first().prop('checked')) visibleKeys.push(key);
+                });
+                var hidden = orderedKeys.filter(function(key) { return visibleKeys.indexOf(key) < 0; });
+                if (!visibleKeys.length) {
+                    if (window.layer) window.layer.msg(typeof t === 'function' ? t('virtual.keepOneColumn') : 'Keep at least one column visible', {icon: 2});
+                    return false;
+                }
+                instance.setColumnConfig({order: orderedKeys, hidden: hidden});
+                layer.close(index);
+            }
+        });
+    }
+
     body.off('scroll.layuixVirtual').on('scroll.layuixVirtual', renderWindow);
     head.off('mousedown.layuixVirtualResize').on('mousedown.layuixVirtualResize', '.layuix-virtual-resizer', function(e) {
         if (!storageKey) return;
         e.preventDefault();
         e.stopPropagation();
         var handle = $(this);
-        var index = parseInt(handle.data('index'), 10);
+        var key = String(handle.data('key'));
+        var colIndex = allColumns.findIndex(function(col, index) { return columnKey(col) === key; });
+        if (colIndex < 0) return;
         var startX = e.clientX;
-        var startWidth = parseInt(columns[index].width, 10) || 120;
+        var startWidth = parseInt(allColumns[colIndex].width, 10) || 120;
         $(document).on('mousemove.layuixVirtualResize', function(moveEvent) {
-            columns[index].width = Math.max(60, startWidth + moveEvent.clientX - startX);
+            allColumns[colIndex].width = Math.min(600, Math.max(60, startWidth + moveEvent.clientX - startX));
             renderHead();
             renderWindow();
         });
@@ -746,6 +899,7 @@ function renderVirtualTable(options) {
             renderHead();
         });
     });
+    head.off('click.layuixColumnSettings').on('click.layuixColumnSettings', '.layuix-virtual-column-settings', openColumnSettings);
     renderWindow();
 
     if (settings.url && typeof fetch === 'function') {
@@ -813,6 +967,11 @@ function enforcePagePermission() {
     }
 
     function check(user) {
+        if (user) {
+            try {
+                (root === window ? window : root).currentUser = user;
+            } catch (e) {}
+        }
         if (user && (user.is_superuser || (user.permissions || []).indexOf(required) > -1)) return true;
         deny();
         return false;

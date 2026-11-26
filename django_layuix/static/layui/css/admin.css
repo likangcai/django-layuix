@@ -837,6 +837,39 @@ a:hover {
     z-index: 2;
 }
 .layuix-virtual-resizer:hover { background: var(--primary-color); opacity: 0.45; }
+.layuix-virtual-column-action {
+    width: 44px;
+    flex: 0 0 44px;
+    justify-content: center;
+    padding: 0;
+}
+.layuix-virtual-column-settings {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    line-height: 26px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.layuix-virtual-column-settings:hover {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.layuix-column-config { max-height: 380px; overflow: auto; padding: 12px 16px; }
+.layuix-column-config-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+.layuix-column-config-item:last-child { border-bottom: 0; }
+.layuix-column-config-item label { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.layuix-column-config-item span { flex: 0 0 auto; }
 .layuix-virtual-state {
     position: absolute;
     left: 0;
@@ -2378,21 +2411,34 @@ a:hover {
     background: #1e9fff !important;
 }
 
-/* Sidebar 浅色 */
+/* Sidebar 浅色：参考通用后台的深色导航 + 蓝色选中态 */
 [data-theme-mode="light"] .admin-sidebar {
-    background: #ffffff !important;
-    border-right: 1px solid #dee0e3 !important;
+    background: #001529 !important;
+    border-right: 1px solid #001529 !important;
+}
+
+[data-theme-mode="light"] .admin-sidebar.collapsed .sub-menu {
+    background: #001529 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme-mode="light"] .sidebar-menu {
+    scrollbar-color: rgba(255,255,255,0.24) transparent !important;
+}
+
+[data-theme-mode="light"] .sidebar-menu::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.24) !important;
 }
 
 [data-theme-mode="light"] .sidebar-menu .menu-item,
 [data-theme-mode="light"] .sidebar-menu .menu-group-title {
-    color: #646a73 !important;
+    color: rgba(255, 255, 255, 0.65) !important;
     border-color: transparent !important;
 }
 
 [data-theme-mode="light"] .sidebar-menu .menu-arrow {
     background: transparent !important;
-    color: #646a73 !important;
+    color: rgba(255, 255, 255, 0.65) !important;
 }
 
 [data-theme-mode="light"] .sidebar-menu .menu-group-title:hover .menu-arrow,
@@ -2403,12 +2449,13 @@ a:hover {
 
 [data-theme-mode="light"] .sidebar-menu .menu-item:hover,
 [data-theme-mode="light"] .sidebar-menu .menu-group-title:hover {
-    background: #f5f5f5 !important;
+    background: #f0faff !important;
+    color: #1e9fff !important;
 }
 
 [data-theme-mode="light"] .sidebar-menu .menu-item.active {
-    background: #e8f4fd !important;
-    color: #1e9fff !important;
+    background: #1e9fff !important;
+    color: #ffffff !important;
 }
 
 /* Tab 栏浅色 */
@@ -2699,26 +2746,7 @@ textarea:focus-visible,
     outline-offset: 2px;
 }
 
-/* 1.4.5 reference-style header and shell feedback */
-[data-theme-mode="light"] .admin-header {
-    background: linear-gradient(135deg, #1E9FFF 0%, #00BFFF 100%) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.35) !important;
-}
-
-[data-theme-mode="light"] .admin-header .sidebar-toggle,
-[data-theme-mode="light"] .admin-header .logo-text,
-[data-theme-mode="light"] .admin-header .user-name,
-[data-theme-mode="light"] .admin-header .header-action-btn,
-[data-theme-mode="light"] .admin-header .user-arrow,
-[data-theme-mode="light"] .admin-header .layui-icon {
-    color: #ffffff !important;
-}
-
-[data-theme-mode="light"] .admin-header .sidebar-toggle {
-    background: rgba(255, 255, 255, 0.18) !important;
-    border-color: rgba(255, 255, 255, 0.35) !important;
-}
-
+/* 1.4.7 reference-style shell: white header + dark sidebar */
 [data-theme-mode="dark"] .admin-header {
     background: linear-gradient(135deg, #16324f 0%, #0f4c63 100%) !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;

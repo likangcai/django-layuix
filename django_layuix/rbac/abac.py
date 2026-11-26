@@ -34,7 +34,10 @@ _TOKEN_RE = re.compile(
 )
 
 _COMPARISONS = {'==', '!=', '>', '>=', '<', '<=', 'in', 'not in', 'contains'}
-_SENSITIVE_FIELD_TOKENS = ('password', 'secret', 'token', 'api_key', 'private_key', 'access_key')
+_SENSITIVE_FIELD_TOKENS = (
+    'password', 'passwd', 'secret', 'credential', 'token', 'api_key',
+    'private_key', 'access_key', 'signature',
+)
 
 
 def _tokenize(expression):
@@ -293,6 +296,24 @@ def _policies_for(resource, action, field):
     return list(queryset.order_by('priority', 'id'))
 
 
+def load_field_policies(resource, action, fields):
+    """Load field policies once for a batch serialization request."""
+    from .models import AbacPolicy
+
+    fields = list(fields or [])
+    if not fields:
+        return {}
+    codes = resource_codes(resource)
+    rows = list(AbacPolicy.objects.filter(
+        is_active=True, resource__in=codes,
+        action__in=[action, '*'], field__in=fields,
+    ).order_by('priority', 'id'))
+    result = {}
+    for row in rows:
+        result.setdefault(row.field, []).append(row)
+    return result
+
+
 def evaluate_policies(user, action, resource, field=None, extra_context=None, policies=None):
     """Return an ABAC decision.
 
@@ -334,6 +355,14 @@ def filter_queryset(queryset, user, action, resource, extra_context=None, chunk_
         if evaluate_policies(user, action, resource or obj, extra_context=context).allowed:
             allowed_pks.append(obj.pk)
     return queryset.filter(pk__in=allowed_pks)
+
+
+def has_field_policies(resource, action, fields):
+    """Whether any ABAC field policy exists for the requested fields."""
+    for field in fields or []:
+        if _policies_for(resource, action, field):
+            return True
+    return False
 
 
 def filter_fields(user, action, resource, fields, extra_context=None):

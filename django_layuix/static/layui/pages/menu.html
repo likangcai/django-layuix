@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>菜单管理 - 软件测试管理后台</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126a">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126c">
     <script>
         // 同步父页面主题
         function syncParentTheme() {
@@ -252,7 +252,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261126a"></script>
+    <script src="/static/layui/js/common.js?v=20261126c"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -407,7 +407,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                             return indent + icon + escapeHtml(d.name);
                         }},
                         {field: 'icon', title: t('menu.icon'), width: 80, align: 'center', templet: function(d) {
-                            return d.icon ? '<i class="layui-icon ' + d.icon + '" style="font-size:20px;"></i>' : '';
+                            return d.icon ? '<i class="layui-icon ' + escapeHtml(d.icon) + '" style="font-size:20px;"></i>' : '';
                         }},
                         {field: 'menu_type', title: t('menu.type'), width: 90, align: 'center', templet: function(d) {
                             var color = menuTypeColor[d.menu_type] || '#999';
@@ -517,12 +517,15 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
 
     function generateButtons(menuId, layero, done) {
         var actions = selectedButtonActions(layero);
-        if (!actions.length) { done(); return; }
         postApi('/admin/api/rbac/menus/' + menuId + '/generate-permissions/', {
             actions: actions, replace: true
         }, function(res) {
-            if (res.code !== 200) layer.msg(res.msg || t('common.fail'), {icon: 2});
-            done();
+            if (res.code !== 200) {
+                layer.msg(res.msg || t('common.fail'), {icon: 2});
+                done(false);
+                return;
+            }
+            done(true);
         });
     }
 
@@ -564,7 +567,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                             frontend_visible: menuData.frontend_visible !== undefined ? menuData.frontend_visible : true
                         });
                         if (menuData.icon) {
-                            layero.find('#iconPreview').html('<i class="layui-icon ' + menuData.icon + '"></i> ' + menuData.icon);
+                            layero.find('#iconPreview').html('<i class="layui-icon ' + escapeHtml(menuData.icon) + '"></i> ').append(document.createTextNode(menuData.icon));
                         }
                         
                         // 初始化联动状态：如果 visible=false，禁用前后端可见性开关
@@ -604,7 +607,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     layero.find('input[name="icon"]').on('input', function() {
                         var val = $(this).val();
                         if (val) {
-                            layero.find('#iconPreview').html('<i class="layui-icon ' + val + '"></i> ' + val);
+                            layero.find('#iconPreview').html('<i class="layui-icon ' + escapeHtml(val) + '"></i> ').append(document.createTextNode(val));
                         } else {
                             layero.find('#iconPreview').html('');
                         }
@@ -657,8 +660,9 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                         layer.msg(res.msg || t('common.fail'), {icon: 2});
                         return;
                     }
-                    generateButtons(id, $btn.closest('.layui-layer'), function() {
+                    generateButtons(id, $btn.closest('.layui-layer'), function(success) {
                         $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                        if (!success) return;
                         layer.msg(t('common.updateSuccess'), {icon: 1});
                         layer.closeAll();
                         loadMenuTree();
@@ -672,8 +676,9 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                         layer.msg(res.msg || t('common.fail'), {icon: 2});
                         return;
                     }
-                    generateButtons(res.data.id, $btn.closest('.layui-layer'), function() {
+                    generateButtons(res.data.id, $btn.closest('.layui-layer'), function(success) {
                         $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                        if (!success) return;
                         layer.msg(t('common.addSuccess'), {icon: 1});
                         layer.closeAll();
                         loadMenuTree();
@@ -824,7 +829,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     layero.find('.icon-item').on('click', function() {
                         var icon = $(this).data('icon');
                         formLayero.find('input[name="icon"]').val(icon);
-                        formLayero.find('#iconPreview').html('<i class="layui-icon ' + icon + '"></i> ' + icon);
+                        formLayero.find('#iconPreview').html('<i class="layui-icon ' + escapeHtml(icon) + '"></i> ').append(document.createTextNode(icon));
                         layer.close(iconLayerIndex);
                     });
                 }

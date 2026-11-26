@@ -26,14 +26,15 @@ export class PermissionService {
     this.ready = false;
   }
 
-  async load(): Promise<void> {
-    if (this.ready) return;
+  async load(options: { refresh?: boolean } = {}): Promise<void> {
+    if (this.ready && !options.refresh) return;
     try {
-      await this.client.load();
+      await this.client.load(options);
       this.ready = true;
       this.error = null;
     } catch (error) {
       this.error = error;
+      throw error;
     }
   }
 
@@ -93,6 +94,7 @@ export class PermissionService {
 export class PermissionDirective implements OnInit, OnChanges {
   @Input('layuiPermission') permissions: string | string[] = [];
   @Input() requireAll = false;
+  private readonly originalDisplay = new WeakMap<HTMLElement, string>();
 
   constructor(
     private readonly elementRef: ElementRef<HTMLElement>,
@@ -109,13 +111,18 @@ export class PermissionDirective implements OnInit, OnChanges {
 
   private apply(): void {
     const node = this.elementRef.nativeElement;
+    if (!this.originalDisplay.has(node)) {
+      this.originalDisplay.set(node, node.style.display || '');
+    }
     node.style.display = 'none';
     this.permission.load().then(() => {
       const codes = Array.isArray(this.permissions) ? this.permissions : [this.permissions];
       const allowed = this.requireAll
         ? this.permission.canAll(codes)
         : this.permission.canAny(codes);
-      node.style.display = allowed ? '' : 'none';
+      node.style.display = allowed ? this.originalDisplay.get(node) || '' : 'none';
+    }).catch(() => {
+      node.style.display = 'none';
     });
   }
 }

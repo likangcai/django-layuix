@@ -20,6 +20,7 @@ from .permissions import (
     api_login_required, api_permission_by_method, api_permission_required,
     resolve_api_user,
 )
+from .serializers import field_whitelisted
 
 
 def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
@@ -947,10 +948,49 @@ def stats_data(request):
 @api_login_required
 @api_permission_required('menu:view')
 def menu_tree(request):
-    """GET /api/rbac/menus/tree/ - 获取所有菜单树（管理用，包含所有菜单）"""
+    """GET /api/rbac/menus/tree/ - 获取菜单树；权限目录默认可通过 exclude_catalog=1 隐藏"""
     from .models import Menu
 
     menus = Menu.objects.all().order_by('sort', 'id')
+    if request.GET.get('exclude_catalog') == '1':
+        button_root = Menu.objects.filter(
+            name='按钮权限目录', plugin_key='permission_catalog'
+        ).first()
+        if button_root:
+            button_ids = {button_root.pk}
+            frontier = [button_root.pk]
+            while frontier:
+                children = list(Menu.objects.filter(parent_id__in=frontier).values_list('id', flat=True))
+                children = [pk for pk in children if pk not in button_ids]
+                button_ids.update(children)
+                frontier = children
+
+            business_codes = set(Menu.objects.exclude(
+                pk__in=button_ids
+            ).exclude(permission='').values_list('permission', flat=True))
+            keep_codes = set()
+            raw_keep_ids = request.GET.get('keep_ids', '')
+            if raw_keep_ids:
+                try:
+                    keep_ids = {
+                        int(item) for item in raw_keep_ids.split(',') if item.strip()
+                    }
+                except (TypeError, ValueError):
+                    keep_ids = set()
+                keep_codes = set(Menu.objects.filter(
+                    pk__in=keep_ids
+                ).exclude(permission='').values_list('permission', flat=True))
+            button_rows = list(Menu.objects.filter(pk__in=button_ids))
+            duplicate_ids = {
+                row.pk for row in button_rows
+                if row.permission and row.permission in business_codes
+                and row.permission not in keep_codes
+            }
+            kept_button_ids = button_ids - duplicate_ids
+            if kept_button_ids == {button_root.pk}:
+                menus = menus.exclude(pk__in=button_ids)
+            else:
+                menus = menus.exclude(pk__in=duplicate_ids)
     menu_list = []
     for m in menus:
         menu_list.append({
@@ -1164,6 +1204,7 @@ def _role_payload(role):
 @csrf_exempt
 @api_login_required
 @api_permission_required('role:view')
+@field_whitelisted('rbac.Role')
 def role_list(request):
     """GET /api/rbac/roles/ - 角色列表"""
     from .models import Role
@@ -1187,6 +1228,7 @@ def role_effective_permissions(request, pk):
 @csrf_exempt
 @api_login_required
 @api_permission_required('role:view')
+@field_whitelisted('rbac.Role')
 def role_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/roles/<id>/ - 角色详情/更新/删除"""
     from .models import Role
@@ -1202,7 +1244,11 @@ def role_detail(request, pk):
     elif request.method == 'PUT':
         if not request.user.has_perm('role:edit'):
             return error_response('无权限', 403)
-        from .engine import RbacConstraintError, validate_role_parents
+        from django.db import IntegrityError, transaction
+
+        from .engine import (
+            RbacConstraintError, validate_assignable_menus, validate_role_parents,
+        )
         body = get_request_body(request)
         if 'name' in body:
             role.name = body['name']
@@ -1242,24 +1288,28 @@ def role_detail(request, pk):
                 return error_response(e.message, 400)
             role.parent_id = parent_id
 
-        role.save()
+        assignable = None
         if 'menu_ids' in body:
             try:
-                from .engine import validate_assignable_menus
-
                 assignable = validate_assignable_menus(body['menu_ids'])
             except RbacConstraintError as e:
                 return error_response(e.message, 400)
-            role.menus.set(assignable)
-        if parent_ids_payload is not None:
-            try:
-                parents = validate_role_parents(role.id, parent_ids_payload)
-            except RbacConstraintError as e:
-                return error_response(e.message, 400)
-            role.parent_roles.set(parents)
-            if 'parent_id' not in body:
-                role.parent = Role.objects.filter(id__in=parents).order_by('id').first()
-                role.save(update_fields=['parent'])
+
+        try:
+            with transaction.atomic():
+                role.save()
+                if assignable is not None:
+                    role.menus.set(assignable)
+                if parent_ids_payload is not None:
+                    parents = validate_role_parents(role.id, parent_ids_payload)
+                    role.parent_roles.set(parents)
+                    if 'parent_id' not in body:
+                        role.parent = Role.objects.filter(id__in=parents).order_by('id').first()
+                        role.save(update_fields=['parent'])
+        except IntegrityError:
+            return error_response('角色编码已存在', 400)
+        except RbacConstraintError as e:
+            return error_response(e.message, 400)
         return success_response(msg='更新成功')
 
     elif request.method == 'DELETE':
@@ -1320,43 +1370,43 @@ def role_create(request):
         scope_depth=scope_depth,
         parent_id=parent_id,
     )
-    role.save()
 
-    if parent_ids_payload is not None:
-        try:
-            parents = validate_role_parents(role.id, parent_ids_payload)
-            role.parent_roles.set(parents)
-        except RbacConstraintError as e:
-            role.delete()
-            return error_response(e.message, 400)
-        if 'parent_id' not in body:
-            role.parent = Role.objects.filter(id__in=parents).order_by('id').first()
-            role.save(update_fields=['parent'])
+    from django.db import IntegrityError, transaction
 
-    if 'menu_ids' in body and body['menu_ids']:
-        try:
-            from .engine import validate_assignable_menus
+    from .engine import validate_assignable_menus
 
-            role.menus.set(validate_assignable_menus(body['menu_ids']))
-        except RbacConstraintError as e:
-            role.delete()
-            return error_response(e.message, 400)
-    else:
-        from .models import Menu
-        default_menus = Menu.objects.filter(
-            permission__in=['profile:view', 'profile:edit']
-        ) | Menu.objects.filter(
-            path__icontains='/profile'
-        )
-        if default_menus.exists():
-            role.menus.set(default_menus)
-        else:
-            profile_menu = Menu.objects.filter(
-                menu_type=2,
-                path__icontains='profile'
-            ).first()
-            if profile_menu:
-                role.menus.set([profile_menu.id])
+    try:
+        with transaction.atomic():
+            role.save()
+            if parent_ids_payload is not None:
+                parents = validate_role_parents(role.id, parent_ids_payload)
+                role.parent_roles.set(parents)
+                if 'parent_id' not in body:
+                    role.parent = Role.objects.filter(id__in=parents).order_by('id').first()
+                    role.save(update_fields=['parent'])
+
+            if 'menu_ids' in body and body['menu_ids']:
+                role.menus.set(validate_assignable_menus(body['menu_ids']))
+            else:
+                from .models import Menu
+                default_menus = Menu.objects.filter(
+                    permission__in=['profile:view', 'profile:edit']
+                ) | Menu.objects.filter(
+                    path__icontains='/profile'
+                )
+                if default_menus.exists():
+                    role.menus.set(default_menus)
+                else:
+                    profile_menu = Menu.objects.filter(
+                        menu_type=2,
+                        path__icontains='profile'
+                    ).first()
+                    if profile_menu:
+                        role.menus.set([profile_menu.id])
+    except IntegrityError:
+        return error_response('角色编码已存在', 400)
+    except RbacConstraintError as e:
+        return error_response(e.message, 400)
 
     return success_response({'id': role.id}, msg='创建成功')
 
@@ -1404,6 +1454,7 @@ def role_copy(request, pk):
 @csrf_exempt
 @api_login_required
 @api_permission_required('user:view')
+@field_whitelisted('rbac.User')
 def user_list(request):
     """GET /api/rbac/users/ - 用户列表"""
     from django.db.models import Q
@@ -1465,6 +1516,57 @@ def user_list(request):
             'date_joined': fmt_time(u.date_joined),
         })
     return success_response({'list': data, 'total': total})
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:delete')
+def user_batch_delete(request):
+    """POST /api/rbac/users/batch-delete/ - 批量删除用户"""
+    if request.method not in ('POST', 'DELETE'):
+        return error_response('Method not allowed', 405)
+
+    from django.db import transaction
+    from .engine import is_full_access
+
+    User = _get_user_model()
+    body = get_request_body(request)
+    raw_ids = body.get('ids')
+    if isinstance(raw_ids, str):
+        raw_ids = [item for item in raw_ids.split(',') if item.strip()]
+    if not isinstance(raw_ids, list):
+        return error_response('用户 ID 列表无效', 400)
+
+    try:
+        ids = list({int(item) for item in raw_ids if str(item).strip()})
+    except (TypeError, ValueError):
+        return error_response('用户 ID 必须是整数', 400)
+    if not ids:
+        return error_response('请选择要删除的用户', 400)
+
+    users = list(User.objects.filter(id__in=ids))
+    deletable = []
+    skipped = []
+    for user in users:
+        if user.pk == request.user.pk or is_full_access(user):
+            skipped.append({'id': user.pk, 'username': user.username, 'reason': 'protected'})
+        else:
+            deletable.append(user)
+
+    deleted_ids = []
+    with transaction.atomic():
+        from .token_auth import revoke_user_tokens
+
+        for user in deletable:
+            revoke_user_tokens(user, reason='user_deleted')
+            deleted_ids.append(user.pk)
+            user.delete()
+
+    return success_response({
+        'deleted': len(deleted_ids),
+        'deleted_ids': deleted_ids,
+        'skipped': skipped,
+    }, msg='批量删除完成')
 
 
 @csrf_exempt
@@ -1597,6 +1699,8 @@ def user_delete(request, pk):
     if is_full_access(user):
         return error_response('不能删除超级管理员或内置管理员', 403)
 
+    from .token_auth import revoke_user_tokens
+    revoke_user_tokens(user, reason='user_deleted')
     user.delete()
     return success_response(msg='删除成功')
 
@@ -1651,16 +1755,28 @@ def user_toggle_status(request, pk):
 
     if user.pk == request.user.pk:
         return error_response('不能禁用当前登录用户', 400)
-    from .engine import is_full_access
-    if is_full_access(user):
-        return error_response('不能禁用超级管理员或内置管理员', 403)
 
-    user.is_active = not user.is_active
-    user.save(update_fields=['is_active'])
-    if not user.is_active:
+    body = get_request_body(request)
+    if 'is_active' not in body:
+        return error_response('缺少目标状态', 400)
+    desired_active = bool(body['is_active'])
+
+    from django.db import transaction
+
+    from .engine import is_full_access
+    with transaction.atomic():
+        locked_user = User.objects.select_for_update().get(pk=user.pk)
+        if locked_user.pk == request.user.pk:
+            return error_response('不能禁用当前登录用户', 400)
+        if is_full_access(locked_user):
+            return error_response('不能禁用超级管理员或内置管理员', 403)
+        locked_user.is_active = desired_active
+        locked_user.save(update_fields=['is_active'])
+
+    if not locked_user.is_active:
         from .token_auth import revoke_user_tokens
-        revoke_user_tokens(user, reason='user_disabled')
-    return success_response({'is_active': user.is_active}, msg='状态已更新')
+        revoke_user_tokens(locked_user, reason='user_disabled')
+    return success_response({'is_active': locked_user.is_active}, msg='状态已更新')
 
 
 # ==================== Operation Log ====================
@@ -1668,6 +1784,7 @@ def user_toggle_status(request, pk):
 @csrf_exempt
 @api_login_required
 @api_permission_required('log:view')
+@field_whitelisted('rbac.OperationLog')
 def log_list(request):
     """GET /api/rbac/logs/ - 操作日志列表（支持搜索和分页）"""
     from .models import OperationLog
@@ -1731,6 +1848,7 @@ def log_list(request):
 @csrf_exempt
 @api_login_required
 @api_permission_required('config:view')
+@field_whitelisted('rbac.SystemConfig')
 def config_list(request):
     """GET /api/rbac/configs/ - 系统配置列表"""
     from .models import SystemConfig
