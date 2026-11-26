@@ -475,12 +475,25 @@ function openStandardDialog(options) {
             if (form && settings.filter) {
                 form.render(null, settings.filter);
             }
-            if (settings.maxHeight) {
-                var maxHeight = settings.maxHeight;
-                layero.find('.layui-layer-content').css({
-                    maxHeight: typeof maxHeight === 'number' ? maxHeight + 'px' : maxHeight,
-                    overflow: 'auto'
-                });
+            if (config.maxHeight) {
+                var maxHeight = config.maxHeight;
+                var maxHeightText = typeof maxHeight === 'number' ? maxHeight + 'px' : maxHeight;
+                var $content = layero.find('.layui-layer-content');
+                var limit = 0;
+                if (typeof maxHeight === 'number') {
+                    limit = maxHeight;
+                } else {
+                    var vhMatch = /^([\d.]+)vh$/i.exec(String(maxHeight));
+                    var pxMatch = /^([\d.]+)px$/i.exec(String(maxHeight));
+                    if (vhMatch) limit = window.innerHeight * parseFloat(vhMatch[1]) / 100;
+                    if (pxMatch) limit = parseFloat(pxMatch[1]);
+                }
+                $content.css('maxHeight', maxHeightText);
+                if (limit && $content[0].scrollHeight > limit) {
+                    $content.css({overflow: 'auto', overflowX: 'hidden'});
+                } else {
+                    $content.css('overflow', 'visible');
+                }
             }
             if (typeof renderI18n === 'function') renderI18n();
             if (typeof originalSuccess === 'function') originalSuccess(layero, idx);
