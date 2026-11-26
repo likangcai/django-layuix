@@ -110,7 +110,7 @@ AUTH_USER_MODEL = 'django_layuix_rbac.UserProfile'
 # ============================================================
 LAYUI_CONFIG = {
     'system_name': 'Layui Admin 演示',
-    'system_version': '1.6.0',
+    'system_version': '1.7.0',
     'system_description': 'django-layuix 功能演示项目',
     'logo_icon': 'layui-icon-code-circle',
     # 使用自定义图片
@@ -168,6 +168,10 @@ LAYUI_JWT_ISSUER = 'django-layuix'
 LAYUIX_ALLOW_LEGACY_TOKEN = True
 LAYUIX_TOKEN_CACHE_PREFIX = 'layuix:auth:'
 LAYUI_RBAC_ALLOW_UNREGISTERED_PERMISSIONS = False
+
+# 默认不初始化 61 万条村/社区数据；需要完整数据时设为 True 或执行
+# python manage.py load_regions --include-villages
+LAYUI_RBAC_SEED_VILLAGES = False
 
 # CACHES = {
 #     'default': {

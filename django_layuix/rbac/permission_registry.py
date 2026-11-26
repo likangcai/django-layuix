@@ -133,75 +133,90 @@ def build_permission_code(prefix, action):
     return '%s:%s' % (prefix, action)
 
 
+def _catalog_node(parent, code, defaults):
+    """Return one catalog row per parent/code and merge legacy duplicates."""
+    from .models import Menu
+
+    rows = list(Menu.objects.filter(parent=parent, permission=code).order_by('id'))
+    if rows:
+        keeper = rows[0]
+        for duplicate in rows[1:]:
+            keeper.roles.add(*duplicate.roles.all())
+            duplicate.delete()
+        return keeper, False
+    try:
+        return Menu.objects.get_or_create(
+            parent=parent, permission=code, defaults=defaults,
+        )
+    except Exception:
+        row = Menu.objects.filter(parent=parent, permission=code).order_by('id').first()
+        return row, False
+
+
 def register_page_permissions():
     """Register all built-in page and button codes as permission nodes."""
     from .models import Menu, Role
 
-    parent, _ = Menu.objects.get_or_create(
-        name='权限目录',
-        defaults={
-            'icon': 'layui-icon-vercode',
-            'menu_type': 1,
-            'plugin_key': 'permission_catalog',
-            'sort': 9999,
-            'status': True,
-            'visible': True,
-            'backend_visible': False,
-            'frontend_visible': False,
-        },
-    )
-    button_parent, _ = Menu.objects.get_or_create(
-        parent=parent,
-        name='按钮权限目录',
-        defaults={
-            'icon': 'layui-icon-vercode',
-            'menu_type': 1,
-            'plugin_key': 'permission_catalog',
-            'sort': 2,
-            'status': True,
-            'visible': True,
-            'backend_visible': False,
-            'frontend_visible': False,
-        },
-    )
+    parent = Menu.objects.filter(name='权限目录').order_by('id').first()
+    if parent is None:
+        parent = Menu.objects.create(
+            name='权限目录',
+            icon='layui-icon-vercode',
+            menu_type=1,
+            plugin_key='permission_catalog',
+            sort=9999,
+            status=True,
+            visible=True,
+            backend_visible=False,
+            frontend_visible=False,
+        )
+    button_parent = Menu.objects.filter(
+        parent=parent, name='按钮权限目录'
+    ).order_by('id').first()
+    if button_parent is None:
+        button_parent = Menu.objects.create(
+            parent=parent,
+            name='按钮权限目录',
+            icon='layui-icon-vercode',
+            menu_type=1,
+            plugin_key='permission_catalog',
+            sort=2,
+            status=True,
+            visible=True,
+            backend_visible=False,
+            frontend_visible=False,
+        )
     created = []
     page_codes = set(PAGE_PERMISSIONS.values())
     for path, code in sorted(PAGE_PERMISSIONS.items()):
-        menu, is_new = Menu.objects.get_or_create(
-            parent=parent, permission=code,
-            defaults={
-                'name': code,
-                'menu_type': 3,
-                'plugin_key': 'permission_catalog',
-                'sort': 1,
-                'status': True,
-                'visible': True,
-                'backend_visible': False,
-                'frontend_visible': False,
-                'path': path,
-            },
-        )
+        menu, is_new = _catalog_node(parent, code, {
+            'name': code,
+            'menu_type': 3,
+            'plugin_key': 'permission_catalog',
+            'sort': 1,
+            'status': True,
+            'visible': True,
+            'backend_visible': False,
+            'frontend_visible': False,
+            'path': path,
+        })
         if is_new:
             created.append(code)
 
     for code in permission_catalog():
         if code in page_codes:
             continue
-        menu, is_new = Menu.objects.get_or_create(
-            parent=button_parent,
-            permission=code,
-            defaults={
-                'name': code,
-                'menu_type': 3,
-                'plugin_key': 'permission_catalog',
-                'sort': 2,
-                'status': True,
-                'visible': True,
-                'backend_visible': False,
-                'frontend_visible': False,
-                'path': '',
-            },
-        )
+        menu, is_new = _catalog_node(button_parent, code, {
+            'name': code,
+            'menu_type': 3,
+            'plugin_key': 'permission_catalog',
+            'sort': 2,
+            'status': True,
+            'visible': True,
+            'backend_visible': False,
+            'frontend_visible': False,
+            'path': '',
+        })
         if is_new:
             created.append(code)
     Menu.objects.filter(pk__in=[parent.pk, button_parent.pk]).update(

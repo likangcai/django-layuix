@@ -369,6 +369,12 @@ def region_list(request):
             queryset = queryset.filter(level__lte=int(max_level))
         except (TypeError, ValueError):
             return error_response('max_level 必须是整数', 400)
+    level = request.GET.get('level')
+    if level not in (None, ''):
+        try:
+            queryset = queryset.filter(level=int(level))
+        except (TypeError, ValueError):
+            return error_response('level 必须是整数', 400)
 
     node_id = request.GET.get('node_id')
     if node_id not in (None, ''):
@@ -376,7 +382,7 @@ def region_list(request):
             node = Region.objects.get(pk=int(node_id))
         except (TypeError, ValueError, Region.DoesNotExist):
             return error_response('地区节点不存在', 400)
-        prefix_len = {1: 2, 2: 4, 3: 6}.get(node.level, len(node.code))
+        prefix_len = {1: 2, 2: 4, 3: 6, 4: 9}.get(node.level, len(node.code))
         queryset = queryset.filter(code__startswith=node.code[:prefix_len])
 
     queryset = queryset.order_by('sort', 'id')
@@ -451,7 +457,7 @@ def region_create(request):
     if not name or not code:
         return error_response('地区名称和行政编码不能为空', 400)
     try:
-        level = _int_value(body.get('level'), 1, 1, 4)
+        level = _int_value(body.get('level'), 1, 1, 5)
         sort = _int_value(body.get('sort'), 0, 0, 999999)
         parent = _parent_for(Region, None, body.get('parent_id'))
         with transaction.atomic():
@@ -501,7 +507,7 @@ def region_detail(request, pk):
             obj.zip_code = str(body.get('zip_code') if 'zip_code' in body else obj.zip_code)[:20]
             obj.pinyin = str(body.get('pinyin') if 'pinyin' in body else obj.pinyin)[:150]
             obj.level = _int_value(
-                body.get('level') if 'level' in body else obj.level, obj.level, 1, 4
+                body.get('level') if 'level' in body else obj.level, obj.level, 1, 5
             )
             obj.parent = parent
             obj.sort = _int_value(
@@ -735,7 +741,7 @@ def _export_row(resource, obj):
 @csrf_exempt
 @api_login_required
 def data_export(request):
-    """GET /api/rbac/data-export/?resource=departments - export CSV."""
+    """GET /api/rbac/data-export/?resource=departments&format=csv|xlsx."""
     import csv
     import io
     from datetime import date
@@ -749,23 +755,43 @@ def data_export(request):
         return error_response(str(exc), 400)
     if not has_permission(request.user, config['view_permission'], request):
         return error_response('无权限', 403)
+    export_format = str(request.GET.get('format') or 'csv').lower()
+    if export_format not in ('csv', 'xlsx'):
+        return error_response('导出格式必须是 csv 或 xlsx', 400)
 
     queryset = config['model'].objects.all()
     if resource in ('departments', 'regions'):
         queryset = queryset.select_related('parent')
     queryset = queryset.order_by('sort', 'id')
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=config['fields'], lineterminator='\n')
-    writer.writeheader()
-    for obj in queryset.iterator():
-        writer.writerow(_export_row(resource, obj))
-    response = HttpResponse(
-        '\ufeff' + output.getvalue(),
-        content_type='text/csv; charset=utf-8',
-    )
-    response['Content-Disposition'] = (
-        'attachment; filename="%s-%s.csv"' % (config['label'], date.today().isoformat())
-    )
+    filename = '%s-%s.%s' % (config['label'], date.today().isoformat(), export_format)
+    if export_format == 'xlsx':
+        try:
+            from openpyxl import Workbook
+        except ImportError:
+            return error_response('服务器未安装 openpyxl，无法导出 Excel', 500)
+        workbook = Workbook(write_only=True)
+        sheet = workbook.create_sheet('data')
+        sheet.append(config['fields'])
+        for obj in queryset.iterator():
+            row = _export_row(resource, obj)
+            sheet.append([row.get(field, '') for field in config['fields']])
+        output = io.BytesIO()
+        workbook.save(output)
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+    else:
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=config['fields'], lineterminator='\n')
+        writer.writeheader()
+        for obj in queryset.iterator():
+            writer.writerow(_export_row(resource, obj))
+        response = HttpResponse(
+            '\ufeff' + output.getvalue(),
+            content_type='text/csv; charset=utf-8',
+        )
+    response['Content-Disposition'] = 'attachment; filename="%s"' % filename
     return response
 
 
@@ -775,17 +801,60 @@ def _import_bool(value, default=True):
     return str(value).strip().lower() in ('1', 'true', 'yes', 'on', '启用', '是')
 
 
-def _csv_rows(uploaded):
+def _cell_text(value):
+    import datetime as dt
+
+    if value is None:
+        return ''
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    if isinstance(value, (dt.date, dt.datetime)):
+        return value.isoformat()
+    return str(value).strip()
+
+
+def _uploaded_rows(uploaded):
     import csv
     import io
 
     raw = uploaded.read()
     if len(raw) > 5 * 1024 * 1024:
         raise ValueError('导入文件不能超过 5MB')
+    filename = str(getattr(uploaded, 'name', '') or '').lower()
+    content_type = str(getattr(uploaded, 'content_type', '') or '').lower()
+    if filename.endswith('.xlsx') or content_type.endswith(
+        'spreadsheetml.sheet'
+    ):
+        try:
+            from openpyxl import load_workbook
+        except ImportError:
+            raise ValueError('服务器未安装 openpyxl，无法导入 Excel')
+        try:
+            workbook = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+            sheet = workbook.active
+            iterator = sheet.iter_rows(values_only=True)
+            headers = [_cell_text(value) for value in next(iterator)]
+            if not any(headers):
+                raise ValueError('Excel 缺少表头')
+            rows = []
+            for values in iterator:
+                if not any(value not in (None, '') for value in values):
+                    continue
+                rows.append({
+                    headers[index]: _cell_text(values[index])
+                    for index in range(min(len(headers), len(values)))
+                    if headers[index]
+                })
+            return rows
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise ValueError('Excel 文件无法解析: %s' % exc)
+
     try:
         text = raw.decode('utf-8-sig')
     except UnicodeDecodeError:
-        raise ValueError('导入文件必须是 UTF-8 CSV')
+        raise ValueError('CSV 文件必须是 UTF-8 编码')
     reader = csv.DictReader(io.StringIO(text))
     if not reader.fieldnames:
         raise ValueError('CSV 缺少表头')
@@ -862,7 +931,7 @@ def _upsert_rows(resource, config, rows, mode, dry_run=False):
                 elif resource == 'regions':
                     obj = existing or Region(code=code)
                     obj.name = name[:150]
-                    obj.level = _parse_int(row.get('level'), 'level', 1, 4, 1)
+                    obj.level = _parse_int(row.get('level'), 'level', 1, 5, 1)
                     obj.area_code = str(row.get('area_code') or '')[:20]
                     obj.zip_code = str(row.get('zip_code') or '')[:20]
                     obj.pinyin = str(row.get('pinyin') or '')[:150]
@@ -934,9 +1003,9 @@ def data_import(request):
         return error_response('无权限', 403)
     uploaded = request.FILES.get('file')
     if not uploaded:
-        return error_response('请选择 CSV 文件', 400)
+        return error_response('请选择 CSV 或 Excel 文件', 400)
     try:
-        rows = _csv_rows(uploaded)
+        rows = _uploaded_rows(uploaded)
         if len(rows) > 10000:
             raise ValueError('单次最多导入 10000 行')
         result = _upsert_rows(resource, config, rows, mode)

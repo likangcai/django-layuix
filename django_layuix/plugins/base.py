@@ -37,17 +37,28 @@ class PluginConfig(AppConfig):
 
     def ready(self):
         super().ready()
-        from django_layuix.rbac.plugins import register_plugin, register_plugin_class
+        from django.db.models.signals import post_migrate
+
+        from django_layuix.rbac.plugins import register_plugin_class
+
+        metadata = self.get_plugin_metadata()
+        key = metadata.pop('key')
+        register_plugin_class(key, self.__class__)
+        post_migrate.connect(
+            self._register_plugin_after_migrate,
+            sender=self,
+            dispatch_uid='django_layuix.plugin.%s' % key,
+        )
+
+    def _register_plugin_after_migrate(self, sender, **kwargs):
+        from django_layuix.rbac.plugins import register_plugin, register_plugin_menus
 
         metadata = self.get_plugin_metadata()
         key = metadata.pop('key')
         metadata.pop('min_layuix_version', None)
-        register_plugin_class(key, self.__class__)
         metadata['validation_errors'] = self.validate_plugin()
         registered = register_plugin(key=key, source=self.source, **metadata)
-
         if registered.get('is_active'):
-            from django_layuix.rbac.plugins import register_plugin_menus
             register_plugin_menus(key, self)
 
     def on_enable(self):

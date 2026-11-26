@@ -1651,8 +1651,58 @@ def _apply_user_organization(user, body):
             user.position = None
         user._pending_positions = positions
 
+    raw_start = body.get('position_start_date')
+    if raw_start:
+        from datetime import date
 
-def _sync_user_positions(user):
+        try:
+            user._pending_position_start_date = date.fromisoformat(str(raw_start))
+        except ValueError:
+            raise ValueError('任职生效日期格式必须为 YYYY-MM-DD')
+
+
+def _record_position_history(user, positions, actor=None, start_date=None):
+    from django.utils import timezone
+
+    from .models import PositionAssignment
+
+    today = start_date or timezone.localdate()
+    active = {
+        item.position_id: item
+        for item in user.position_assignments.filter(end_date__isnull=True)
+    }
+    desired = {position.pk: position for position in positions}
+    primary_id = user.position_id
+
+    for position_id, assignment in active.items():
+        if position_id not in desired:
+            assignment.end_date = today
+            assignment.save(update_fields=['end_date', 'update_time'])
+        elif assignment.is_primary and position_id != primary_id:
+            assignment.end_date = today
+            assignment.is_primary = False
+            assignment.save(update_fields=['end_date', 'is_primary', 'update_time'])
+
+    for position_id, position in desired.items():
+        current = active.get(position_id)
+        desired_primary = position_id == primary_id
+        if current and current.end_date is None and current.is_primary == desired_primary:
+            continue
+        if current and current.end_date is None:
+            current.end_date = today
+            current.save(update_fields=['end_date', 'update_time'])
+        PositionAssignment.objects.create(
+            user=user,
+            position=position,
+            position_name=position.name,
+            is_primary=desired_primary,
+            start_date=today,
+            changed_by=actor,
+            change_reason='用户岗位调整',
+        )
+
+
+def _sync_user_positions(user, actor=None, start_date=None):
     if not hasattr(user, 'positions'):
         return
     pending = getattr(user, '_pending_positions', None)
@@ -1663,6 +1713,74 @@ def _sync_user_positions(user):
         from .models import Position
         pending = list(Position.objects.filter(pk__in=pending_ids))
     user.positions.set(pending)
+    _record_position_history(user, pending, actor=actor, start_date=start_date)
+
+
+def _position_assignment_payload(item):
+    return {
+        'id': item.pk,
+        'position_id': item.position_id,
+        'position_name': item.position_name or getattr(item.position, 'name', ''),
+        'is_primary': item.is_primary,
+        'start_date': item.start_date.isoformat() if item.start_date else '',
+        'end_date': item.end_date.isoformat() if item.end_date else '',
+        'change_reason': item.change_reason,
+        'changed_by_name': getattr(item.changed_by, 'username', ''),
+        'create_time': fmt_time(item.create_time),
+    }
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:view')
+def user_position_assignments(request, pk):
+    """GET /api/rbac/users/<id>/position-assignments/."""
+    if request.method != 'GET':
+        return error_response('Method not allowed', 405)
+    User = _get_user_model()
+    user = User.objects.filter(pk=pk).first()
+    if user is None:
+        return error_response('用户不存在', 404)
+    rows = user.position_assignments.select_related('position', 'changed_by').all()
+    return success_response({
+        'list': [_position_assignment_payload(item) for item in rows],
+        'primary_position_id': user.position_id,
+    })
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:edit')
+def end_position_assignment(request, pk):
+    """POST /api/rbac/position-assignments/<id>/end/ - close a tenure."""
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    from django.utils import timezone
+
+    from .models import PositionAssignment
+
+    assignment = PositionAssignment.objects.select_related(
+        'user', 'position'
+    ).filter(pk=pk).first()
+    if assignment is None:
+        return error_response('任职记录不存在', 404)
+    if assignment.end_date is not None:
+        return error_response('该任职记录已结束', 400)
+    assignment.end_date = timezone.localdate()
+    assignment.save(update_fields=['end_date', 'update_time'])
+    user = assignment.user
+    if assignment.position_id:
+        user.positions.remove(assignment.position_id)
+    if user.position_id == assignment.position_id:
+        next_item = user.position_assignments.filter(
+            end_date__isnull=True,
+        ).exclude(pk=assignment.pk).order_by('-is_primary', 'start_date', 'id').first()
+        user.position = next_item.position if next_item else None
+        user.save(update_fields=['position'])
+        if next_item:
+            next_item.is_primary = True
+            next_item.save(update_fields=['is_primary', 'update_time'])
+    return success_response(msg='任职已结束')
 
 
 @csrf_exempt
@@ -1735,7 +1853,10 @@ def user_create(request):
 
     user.set_password(password)
     user.save()
-    _sync_user_positions(user)
+    _sync_user_positions(
+        user, actor=request.user,
+        start_date=getattr(user, '_pending_position_start_date', None),
+    )
 
     if final_role_ids is not None:
         from .models import Role
@@ -1790,7 +1911,10 @@ def user_update(request, pk):
             return error_response(e.message, 400)
 
     user.save()
-    _sync_user_positions(user)
+    _sync_user_positions(
+        user, actor=request.user,
+        start_date=getattr(user, '_pending_position_start_date', None),
+    )
 
     if final_role_ids is not None:
         from .models import Role

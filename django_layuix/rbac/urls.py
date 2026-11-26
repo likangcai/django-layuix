@@ -62,6 +62,8 @@ urlpatterns = [
     path('users/<int:pk>/delete/', views.user_delete, name='rbac_user_delete'),
     path('users/<int:pk>/reset-password/', views.user_reset_password, name='rbac_user_reset_password'),
     path('users/<int:pk>/status/', views.user_toggle_status, name='rbac_user_toggle_status'),
+    path('users/<int:pk>/position-assignments/', views.user_position_assignments, name='rbac_user_position_assignments'),
+    path('position-assignments/<int:pk>/end/', views.end_position_assignment, name='rbac_end_position_assignment'),
 
     # Plugin registry
     path('plugins/manifest/', views.plugin_manifest, name='rbac_plugin_manifest'),

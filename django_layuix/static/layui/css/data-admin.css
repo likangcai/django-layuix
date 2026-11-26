@@ -104,3 +104,5 @@
     .data-main { height: 640px; }
     .data-form-grid { grid-template-columns: 1fr; }
 }
+.data-export-dialog { display: flex; gap: 12px; padding: 24px; }
+.data-export-dialog .data-export-choice { flex: 1; height: 48px; line-height: 46px; }

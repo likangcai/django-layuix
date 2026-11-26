@@ -24,6 +24,15 @@ class RbacConfig(AppConfig):
         self._register_operation_log_middleware()
         self._register_rbac_session_middleware()
         self._register_api_origin_guard_middleware()
+        from django.db.models.signals import post_migrate
+
+        post_migrate.connect(
+            self._on_post_migrate,
+            sender=self,
+            dispatch_uid='django_layuix.rbac.ensure_default_configs',
+        )
+
+    def _on_post_migrate(self, sender, **kwargs):
         self._ensure_default_configs()
 
     def _ensure_base_app_registered(self):

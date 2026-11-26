@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="data.region">地区管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126i">
-    <link rel="stylesheet" href="/static/layui/css/data-admin.css?v=2">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126j">
+    <link rel="stylesheet" href="/static/layui/css/data-admin.css?v=3">
     <script>
         function syncParentTheme() {
             var themeMode = 'light';
@@ -56,6 +56,14 @@
             <div class="data-body">
                 <div class="data-toolbar">
                     <input type="text" id="regionKeyword" class="layui-input data-keyword" data-i18n-placeholder="data.search" placeholder="搜索名称或编码" autocomplete="off">
+                    <select id="regionLevel" class="data-status">
+                        <option value="" data-i18n="data.allLevels">全部层级</option>
+                        <option value="1" data-i18n="data.levelProvince">省份</option>
+                        <option value="2" data-i18n="data.levelCity">城市</option>
+                        <option value="3" data-i18n="data.levelDistrict">县区</option>
+                        <option value="4" data-i18n="data.levelStreet">街道</option>
+                        <option value="5" data-i18n="data.levelVillage">村/社区</option>
+                    </select>
                     <select id="regionStatus" class="data-status">
                         <option value="" data-i18n="data.allStatus">全部状态</option>
                         <option value="1" data-i18n="data.enabled">启用</option>
@@ -105,6 +113,7 @@
                         <option value="2" data-i18n="data.levelCity">城市</option>
                         <option value="3" data-i18n="data.levelDistrict">县区</option>
                         <option value="4" data-i18n="data.levelStreet">街道</option>
+                        <option value="5" data-i18n="data.levelVillage">村/社区</option>
                     </select>
                 </div>
             </div>
@@ -148,9 +157,9 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-<script src="/static/layui/js/common.js?v=20261126i"></script>
-<script src="/static/layui/js/i18n.js?v=20261126i"></script>
-<script src="/static/layui/js/data-admin.js?v=2"></script>
+<script src="/static/layui/js/common.js?v=20261126j"></script>
+<script src="/static/layui/js/i18n.js?v=20261126j"></script>
+<script src="/static/layui/js/data-admin.js?v=3"></script>
 <script>
 inheritTheme();
 renderI18n();
@@ -198,6 +207,7 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
         return {
             keyword: $('#regionKeyword').val().trim(),
             status: $('#regionStatus').val(),
+            level: $('#regionLevel').val(),
             node_id: selectedNode ? selectedNode.id : '',
         };
     }
@@ -272,6 +282,8 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
                         code: obj.data.code,
                         level: obj.data.level,
                     };
+                    $('#regionLevel').val('');
+                    form.render('select');
                     $('#regionScopeTitle').text(selectedName());
                     reloadTable();
                 }
@@ -387,15 +399,19 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
     $('#addRegionBtn').on('click', function () { openDialog(null); });
     $('#showAllRegionBtn').on('click', function () {
         selectedNode = null;
+        $('#regionLevel').val('');
         $('#regionScopeTitle').text(t('data.allNodes'));
+        form.render('select');
         reloadTable();
     });
     $('#searchRegionBtn').on('click', reloadTable);
     $('#resetRegionBtn').on('click', function () {
         $('#regionKeyword').val('');
         $('#regionStatus').val('');
+        $('#regionLevel').val('');
         selectedNode = null;
         $('#regionScopeTitle').text(t('data.allNodes'));
+        form.render('select');
         reloadTable();
     });
     $('#regionKeyword').on('keydown', function (event) {

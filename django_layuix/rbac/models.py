@@ -6,6 +6,7 @@ Required RBAC engine - add 'django_layuix.rbac' to INSTALLED_APPS to enable
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Menu(models.Model):
@@ -484,6 +485,43 @@ class Position(models.Model):
         return '%s (%s)' % (self.name, self.code)
 
 
+class PositionAssignment(models.Model):
+    """Position tenure history, including primary-position changes."""
+
+    user = models.ForeignKey(
+        'UserProfile', on_delete=models.CASCADE,
+        related_name='position_assignments', verbose_name='用户',
+    )
+    position = models.ForeignKey(
+        Position, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='assignments', verbose_name='岗位',
+    )
+    position_name = models.CharField(max_length=150, blank=True, default='', verbose_name='岗位快照')
+    is_primary = models.BooleanField(default=False, verbose_name='是否主岗')
+    start_date = models.DateField(default=timezone.localdate, verbose_name='生效日期')
+    end_date = models.DateField(null=True, blank=True, verbose_name='结束日期')
+    change_reason = models.CharField(max_length=255, blank=True, default='', verbose_name='变更原因')
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+', verbose_name='操作人',
+    )
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_position_assignment'
+        verbose_name = '岗位任职记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-start_date', '-id']
+        indexes = [
+            models.Index(fields=['user', 'end_date'], name='idx_pos_assign_user_end'),
+            models.Index(fields=['position', 'end_date'], name='idx_pos_assign_pos_end'),
+        ]
+
+    def __str__(self):
+        return '%s - %s' % (self.user_id, self.position_name or self.position_id)
+
+
 class Region(models.Model):
     """Administrative region tree."""
     LEVEL_CHOICES = [
@@ -491,6 +529,7 @@ class Region(models.Model):
         (2, '城市'),
         (3, '县区'),
         (4, '街道'),
+        (5, '村/社区'),
     ]
     name = models.CharField(max_length=150, verbose_name='地区名称')
     code = models.CharField(max_length=20, unique=True, verbose_name='行政编码')
@@ -513,6 +552,9 @@ class Region(models.Model):
         verbose_name = '地区'
         verbose_name_plural = verbose_name
         ordering = ['sort', 'id']
+        indexes = [
+            models.Index(fields=['level', 'sort'], name='idx_region_level_sort'),
+        ]
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.code)

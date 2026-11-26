@@ -1,7 +1,7 @@
 /**
  * Shared helpers for data-management pages.
  */
-(function (window, $) {
+(function (window) {
     'use strict';
 
     function currentUser() {
@@ -167,9 +167,36 @@
         if (layer) layer.msg(message, {icon: icon || 1});
     }
 
-    function exportCsv(resource) {
+    function downloadExport(resource, format) {
         notify(typeof t === 'function' ? t('data.exporting') : 'Exporting...', 0);
-        window.location.href = '/admin/api/rbac/data-export/?resource=' + encodeURIComponent(resource);
+        window.location.href = '/admin/api/rbac/data-export/?resource=' +
+            encodeURIComponent(resource) + '&format=' + encodeURIComponent(format);
+    }
+
+    function openExportDialog(resource) {
+        var layer = window.layui && window.layui.layer;
+        if (!layer) return;
+        var html = '' +
+            '<div class="data-export-dialog">' +
+            '<button type="button" class="layui-btn layui-btn-primary data-export-choice" data-format="csv">' +
+            'CSV</button>' +
+            '<button type="button" class="layui-btn layui-btn-primary data-export-choice" data-format="xlsx">' +
+            'Excel (.xlsx)</button>' +
+            '</div>';
+        var index = layer.open({
+            type: 1,
+            title: typeof t === 'function' ? t('data.exportTitle') : 'Export',
+            skin: 'layui-layer-admin',
+            area: ['420px', 'auto'],
+            content: html,
+            success: function (layero) {
+                layero.find('.data-export-choice').on('click', function () {
+                    var format = window.layui.jquery(this).data('format');
+                    layer.close(index);
+                    downloadExport(resource, format);
+                });
+            },
+        });
     }
 
     function openImportDialog(resource, done) {
@@ -184,12 +211,12 @@
             '<option value="insert">' + (typeof t === 'function' ? t('data.importInsert') : 'Create only') + '</option>' +
             '</select></div></div>' +
             '<div class="layui-form-item"><label class="layui-form-label">' +
-            (typeof t === 'function' ? t('data.chooseFile') : 'Choose CSV') + '</label>' +
-            '<div class="layui-input-block"><input type="file" id="dataImportFile" accept=".csv,text/csv"></div></div>' +
+            (typeof t === 'function' ? t('data.chooseFile') : 'Choose CSV or Excel') + '</label>' +
+            '<div class="layui-input-block"><input type="file" id="dataImportFile" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div></div>' +
             '<div class="data-import-hint">' + (typeof t === 'function' ? t('data.importHint') : '') + '</div>' +
             '</div>';
         LayuiUI.dialog({
-            title: typeof t === 'function' ? t('data.importTitle') : 'Import CSV',
+            title: typeof t === 'function' ? t('data.importTitle') : 'Import CSV or Excel',
             content: html,
             area: ['560px', 'auto'],
             btn: [typeof t === 'function' ? t('data.import') : 'Import',
@@ -197,7 +224,7 @@
             yes: function (index, layero) {
                 var input = layero.find('#dataImportFile')[0];
                 if (!input || !input.files || !input.files.length) {
-                    layer.msg(typeof t === 'function' ? t('data.chooseFile') : 'Choose CSV file', {icon: 2});
+                    layer.msg(typeof t === 'function' ? t('data.chooseFile') : 'Choose CSV or Excel file', {icon: 2});
                     return;
                 }
                 var button = layero.find('.layui-layer-btn0');
@@ -284,7 +311,7 @@
         table.on('toolbar(' + tableId + ')', function (obj) {
             var ids = selectedIds(table, tableId);
             if (obj.event === 'data-export') {
-                exportCsv(resource);
+                openExportDialog(resource);
                 return;
             }
             if (obj.event === 'data-import') {
@@ -318,10 +345,11 @@
         permissionPrefix: permissionPrefix,
         tableToolbar: tableToolbar,
         selectedIds: selectedIds,
-        exportCsv: exportCsv,
+        downloadExport: downloadExport,
+        openExportDialog: openExportDialog,
         openImportDialog: openImportDialog,
         batchStatus: batchStatus,
         batchDelete: batchDelete,
         bindTableToolbar: bindTableToolbar,
     };
-})(window, window.layui ? window.layui.$ : window.jQuery);
+})(window);

@@ -281,16 +281,18 @@ class Rbac4ExtensionTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_prerequisite_reject_strategy(self):
-        SystemConfig.objects.create(
-            key='rbac_prerequisite_strategy', value='reject', config_type='string'
+        SystemConfig.objects.update_or_create(
+            key='rbac_prerequisite_strategy',
+            defaults={'value': 'reject', 'config_type': 'string'},
         )
         RolePrerequisite.objects.create(role=self.manager, prerequisite=self.employee)
         with self.assertRaises(RbacConstraintError):
             validate_assignment(self.user, [self.manager.id])
 
     def test_dsd_explicit_strategy_never_auto_activates_conflict(self):
-        SystemConfig.objects.create(
-            key='rbac_dsd_strategy', value='explicit', config_type='string'
+        SystemConfig.objects.update_or_create(
+            key='rbac_dsd_strategy',
+            defaults={'value': 'explicit', 'config_type': 'string'},
         )
         self.user.roles.add(self.cashier, self.accountant)
         group = RoleMutex.objects.create(name='财务动态互斥4', kind='dsd')
@@ -1676,6 +1678,42 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(response.json()['data']['deleted'], 2)
         self.assertFalse(Department.objects.filter(id__in=ids).exists())
 
+    def test_excel_export_and_import(self):
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from openpyxl import Workbook, load_workbook
+
+        from .models import Position
+
+        Position.objects.create(name='Excel 导出岗', code='excel_export_pos')
+        exported = self.client.get(
+            '/admin/api/rbac/data-export/?resource=positions&format=xlsx'
+        )
+        self.assertEqual(exported.status_code, 200)
+        self.assertIn('spreadsheetml.sheet', exported['Content-Type'])
+        workbook = load_workbook(io.BytesIO(exported.content), read_only=True)
+        rows = list(workbook.active.iter_rows(values_only=True))
+        self.assertEqual(rows[0], ('name', 'code', 'sort', 'status', 'note'))
+        self.assertIn('excel_export_pos', [row[1] for row in rows[1:]])
+
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.append(['name', 'code', 'sort', 'status', 'note'])
+        sheet.append(['Excel 导入岗', 'excel_import_pos', 3, 1, 'imported'])
+        output = io.BytesIO()
+        workbook.save(output)
+        upload = SimpleUploadedFile(
+            'positions.xlsx', output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response = self.client.post('/admin/api/rbac/data-import/', {
+            'resource': 'positions', 'mode': 'upsert', 'file': upload,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['created'], 1)
+        self.assertTrue(Position.objects.filter(code='excel_import_pos').exists())
+
     def test_user_profile_department_and_position_relation(self):
         from .models import Department, Position
 
@@ -1688,6 +1726,7 @@ class RbacFinalAuditTests(TestCase):
                 'username': 'org_user', 'password': 'pass12345',
                 'department_id': department.id, 'position_id': position.id,
                 'position_ids': [position.id, position2.id],
+                'position_start_date': '2026-01-01',
             },
             content_type='application/json',
         )
@@ -1697,12 +1736,36 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(listed[0]['position_name'], '开发工程师')
         self.assertEqual(set(listed[0]['position_ids']), {position.id, position2.id})
         self.assertEqual(set(listed[0]['position_names']), {'开发工程师', '项目经理'})
+        user_id = listed[0]['id']
+        from .models import PositionAssignment
+        active = PositionAssignment.objects.filter(
+            user_id=user_id, end_date__isnull=True
+        )
+        self.assertEqual(active.count(), 2)
+        self.assertEqual(active.filter(is_primary=True).get().position_id, position.id)
+        self.assertEqual(str(active.first().start_date), '2026-01-01')
+        history = self.client.get(
+            '/admin/api/rbac/users/%s/position-assignments/' % user_id
+        )
+        self.assertEqual(history.status_code, 200)
+        self.assertEqual(len(history.json()['data']['list']), 2)
+
+        non_primary = active.get(position=position2)
+        response = self.client.post(
+            '/admin/api/rbac/position-assignments/%s/end/' % non_primary.pk,
+            {}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        non_primary.refresh_from_db()
+        self.assertIsNotNone(non_primary.end_date)
+        self.assertFalse(PositionAssignment.objects.filter(
+            user_id=user_id, position=position2, end_date__isnull=True
+        ).exists())
 
         options = self.client.get('/admin/api/rbac/users/org-options/').json()['data']
         self.assertIn(department.id, [row['id'] for row in options['departments']])
         self.assertIn(position.id, [row['id'] for row in options['positions']])
 
-        user_id = listed[0]['id']
         response = self.client.put(
             '/admin/api/rbac/users/%s/update/' % user_id,
             {'department_id': None, 'position_id': None},
@@ -1777,6 +1840,20 @@ class RbacFinalAuditTests(TestCase):
         self.assertTrue(all(row['level'] == 4 for row in rows))
         self.assertTrue(all(row['parent_code'] for row in rows))
         self.assertIn('110101001', {row['code'] for row in rows[:500]})
+
+    def test_region_seed_contains_village_level_data(self):
+        import gzip
+        import json
+        from pathlib import Path
+
+        seed = Path(__file__).resolve().parent / 'data' / 'china_villages.json.gz'
+        payload = json.loads(gzip.decompress(seed.read_bytes()).decode('utf-8'))
+        rows = payload['regions']
+        self.assertGreaterEqual(len(rows), 600000)
+        self.assertEqual(payload['max_level'], 5)
+        self.assertTrue(all(row['level'] == 5 for row in rows))
+        self.assertTrue(all(row['parent_code'] for row in rows))
+        self.assertIn('110101001001', {row['code'] for row in rows[:500]})
 
     def test_region_seed_contains_full_province_city_county_data(self):
         import json

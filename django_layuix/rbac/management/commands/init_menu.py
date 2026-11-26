@@ -7,6 +7,7 @@
   python manage.py init_menu --fix-icons # 修复数据库中可能存在的无效 Layui 图标
 
 """
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django_layuix.rbac.defaults import get_default_configs
@@ -75,7 +76,9 @@ class Command(BaseCommand):
         self._init_default_dictionaries()
         from django_layuix.rbac.region_seed import seed_regions_if_empty
 
-        seeded = seed_regions_if_empty()
+        seeded = seed_regions_if_empty(
+            include_villages=getattr(settings, 'LAYUI_RBAC_SEED_VILLAGES', False),
+        )
         if seeded:
             self.stdout.write(self.style.SUCCESS(
                 '  初始化地区数据 %s 条' % seeded['total']
@@ -261,14 +264,14 @@ class Command(BaseCommand):
             ('系统配置', 'Config', '系统配置', 'layui-icon-set-sm', '/system/config', 2, 3, '系统管理'),
             ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 2, 6, '权限管理'),
 
-            # ---- 数据管理 ----
-            ('数据管理', 'Data', '数据管理', 'layui-icon-table', '', 1, 4, None),
-            ('字典管理', 'Dictionary', '字典管理', 'layui-icon-read', '/data/dictionary', 2, 1, '数据管理'),
-
             # ---- 运维管理 ----
             ('运维管理', 'Operations', '运维管理', 'layui-icon-console', '', 1, 3, None),
             ('服务器管理', 'Server', '服务器管理', 'layui-icon-console', '/ops/server', 2, 1, '运维管理'),
             ('AI 配置', 'AI Config', 'AI 配置', 'layui-icon-light', '/ops/ai-config', 2, 2, '运维管理'),
+
+            # ---- 数据管理 ----
+            ('数据管理', 'Data', '数据管理', 'layui-icon-table', '', 1, 4, None),
+            ('字典管理', 'Dictionary', '字典管理', 'layui-icon-read', '/data/dictionary', 2, 1, '数据管理'),
         ]
 
         created = {}

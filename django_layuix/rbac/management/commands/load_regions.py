@@ -7,7 +7,7 @@ from django_layuix.rbac.region_seed import (
 
 
 class Command(BaseCommand):
-    help = 'Load bundled China region seeds, including optional town/street data'
+    help = '加载捆绑的中国地区种子，包括可选的城镇/街道数据'
 
     def add_arguments(self, parser):
         parser.add_argument('--file', default=str(DEFAULT_SEED_PATH))
@@ -17,6 +17,10 @@ class Command(BaseCommand):
             '--skip-streets', action='store_true',
             help='load only province/city/county rows from %s' % DEFAULT_STREET_PATH.name,
         )
+        parser.add_argument(
+            '--include-villages', action='store_true',
+            help='also load the optional 600k village/community seed',
+        )
 
     def handle(self, *args, **options):
         try:
@@ -25,6 +29,7 @@ class Command(BaseCommand):
                 truncate=options['truncate'],
                 dry_run=options['dry_run'],
                 include_streets=not options['skip_streets'],
+                include_villages=options['include_villages'],
             )
         except (FileNotFoundError, ValueError) as exc:
             raise CommandError(str(exc)) from exc
