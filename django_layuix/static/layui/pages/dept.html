@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="data.department">部门管理</title>
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126f">
-    <link rel="stylesheet" href="/static/layui/css/data-admin.css?v=1">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126g">
+    <link rel="stylesheet" href="/static/layui/css/data-admin.css?v=2">
     <script>
         function syncParentTheme() {
             var themeMode = 'light';
@@ -148,9 +148,9 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-<script src="/static/layui/js/common.js?v=20261126f"></script>
-<script src="/static/layui/js/i18n.js?v=20261126f"></script>
-<script src="/static/layui/js/data-admin.js?v=1"></script>
+<script src="/static/layui/js/common.js?v=20261126g"></script>
+<script src="/static/layui/js/i18n.js?v=20261126g"></script>
+<script src="/static/layui/js/data-admin.js?v=2"></script>
 <script>
 inheritTheme();
 renderI18n();
@@ -232,21 +232,23 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
             id: 'deptTable',
             data: rows,
             page: false,
-            height: 'full-235',
+            height: 'full-270',
             defaultToolbar: [],
+            toolbar: DataAdmin.tableToolbar('departments'),
             cols: [[
-                {field: 'name', title: t('data.name'), width: 160},
-                {field: 'code', title: t('data.code'), width: 110},
+                {type: 'checkbox', width: 44},
+                {field: 'name', title: t('data.name'), width: 150},
+                {field: 'code', title: t('data.code'), width: 105},
                 {field: 'type_display', title: t('data.type'), width: 70, align: 'center', templet: function (d) {
                     return '<span class="data-tag data-tag-info">' + escapeHtml(d.type_display) + '</span>';
                 }},
                 {field: 'leader', title: t('data.leader'), width: 85},
-                {field: 'phone', title: t('data.phone'), width: 105},
+                {field: 'phone', title: t('data.phone'), width: 100},
                 {field: 'sort', title: t('data.sort'), width: 55, align: 'center'},
                 {field: 'status', title: t('data.status'), width: 70, align: 'center', templet: function (d) {
                     return DataAdmin.statusBadge(d.status);
                 }},
-                {title: t('common.operation'), width: 190, align: 'center', toolbar: '#deptRowToolTpl'}
+                {title: t('common.operation'), width: 200, align: 'center', toolbar: '#deptRowToolTpl'}
             ]]
         });
     }
@@ -341,6 +343,7 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
         }
     });
 
+    DataAdmin.bindTableToolbar(table, 'deptTable', 'departments', loadData);
     $('#addDeptBtn').on('click', function () { openDialog(null); });
     $('#showAllBtn').on('click', function () {
         selectedId = null;

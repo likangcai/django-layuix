@@ -248,6 +248,14 @@ class UserProfile(AbstractUser):
     avatar = models.ImageField(upload_to='avatar/%Y/%m/', blank=True, null=True, verbose_name='头像')
     nickname = models.CharField(max_length=50, blank=True, default='', verbose_name='昵称')
     roles = models.ManyToManyField(Role, blank=True, related_name='users', verbose_name='角色')
+    department = models.ForeignKey(
+        'Department', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='users', verbose_name='部门',
+    )
+    position = models.ForeignKey(
+        'Position', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='users', verbose_name='岗位',
+    )
     
     # 主题配置 - 深色/浅色双模式
     THEME_CHOICES = [

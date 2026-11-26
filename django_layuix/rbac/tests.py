@@ -23,7 +23,7 @@ from .engine import (
     validate_prerequisite,
     validate_role_parents,
 )
-from .models import Menu, PluginRegistry, Role, RoleMutex, RolePrerequisite, SystemConfig
+from .models import Department, Menu, PluginRegistry, Role, RoleMutex, RolePrerequisite, SystemConfig
 from .permissions import api_permission_required, has_permission
 from .plugins import (
     discover_entry_point_plugins, list_plugins, register_plugin,
@@ -1600,14 +1600,14 @@ class RbacFinalAuditTests(TestCase):
     def test_region_tree_crud_and_page_permissions_are_registered(self):
         response = self.client.post(
             '/admin/api/rbac/regions/create/',
-            {'name': '浙江省', 'code': '330000', 'level': 1},
+            {'name': '审计测试省', 'code': '990000', 'level': 1},
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
         province_id = response.json()['data']['id']
         response = self.client.post(
             '/admin/api/rbac/regions/create/',
-            {'name': '杭州市', 'code': '330100', 'level': 2, 'parent_id': province_id},
+            {'name': '审计测试市', 'code': '990100', 'level': 2, 'parent_id': province_id},
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
@@ -1625,6 +1625,96 @@ class RbacFinalAuditTests(TestCase):
             '/static/layui/pages/region.html', '/static/layui/pages/member-level.html',
         ):
             self.assertIn(path, PAGE_PERMISSIONS)
+
+    def test_data_import_export_and_batch_operations(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        csv_text = (
+            'name,code,type,parent_code,leader,phone,email,sort,status,note\n'
+            '导入总部,org_hq,1,,张三,13800000000,hq@example.com,1,1,总部\n'
+            '导入研发,org_rd,3,org_hq,李四,,,2,1,研发\n'
+        )
+        upload = SimpleUploadedFile(
+            'departments.csv', csv_text.encode('utf-8-sig'), content_type='text/csv'
+        )
+        response = self.client.post('/admin/api/rbac/data-import/', {
+            'resource': 'departments', 'mode': 'upsert', 'file': upload,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['created'], 2)
+        child = Department.objects.get(code='org_rd')
+        self.assertEqual(child.parent.code, 'org_hq')
+
+        exported = self.client.get('/admin/api/rbac/data-export/?resource=departments')
+        self.assertEqual(exported.status_code, 200)
+        text = exported.content.decode('utf-8-sig')
+        self.assertIn('name,code,type,parent_code', text)
+        self.assertIn('org_hq', text)
+        self.assertIn('org_rd', text)
+
+        ids = list(Department.objects.filter(code__in=['org_hq', 'org_rd']).values_list('id', flat=True))
+        response = self.client.post(
+            '/admin/api/rbac/data-batch-status/',
+            {'resource': 'departments', 'ids': ids, 'status': False},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Department.objects.filter(id__in=ids, status=True).exists())
+
+        response = self.client.post(
+            '/admin/api/rbac/data-batch-delete/',
+            {'resource': 'departments', 'ids': ids},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['deleted'], 2)
+        self.assertFalse(Department.objects.filter(id__in=ids).exists())
+
+    def test_user_profile_department_and_position_relation(self):
+        from .models import Department, Position
+
+        department = Department.objects.create(name='研发部', code='user_dept')
+        position = Position.objects.create(name='开发工程师', code='user_pos')
+        response = self.client.post(
+            '/admin/api/rbac/users/create/',
+            {
+                'username': 'org_user', 'password': 'pass12345',
+                'department_id': department.id, 'position_id': position.id,
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        listed = self.client.get('/admin/api/rbac/users/?keyword=org_user').json()['data']['list']
+        self.assertEqual(listed[0]['department_name'], '研发部')
+        self.assertEqual(listed[0]['position_name'], '开发工程师')
+
+        options = self.client.get('/admin/api/rbac/users/org-options/').json()['data']
+        self.assertIn(department.id, [row['id'] for row in options['departments']])
+        self.assertIn(position.id, [row['id'] for row in options['positions']])
+
+        user_id = listed[0]['id']
+        response = self.client.put(
+            '/admin/api/rbac/users/%s/update/' % user_id,
+            {'department_id': None, 'position_id': None},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        listed = self.client.get('/admin/api/rbac/users/?keyword=org_user').json()['data']['list']
+        self.assertEqual(listed[0]['department_name'], '')
+        self.assertEqual(listed[0]['position_name'], '')
+
+    def test_region_seed_contains_full_province_city_county_data(self):
+        import json
+        from pathlib import Path
+
+        seed = Path(__file__).resolve().parent / 'data' / 'china_regions.json'
+        payload = json.loads(seed.read_text(encoding='utf-8'))
+        rows = payload['regions']
+        self.assertGreaterEqual(len(rows), 3000)
+        self.assertGreaterEqual(sum(1 for row in rows if row['level'] == 1), 30)
+        self.assertGreaterEqual(sum(1 for row in rows if row['level'] == 2), 300)
+        self.assertGreaterEqual(sum(1 for row in rows if row['level'] == 3), 2000)
+        self.assertEqual(payload['source_name'], '民政部国家地名信息库')
 
     def test_role_code_conflict_is_rejected_atomically(self):
         from .permission_registry import register_page_permissions

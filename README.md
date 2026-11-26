@@ -10,7 +10,9 @@
 - 📊 Dashboard 仪表盘（CPU/内存折线图、磁盘饼图、网络监控）
 - 📝 操作日志（自动记录用户操作，支持自定义路径前缀，可记录前端 API）
 - ⚙️ 系统配置（键值对配置，数据库动态管理，实时生效）
-- 🧩 数据管理（字典、部门、岗位、地区、会员等级；统一树/表格布局与权限控制）
+- 🧩 数据管理（字典、部门、岗位、地区、会员等级；统一树/表格布局、CSV 导入导出与批量操作）
+- 🗺️ 官方省市县数据（内置 3214 条，可通过脚本从民政部国家地名信息库更新）
+- 👥 用户组织归属（用户档案关联部门与岗位）
 - 🖼️ 图片上传（Logo、Favicon 等配置项支持本地上传）
 - 🌐 Favicon 自定义（支持 ICO/PNG/SVG 格式）
 - 👤 个人中心（修改资料、更换头像、修改密码）
@@ -172,7 +174,7 @@ python manage.py runserver
 LAYUI_CONFIG = {
     # 系统信息
     'system_name': 'Django Layuix Admin',
-    'system_version': '1.4.9',         # 系统版本号（显示在侧边栏）
+    'system_version': '1.5.0',         # 系统版本号（显示在侧边栏）
     'system_description': '',          # 系统描述（显示在登录页）
 
     # Logo
@@ -290,7 +292,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
 | `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
-| `system_version` | 版本号 | 包版本（当前 1.4.9） |
+| `system_version` | 版本号 | 包版本（当前 1.5.0） |
 | `system_description` | 系统描述 | （空） |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |

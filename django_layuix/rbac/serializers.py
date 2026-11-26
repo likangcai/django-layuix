@@ -17,6 +17,7 @@ API_FIELD_REGISTRY = {
     'rbac.User': (
         'id', 'username', 'nickname', 'phone', 'email', 'avatar',
         'is_active', 'is_superuser', 'is_staff', 'is_tester', 'roles',
+        'department_id', 'department_name', 'position_id', 'position_name',
         'last_login', 'date_joined',
     ),
     'rbac.OperationLog': (
@@ -139,7 +140,10 @@ def _serialize_instance(
     user = getattr(request, 'user', None)
     visible = []
     for field in safe:
-        policies = (policy_map or {}).get(field) or _policies_for(resource, action, field)
+        if policy_map is None:
+            policies = _policies_for(resource, action, field)
+        else:
+            policies = policy_map.get(field, [])
         if not policies:
             visible.append(field)
             continue

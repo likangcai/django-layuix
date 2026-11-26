@@ -72,6 +72,13 @@ class Command(BaseCommand):
         self._init_roles(force)
         self._init_default_configs(force)
         self._init_default_dictionaries()
+        from django_layuix.rbac.region_seed import seed_regions_if_empty
+
+        seeded = seed_regions_if_empty()
+        if seeded:
+            self.stdout.write(self.style.SUCCESS(
+                '  初始化地区数据 %s 条' % seeded['total']
+            ))
         self.stdout.write(self.style.SUCCESS('\n初始化完成！'))
 
     def _ensure_rbac3_menu(self):

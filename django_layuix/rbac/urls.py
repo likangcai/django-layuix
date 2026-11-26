@@ -55,6 +55,7 @@ urlpatterns = [
 
     # User CRUD
     path('users/', views.user_list, name='rbac_user_list'),
+    path('users/org-options/', views.user_org_options, name='rbac_user_org_options'),
     path('users/batch-delete/', views.user_batch_delete, name='rbac_user_batch_delete'),
     path('users/create/', views.user_create, name='rbac_user_create'),
     path('users/<int:pk>/update/', views.user_update, name='rbac_user_update'),
@@ -109,6 +110,12 @@ urlpatterns = [
     path('member-levels/', data_admin_views.member_level_list, name='rbac_member_level_list'),
     path('member-levels/create/', data_admin_views.member_level_create, name='rbac_member_level_create'),
     path('member-levels/<int:pk>/', data_admin_views.member_level_detail, name='rbac_member_level_detail'),
+
+    # Generic data import/export and batch operations
+    path('data-export/', data_admin_views.data_export, name='rbac_data_export'),
+    path('data-import/', data_admin_views.data_import, name='rbac_data_import'),
+    path('data-batch-delete/', data_admin_views.data_batch_delete, name='rbac_data_batch_delete'),
+    path('data-batch-status/', data_admin_views.data_batch_status, name='rbac_data_batch_status'),
 
     # Operation Log
     path('logs/', views.log_list, name='rbac_log_list'),

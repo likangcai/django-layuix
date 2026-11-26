@@ -1461,7 +1461,10 @@ def user_list(request):
 
     User = _get_user_model()
 
-    users = User.objects.all().order_by('-id')
+    users = User.objects.all()
+    if hasattr(User, 'department'):
+        users = users.select_related('department', 'position')
+    users = users.order_by('-id')
 
     # keyword 过滤（username/nickname/email/phone 模糊搜索）
     keyword = request.GET.get('keyword', '').strip()
@@ -1512,6 +1515,10 @@ def user_list(request):
             'is_staff': u.is_staff,
             'is_tester': getattr(u, 'is_tester', False),
             'roles': roles,
+            'department_id': getattr(u, 'department_id', None),
+            'department_name': getattr(getattr(u, 'department', None), 'name', ''),
+            'position_id': getattr(u, 'position_id', None),
+            'position_name': getattr(getattr(u, 'position', None), 'name', ''),
             'last_login': fmt_time(u.last_login),
             'date_joined': fmt_time(u.date_joined),
         })
@@ -1569,6 +1576,54 @@ def user_batch_delete(request):
     }, msg='批量删除完成')
 
 
+def _apply_user_organization(user, body):
+    from .models import Department, Position
+
+    if 'department_id' in body and hasattr(user, 'department_id'):
+        raw = body.get('department_id')
+        if raw in (None, ''):
+            user.department = None
+        else:
+            try:
+                department_id = int(raw)
+            except (TypeError, ValueError):
+                raise ValueError('部门 ID 必须是整数')
+            department = Department.objects.filter(pk=department_id, status=True).first()
+            if department is None:
+                raise ValueError('部门不存在或已停用')
+            user.department = department
+    if 'position_id' in body and hasattr(user, 'position_id'):
+        raw = body.get('position_id')
+        if raw in (None, ''):
+            user.position = None
+        else:
+            try:
+                position_id = int(raw)
+            except (TypeError, ValueError):
+                raise ValueError('岗位 ID 必须是整数')
+            position = Position.objects.filter(pk=position_id, status=True).first()
+            if position is None:
+                raise ValueError('岗位不存在或已停用')
+            user.position = position
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:view')
+def user_org_options(request):
+    """GET /api/rbac/users/org-options/ - active departments and positions."""
+    from .models import Department, Position
+
+    return success_response({
+        'departments': list(Department.objects.filter(status=True).order_by('sort', 'id').values(
+            'id', 'name', 'code', 'parent_id'
+        )),
+        'positions': list(Position.objects.filter(status=True).order_by('sort', 'id').values(
+            'id', 'name', 'code'
+        )),
+    })
+
+
 @csrf_exempt
 @api_login_required
 @api_permission_required('user:add')
@@ -1608,6 +1663,10 @@ def user_create(request):
         user.phone = body.get('phone', '')
     if hasattr(user, 'is_tester'):
         user.is_tester = bool(body.get('is_tester', False))
+    try:
+        _apply_user_organization(user, body)
+    except ValueError as exc:
+        return error_response(str(exc), 400)
 
     final_role_ids = None
     if 'role_ids' in body and hasattr(User, 'roles'):
@@ -1659,6 +1718,10 @@ def user_update(request, pk):
         user.phone = body['phone']
     if hasattr(user, 'is_tester') and 'is_tester' in body:
         user.is_tester = bool(body['is_tester'])
+    try:
+        _apply_user_organization(user, body)
+    except ValueError as exc:
+        return error_response(str(exc), 400)
 
     final_role_ids = None
     if 'role_ids' in body and hasattr(user, 'roles'):

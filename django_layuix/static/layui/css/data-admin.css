@@ -58,6 +58,25 @@
     white-space: nowrap;
 }
 .data-row-actions .layui-btn { margin-left: 0; }
+.data-table-toolbar { padding: 2px 0; }
+.data-table-toolbar .layui-btn + .layui-btn { margin-left: 6px; }
+.data-import-dialog { padding: 18px 20px 4px; }
+.data-import-dialog .layui-form-label { width: 96px; }
+.data-import-dialog .layui-input-block { margin-left: 126px; }
+.data-import-hint {
+    margin: 4px 0 8px 126px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 20px;
+}
+.data-import-errors {
+    margin-top: 10px;
+    max-height: 260px;
+    overflow: auto;
+    color: var(--danger-color);
+    font-size: 12px;
+    line-height: 20px;
+}
 .data-code { color: var(--text-muted); font-size: 12px; }
 .data-tag {
     display: inline-block;
