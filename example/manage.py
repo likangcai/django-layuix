@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : manage.py
+# -----------------------------
 """Django's command-line utility for administrative tasks."""
 import os
 import sys

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : update_villages_from_npm.py
+# -----------------------------
 """Refresh level-5 village/community seed data from the china-division package.
 
 The output is gzip-compressed because the raw JSON is about 75MB. Villages whose

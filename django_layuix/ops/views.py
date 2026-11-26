@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : views.py
+# -----------------------------
 """
 Ops API Views - Server CRUD, SSH test, log viewing, command execution
 """
@@ -41,7 +46,7 @@ def error_response(msg='error', code=400):
     return JsonResponse({'code': code, 'msg': msg}, status=code)
 
 
-# ==================== Server CRUD ====================
+# ==================== 服务器 CRUD ====================
 
 @csrf_exempt
 @api_login_required
@@ -122,7 +127,7 @@ def server_update(request, pk):
                 setattr(server, field, body[field] is True or body[field] == 'on')
             else:
                 setattr(server, field, body[field])
-    # Sensitive fields: only update if explicitly provided and non-empty
+    # 敏感字段：仅在显式提供且非空时更新
     for field in ['password', 'private_key']:
         if field in body and body[field]:
             setattr(server, field, body[field])
@@ -172,7 +177,7 @@ def server_delete(request, pk):
         return error_response('服务器不存在', 404)
 
 
-# ==================== SSH Operations ====================
+# ==================== SSH 操作 ====================
 
 @csrf_exempt
 @api_login_required
@@ -287,13 +292,13 @@ def server_log(request, pk):
     log_path = body.get('log_path', '/var/log/syslog').strip()
     lines = int(body.get('lines', 100))
 
-    # Security: validate log path
+    # 安全校验：验证日志路径
     if re.search(r'[;&|`$]', log_path):
         return error_response('日志路径包含非法字符', 400)
 
     try:
         client = server.get_ssh_client()
-        # Use tail command with line count
+        # 使用 tail 命令并按行数截取
         safe_path = shlex.quote(log_path)
         stdin, stdout, stderr = client.exec_command(f'tail -n {lines} {safe_path}')
         output = stdout.read().decode('utf-8', errors='replace')
@@ -326,7 +331,7 @@ def server_exec(request, pk):
     if not command:
         return error_response('命令不能为空', 400)
 
-    # Dangerous command blacklist
+    # 危险命令黑名单
     dangerous_patterns = [
         r'rm\s+-rf\s+/', r'dd\s+if=', r'mkfs\.', r'shutdown',
         r'reboot', r'chmod\s+777\s+/', r'>\s*/etc/', r'curl.*\|.*bash',
@@ -353,7 +358,7 @@ def server_exec(request, pk):
         return error_response(f'命令执行失败: {str(e)}', 500)
 
 
-# ==================== AI Config (Multi-model list) ====================
+# ==================== AI 配置（多模型列表） ====================
 
 import uuid as _uuid
 
@@ -447,7 +452,7 @@ def _get_default_ai_config():
     except Exception:
         pass
     
-    # settings.py fallback
+    # settings.py 回退逻辑
     return {
         'api_key': getattr(settings, 'LAYUI_AI_API_KEY', ''),
         'base_url': getattr(settings, 'LAYUI_AI_BASE_URL', ''),
@@ -460,7 +465,7 @@ def _get_ai_settings():
     return _get_default_ai_config()
 
 
-# ---------- API Views ----------
+# ---------- API 视图 ----------
 
 @csrf_exempt
 @api_login_required
@@ -584,7 +589,7 @@ def ai_config_save(request):
     configs = _load_ai_configs()
 
     if config_id:
-        # Update existing
+        # 更新已有记录
         found = False
         for c in configs:
             if c.get('id') == config_id:
@@ -608,7 +613,7 @@ def ai_config_save(request):
         _save_ai_configs(configs)
         return success_response(msg='配置更新成功')
     else:
-        # Create new
+        # 创建新记录
         if not api_key or '****' in api_key:
             return error_response('API Key 不能为空', 400)
         new_id = str(_uuid.uuid4())[:8]
@@ -785,7 +790,7 @@ def ai_config_test(request):
             return error_response(f'连接测试失败: {error_msg}', 500)
 
 
-# ==================== AI Analysis ====================
+# ==================== AI 分析 ====================
 
 @csrf_exempt
 @api_login_required
@@ -803,11 +808,11 @@ def ai_analyze_log(request):
     if not log_content:
         return error_response('日志内容不能为空', 400)
 
-    # Limit log content length
+    # 限制日志内容长度
     if len(log_content) > 50000:
         log_content = log_content[-50000:]
 
-    # Get AI config (dynamic JSON file > settings.py)
+    # 获取 AI 配置（动态 JSON 文件优先于 settings.py）
     config = _get_ai_settings()
     if not config.get('api_key'):
         return JsonResponse({'code': 401, 'msg': '未配置 AI 模型', 'data': {'need_config': True}}, status=200)

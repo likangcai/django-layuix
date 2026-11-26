@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : tests.py
+# -----------------------------
 """RBAC3 regression tests: inheritance, constraints and server-side enforcement."""
 import hashlib
 import importlib.util
@@ -30,8 +35,8 @@ from .plugins import (
     register_plugin_class, set_plugin_active, unregister_plugin,
 )
 
-# Browser writes always send Origin/Referer. Test clients simulate that by default;
-# tests that exercise the guard can override or remove this header explicitly.
+# 浏览器写入请求会携带 Origin/Referer。测试客户端默认模拟该行为；
+# 校验该防护逻辑的测试可显式覆盖或移除此请求头。
 _original_client_init = Client.__init__
 
 
@@ -69,7 +74,7 @@ class Rbac3Tests(TestCase):
 
         self.user = User.objects.create_user(username='tester', password='pass12345')
 
-    # ---------- RBAC1 ----------
+    # ---------- RBAC1 基础 ----------
     def test_direct_role_permission(self):
         self.user.roles.add(self.employee)
         self.assertTrue(self.user.has_perm('test:employee'))
@@ -88,7 +93,7 @@ class Rbac3Tests(TestCase):
         with self.assertRaises(RbacConstraintError):
             validate_role_parents(self.manager.id, [self.manager.id])
 
-    # ---------- RBAC2: SSD ----------
+    # ---------- RBAC2：SSD ----------
     def test_ssd_blocks_direct_assignment(self):
         group = RoleMutex.objects.create(name='财务互斥', kind='ssd')
         group.roles.add(self.cashier, self.accountant)
@@ -102,7 +107,7 @@ class Rbac3Tests(TestCase):
         with self.assertRaises(RbacConstraintError):
             validate_assignment(self.user, [self.accountant.id, self.cashier.id])
 
-    # ---------- RBAC2: prerequisites ----------
+    # ---------- RBAC2：前置角色 ----------
     def test_prerequisite_auto_granted(self):
         RolePrerequisite.objects.create(role=self.manager, prerequisite=self.employee)
         final_ids = validate_assignment(self.user, [self.manager.id])
@@ -113,7 +118,7 @@ class Rbac3Tests(TestCase):
         with self.assertRaises(RbacConstraintError):
             validate_prerequisite(self.manager.id, self.employee.id)
 
-    # ---------- RBAC2: cardinality ----------
+    # ---------- RBAC2：基数约束 ----------
     def test_role_max_users(self):
         User = get_user_model()
         other = User.objects.create_user(username='other', password='pass12345')
@@ -233,7 +238,7 @@ class Rbac4ExtensionTests(TestCase):
         self.cashier = Role.objects.create(name='出纳4', code='rbac4_cashier')
         self.accountant = Role.objects.create(name='会计4', code='rbac4_accountant')
 
-        # Plugin state is persisted; make tests independent of the development DB.
+        # 插件状态已持久化；测试需要独立于开发数据库。
         register_plugin(key='ops', name='运维管理')
         PluginRegistry.objects.filter(key='ops').update(validation_error='')
         set_plugin_active('ops', True)
@@ -323,7 +328,7 @@ class Rbac4ExtensionTests(TestCase):
         register_plugin(key='demo_plugin', name='演示插件', version='2.0.0')
         self.assertTrue(PluginRegistry.objects.filter(key='demo_plugin').exists())
 
-        # Simulate a fresh process losing the in-process registry.
+        # 模拟新进程丢失内存注册表的情况。
         from django_layuix.rbac import plugins as plugin_module
         backup = dict(plugin_module._PLUGINS)
         plugin_module._PLUGINS.clear()

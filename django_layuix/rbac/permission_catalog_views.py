@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : permission_catalog_views.py
+# -----------------------------
 """Permission catalog management APIs."""
 from django.db.models import Count
 from django.views.decorators.csrf import csrf_exempt

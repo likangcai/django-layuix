@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : layui_tags.py
+# -----------------------------
 from django import template
 from django.conf import settings
 

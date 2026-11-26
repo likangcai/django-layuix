@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : update_streets_from_npm.py
+# -----------------------------
 """Refresh level-4 town/street seed data from the china-division package.
 
 The official MCA endpoint used by update_regions_from_mca.py exposes only

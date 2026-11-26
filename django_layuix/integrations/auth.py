@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : auth.py
+# -----------------------------
 """Generic authentication bridge for Django-native and third-party APIs."""
 import importlib
 import logging

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : 0002_rbac3.py
+# -----------------------------
 """RBAC3: role inheritance, mutex groups, prerequisites and cardinality."""
 from django.db import migrations, models
 

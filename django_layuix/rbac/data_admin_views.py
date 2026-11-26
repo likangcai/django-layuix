@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : data_admin_views.py
+# -----------------------------
 """Department, position, region and member-level management APIs."""
 from decimal import Decimal, InvalidOperation
 
@@ -118,7 +123,7 @@ def _member_level_payload(obj):
     }
 
 
-# ==================== Department ====================
+# ==================== 部门 ====================
 
 @csrf_exempt
 @api_login_required
@@ -244,7 +249,7 @@ def department_detail(request, pk):
     return error_response('Method not allowed', 405)
 
 
-# ==================== Position ====================
+# ==================== 岗位 ====================
 
 @csrf_exempt
 @api_login_required
@@ -340,7 +345,7 @@ def position_detail(request, pk):
     return error_response('Method not allowed', 405)
 
 
-# ==================== Region ====================
+# ==================== 地区 ====================
 
 @csrf_exempt
 @api_login_required
@@ -535,7 +540,7 @@ def region_detail(request, pk):
     return error_response('Method not allowed', 405)
 
 
-# ==================== Member level ====================
+# ==================== 会员等级 ====================
 
 @csrf_exempt
 @api_login_required
@@ -649,7 +654,7 @@ def member_level_detail(request, pk):
     return error_response('Method not allowed', 405)
 
 
-# ==================== Import / export / batch ====================
+# ==================== 导入 / 导出 / 批量操作 ====================
 
 DATA_RESOURCES = {
     'departments': {

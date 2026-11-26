@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : models.py
+# -----------------------------
 """
 django-layuix RBAC Models
 Required RBAC engine - add 'django_layuix.rbac' to INSTALLED_APPS to enable

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : demo_specs.py
+# -----------------------------
 """Shared declarations for the one-command permission demo."""
 
 DEMO_PARENT_MENU = {

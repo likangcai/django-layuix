@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : init_menu.py
+# -----------------------------
 """
 初始化默认菜单数据
 用法:
@@ -243,7 +248,7 @@ class Command(BaseCommand):
     def _init_menus(self, force=False):
         """初始化菜单数据"""
         # 创建菜单
-        # (name, name_en, name_zh_hans, icon, path, menu_type, sort, parent_name_or_None)
+        # （名称、英文名、中文名、图标、路径、菜单类型、排序、上级名称或空）
         # menu_type: 1=目录, 2=菜单
         menus_data = [
             # ---- 仪表盘 ----
@@ -353,7 +358,7 @@ class Command(BaseCommand):
                 menu.save(update_fields=['permission'])
 
         # 创建按钮级权限（menu_type=3）
-        # (name, name_en, name_zh_hans, parent_menu, permission, sort)
+        # （名称、英文名、中文名、上级菜单、权限码、排序）
         buttons_data = [
             # 菜单管理下：新增菜单、编辑菜单、删除菜单
             ('新增菜单', 'Add Menu', '新增菜单', created['菜单管理'], 'menu:add', 1),

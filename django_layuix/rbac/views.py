@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : views.py
+# -----------------------------
 """
 RBAC API Views - User info, menu data, system info, profile management
 """
@@ -35,14 +40,14 @@ def get_request_body(request):
     try:
         if request.content_type == 'application/json':
             return json.loads(request.body)
-        # For form data (application/x-www-form-urlencoded), try POST first, then parse body for PUT/PATCH
+        # 表单数据（application/x-www-form-urlencoded）优先尝试 POST，再为 PUT/PATCH 解析请求体
         if request.POST:
             return dict(request.POST)
-        # Try to parse form data from body for PUT/PATCH requests
+        # 尝试从 PUT/PATCH 请求体中解析表单数据
         if request.body:
             from urllib.parse import parse_qs
             data = parse_qs(request.body.decode('utf-8'))
-            # parse_qs returns lists, convert single-item lists to values
+            # parse_qs 返回列表，将单元素列表转换为标量值
             return {k: v[0] if len(v) == 1 else v for k, v in data.items()}
         return {}
     except (json.JSONDecodeError, ValueError, TypeError, UnicodeDecodeError):
@@ -117,7 +122,7 @@ def user_info(request):
     except Exception:
         user = request.user
 
-    # Build user data
+    # 构建用户数据
     def get_client_ip(request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
@@ -140,17 +145,17 @@ def user_info(request):
         'ip': get_client_ip(request),
     }
 
-    # Get roles
+    # 获取角色
     roles = []
     if hasattr(user, 'roles'):
         roles = [{'id': r.id, 'name': r.name, 'code': r.code, 'description': r.description or ''} for r in user.roles.filter(status=True)]
     user_data['roles'] = roles
 
-    # Get menus based on permissions
+    # 根据权限获取菜单
     menus = _get_user_menus(user)
     user_data['menus'] = menus
 
-    # Get permissions and the catalog subset visible to this user
+    # 获取权限及该用户可见的权限目录子集
     user_data['permissions'] = _get_user_permissions(user)
     page_permissions, button_actions, catalog = _permission_catalog_payload(
         user, user_data['permissions']
@@ -274,7 +279,7 @@ def system_info(request):
         'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
 
-    # CPU info
+    # CPU 信息
     try:
         data['cpu_count'] = psutil.cpu_count(logical=True)
         data['cpu_count_physical'] = psutil.cpu_count(logical=False)
@@ -284,7 +289,7 @@ def system_info(request):
         data['cpu_count'] = 0
         data['cpu_percent'] = 0
 
-    # Memory info
+    # 内存信息
     try:
         mem = psutil.virtual_memory()
         data['memory'] = {
@@ -300,11 +305,11 @@ def system_info(request):
     except Exception:
         data['memory'] = {}
 
-    # Disk info - aggregate all physical partitions
+    # 磁盘信息——汇总所有物理分区
     try:
         total_disk = used_disk = free_disk = 0
         if platform.system() == 'Windows':
-            # Windows: iterate all physical drives (C:, D:, etc.)
+            # Windows：遍历所有物理磁盘（C:、D: 等）
             for part in psutil.disk_partitions():
                 if 'cdrom' in part.opts.lower() or part.fstype == '':
                     continue
@@ -316,9 +321,9 @@ def system_info(request):
                 except (PermissionError, OSError):
                     continue
         else:
-            # Linux/Mac: iterate all non-virtual partitions
+            # Linux/Mac：遍历所有非虚拟分区
             for part in psutil.disk_partitions():
-                # Skip virtual/loop filesystems
+                # 跳过虚拟/回环文件系统
                 if part.fstype in ('tmpfs', 'devtmpfs', 'overlay', 'proc', 'sysfs',
                                    'cgroup', 'cgroup2', 'devpts', 'mqueue', 'hugetlbfs',
                                    'nfs', 'nfs4', 'squashfs', 'iso9660', 'fuseblk'):
@@ -342,7 +347,7 @@ def system_info(request):
                 'free_human': _bytes_to_human(free_disk),
             }
         else:
-            # Fallback: directly check root partition (Docker/container environments)
+            # 回退方案：直接检查根分区（Docker/容器环境）
             try:
                 disk = psutil.disk_usage('/')
                 data['disk'] = {
@@ -359,7 +364,7 @@ def system_info(request):
     except Exception:
         data['disk'] = {}
 
-    # Network info
+    # 网络信息
     try:
         net = psutil.net_io_counters()
         data['network'] = {
@@ -373,7 +378,7 @@ def system_info(request):
     except Exception:
         data['network'] = {}
 
-    # Database info
+    # 数据库信息
     try:
         data['database'] = _get_db_info()
     except Exception:
@@ -442,7 +447,7 @@ def system_info_stream(request):
                     'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 }
                 
-                # CPU
+                # CPU 信息
                 try:
                     data['cpu_count'] = psutil.cpu_count(logical=True)
                     data['cpu_percent'] = psutil.cpu_percent(interval=0.3)
@@ -595,7 +600,7 @@ def _get_db_info():
         db_name = db_settings.get('NAME', '')
         if db_name and os.path.exists(db_name):
             db_info['size'] = _bytes_to_human(os.path.getsize(db_name))
-        # Get table count
+        # 获取数据表数量
         try:
             with connections['default'].cursor() as cursor:
                 cursor.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
@@ -942,7 +947,7 @@ def stats_data(request):
     return success_response(data)
 
 
-# ==================== Menu CRUD ====================
+# ==================== 菜单 CRUD ====================
 
 @csrf_exempt
 @api_login_required
@@ -1174,7 +1179,7 @@ def menu_generate_permissions(request, pk):
     return success_response(result, msg='按钮权限已生成')
 
 
-# ==================== Role CRUD ====================
+# ==================== 角色 CRUD ====================
 
 def _role_payload(role):
     parent_ids = list(role.parent_roles.values_list('id', flat=True))
@@ -1449,7 +1454,7 @@ def role_copy(request, pk):
     return success_response({'id': new_role.id}, msg='复制成功')
 
 
-# ==================== User CRUD ====================
+# ==================== 用户 CRUD ====================
 
 @csrf_exempt
 @api_login_required
@@ -2026,7 +2031,7 @@ def user_toggle_status(request, pk):
     return success_response({'is_active': locked_user.is_active}, msg='状态已更新')
 
 
-# ==================== Operation Log ====================
+# ==================== 操作日志 ====================
 
 @csrf_exempt
 @api_login_required
@@ -2090,7 +2095,7 @@ def log_list(request):
     return success_response({'list': data, 'total': total})
 
 
-# ==================== System Config CRUD ====================
+# ==================== 系统配置 CRUD ====================
 
 @csrf_exempt
 @api_login_required
@@ -2232,7 +2237,7 @@ def config_delete(request, pk):
     return success_response(msg='删除成功')
 
 
-# ==================== Profile Avatar ====================
+# ==================== 个人头像 ====================
 
 @csrf_exempt
 @api_login_required
@@ -2268,7 +2273,7 @@ def profile_avatar(request):
     return success_response({'avatar': user.avatar_url}, msg='头像上传成功')
 
 
-# ==================== Generic Image Upload ====================
+# ==================== 通用图片上传 ====================
 
 @csrf_exempt
 @api_login_required
@@ -2314,7 +2319,7 @@ def upload_image(request):
     return success_response({'url': url, 'filename': filename}, msg='上传成功')
 
 
-# ==================== Plugin Registry ====================
+# ==================== 插件注册 ====================
 
 @csrf_exempt
 @api_login_required
@@ -2360,7 +2365,7 @@ def plugin_manifest(request):
     return success_response(result)
 
 
-# ==================== RBAC3 Constraints & Active Roles ====================
+# ==================== RBAC3 约束与激活角色 ====================
 
 @csrf_exempt
 @api_login_required
@@ -2665,7 +2670,7 @@ def active_roles(request):
     return error_response('Method not allowed', 405)
 
 
-# ==================== 1.4.2 Scope Nodes ====================
+# ==================== 1.4.2 数据范围节点 ====================
 
 def _scope_node_payload(node):
     return {
@@ -2791,7 +2796,7 @@ def scope_node_detail(request, pk):
     return error_response('Method not allowed', 405)
 
 
-# ==================== 1.4.2 ABAC policies ====================
+# ==================== 1.4.2 ABAC 策略 ====================
 
 def _abac_payload(policy, include_expression=True):
     data = {

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : load_regions.py
+# -----------------------------
 from django.core.management.base import BaseCommand, CommandError
 
 from django_layuix.rbac.region_seed import (

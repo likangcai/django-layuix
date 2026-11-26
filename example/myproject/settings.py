@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : settings.py
+# -----------------------------
 """
 Django settings for example project using django-layuix
 展示 django-layuix 完整功能的示例配置

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : theme_generator.py
+# -----------------------------
 """
 Theme CSS Generator
 动态生成主题CSS文件

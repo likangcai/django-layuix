@@ -1,50 +1,56 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : urls.py
+# -----------------------------
 from django.urls import path
 from . import data_admin_views, dictionary_views, permission_catalog_views, views
 
 urlpatterns = [
-    # User info & menus
+    # 用户信息与菜单
     path('userinfo/', views.user_info, name='rbac_user_info'),
 
-    # System info
+    # 系统信息
     path('system/info/', views.system_info, name='rbac_system_info'),
     path('system/info/stream/', views.system_info_stream, name='rbac_system_info_stream'),  # SSE流式推送
     path('system/info/stream-ticket/', views.system_info_stream_ticket, name='rbac_system_info_stream_ticket'),
     path('system/public-config/', views.public_config, name='rbac_public_config'),         # 公开配置(无需登录)
     path('system/config/', views.system_config, name='rbac_system_config'),                # 需要登录
 
-    # Profile
+    # 个人中心
     path('profile/', views.profile_update, name='rbac_profile_update'),
     path('profile/password/', views.profile_password, name='rbac_profile_password'),
     path('profile/theme/', views.profile_theme, name='rbac_profile_theme'),
     path('profile/avatar/', views.profile_avatar, name='rbac_profile_avatar'),
     path('available-themes/', views.available_themes, name='rbac_available_themes'),
 
-    # Upload
+    # 文件上传
     path('upload/image/', views.upload_image, name='rbac_upload_image'),
 
-    # Language
+    # 语言
     path('set-language/', views.set_language, name='rbac_set_language'),
 
-    # Register
+    # 注册
     path('register/', views.register, name='rbac_register'),
 
-    # Login (CSRF exempt fallback)
+    # 登录（CSRF 豁免回退）
     path('login/', views.api_login, name='rbac_api_login'),
 
-    # Logout
+    # 登出
     path('logout/', views.logout, name='rbac_logout'),
 
-    # Stats
+    # 统计
     path('stats/', views.stats_data, name='rbac_stats_data'),
 
-    # Menu CRUD
+    # 菜单 CRUD
     path('menus/tree/', views.menu_tree, name='rbac_menu_tree'),
     path('menus/frontend/', views.frontend_menu_tree, name='rbac_frontend_menu_tree'),
     path('menus/create/', views.menu_create, name='rbac_menu_create'),
     path('menus/<int:pk>/', views.menu_detail, name='rbac_menu_detail'),
     path('menus/<int:pk>/generate-permissions/', views.menu_generate_permissions, name='rbac_menu_generate_permissions'),
 
-    # Role CRUD
+    # 角色 CRUD
     path('roles/', views.role_list, name='rbac_role_list'),
     path('roles/create/', views.role_create, name='rbac_role_create'),
     path('roles/<int:pk>/effective_permissions/', views.role_effective_permissions, name='rbac_role_effective_permissions'),
@@ -53,7 +59,7 @@ urlpatterns = [
     path('roles/<int:pk>/delete/', views.role_detail, name='rbac_role_delete'),
     path('roles/<int:pk>/copy/', views.role_copy, name='rbac_role_copy'),
 
-    # User CRUD
+    # 用户 CRUD
     path('users/', views.user_list, name='rbac_user_list'),
     path('users/org-options/', views.user_org_options, name='rbac_user_org_options'),
     path('users/batch-delete/', views.user_batch_delete, name='rbac_user_batch_delete'),
@@ -65,11 +71,11 @@ urlpatterns = [
     path('users/<int:pk>/position-assignments/', views.user_position_assignments, name='rbac_user_position_assignments'),
     path('position-assignments/<int:pk>/end/', views.end_position_assignment, name='rbac_end_position_assignment'),
 
-    # Plugin registry
+    # 插件注册
     path('plugins/manifest/', views.plugin_manifest, name='rbac_plugin_manifest'),
     path('plugins/', views.plugin_list, name='rbac_plugin_list'),
 
-    # 1.4.2 ABAC and scope nodes
+    # 1.4.2 ABAC 与数据范围节点
     path('scope-nodes/', views.scope_node_list, name='rbac_scope_node_list'),
     path('scope-nodes/<int:pk>/', views.scope_node_detail, name='rbac_scope_node_detail'),
     path('abac-policies/', views.abac_policy_list, name='rbac_abac_policy_list'),
@@ -77,12 +83,12 @@ urlpatterns = [
     path('abac-check/', views.abac_check, name='rbac_abac_check'),
     path('frontend/permissions/', views.frontend_permissions, name='rbac_frontend_permissions'),
 
-    # 1.4.1 SoD compatibility endpoints
+    # 1.4.1 SoD 兼容接口
     path('sod-constraints/check/', views.sod_constraint_check, name='rbac_sod_constraint_check'),
     path('sod-constraints/', views.sod_constraint_list, name='rbac_sod_constraint_list'),
     path('sod-constraints/<int:pk>/', views.sod_constraint_detail, name='rbac_sod_constraint_detail'),
 
-    # RBAC3 / RBAC4 constraints & active roles
+    # RBAC3 / RBAC4 约束与激活角色
     path('constraints/', views.constraint_list, name='rbac_constraint_list'),
     path('constraints/mutex/', views.mutex_create, name='rbac_mutex_create'),
     path('constraints/mutex/<int:pk>/', views.mutex_delete, name='rbac_mutex_delete'),
@@ -90,7 +96,7 @@ urlpatterns = [
     path('constraints/prerequisite/<int:pk>/', views.prerequisite_delete, name='rbac_prerequisite_delete'),
     path('active-roles/', views.active_roles, name='rbac_active_roles'),
 
-    # Data dictionary
+    # 数据字典
     path('dictionaries/', dictionary_views.dictionary_list, name='rbac_dictionary_list'),
     path('dictionaries/create/', dictionary_views.dictionary_create, name='rbac_dictionary_create'),
     path('dictionaries/options/<str:code>/', dictionary_views.dictionary_options, name='rbac_dictionary_options'),
@@ -99,7 +105,7 @@ urlpatterns = [
     path('dictionaries/<int:pk>/', dictionary_views.dictionary_detail, name='rbac_dictionary_detail'),
     path('dictionary-items/<int:pk>/', dictionary_views.dictionary_item_detail, name='rbac_dictionary_item_detail'),
 
-    # Department / position / region / member level
+    # 部门 / 岗位 / 地区 / 会员等级
     path('departments/', data_admin_views.department_list, name='rbac_department_list'),
     path('departments/create/', data_admin_views.department_create, name='rbac_department_create'),
     path('departments/<int:pk>/', data_admin_views.department_detail, name='rbac_department_detail'),
@@ -116,16 +122,16 @@ urlpatterns = [
     path('member-levels/create/', data_admin_views.member_level_create, name='rbac_member_level_create'),
     path('member-levels/<int:pk>/', data_admin_views.member_level_detail, name='rbac_member_level_detail'),
 
-    # Generic data import/export and batch operations
+    # 通用数据导入导出与批量操作
     path('data-export/', data_admin_views.data_export, name='rbac_data_export'),
     path('data-import/', data_admin_views.data_import, name='rbac_data_import'),
     path('data-batch-delete/', data_admin_views.data_batch_delete, name='rbac_data_batch_delete'),
     path('data-batch-status/', data_admin_views.data_batch_status, name='rbac_data_batch_status'),
 
-    # Operation Log
+    # 操作日志
     path('logs/', views.log_list, name='rbac_log_list'),
 
-    # System Config CRUD
+    # 系统配置 CRUD
     path('configs/', views.config_list, name='rbac_config_list'),
     path('configs/create/', views.config_create, name='rbac_config_create'),
     path('configs/<int:pk>/update/', views.config_update, name='rbac_config_update'),

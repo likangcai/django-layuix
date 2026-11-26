@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : middleware.py
+# -----------------------------
 """
 OperationLogMiddleware - 自动记录 API 操作日志
 支持通过 Django settings 配置需要记录的路径前缀

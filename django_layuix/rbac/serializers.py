@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : serializers.py
+# -----------------------------
 """Field-whitelist serializer for business API responses."""
 import json
 from datetime import date, datetime, time

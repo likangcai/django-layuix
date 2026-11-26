@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : views_api.py
+# -----------------------------
 from django.http import JsonResponse
 
 from django_layuix.rbac.abac import filter_fields, filter_queryset

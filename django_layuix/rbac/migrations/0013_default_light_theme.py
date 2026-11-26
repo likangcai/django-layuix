@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : 0013_default_light_theme.py
+# -----------------------------
 from django.db import migrations, models
 
 

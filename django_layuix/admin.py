@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : admin.py
+# -----------------------------
 """
 自定义 Django Admin Site
 用于传递 LAYUI_CONFIG 到模板上下文

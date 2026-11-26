@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : apps.py
+# -----------------------------
 from django.apps import AppConfig
 from django.db.models.signals import post_migrate
 

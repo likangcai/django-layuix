@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : update_regions_from_mca.py
+# -----------------------------
 """Fetch official province/city/county data from the MCA public endpoint.
 
 Usage:

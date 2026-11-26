@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : 0003_rbac4_extensions.py
+# -----------------------------
 """RBAC4 extensions: permission-level mutex and strategy defaults."""
 from django.db import migrations, models
 

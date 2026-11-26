@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : init_demo_data.py
+# -----------------------------
 """
 初始化演示数据
 用法: python manage.py init_demo_data

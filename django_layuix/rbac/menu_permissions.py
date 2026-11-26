@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : menu_permissions.py
+# -----------------------------
 """Stable permission codes assigned to built-in menus.
 
 Read-only management APIs use these codes so authorization follows role/menu

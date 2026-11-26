@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : plugins.py
+# -----------------------------
 """Third-party plugin registry: discovery, validation, persistence and hooks."""
 import importlib
 import logging
@@ -174,8 +179,8 @@ def register_plugin(key, name, version='1.0.0', description='',
     desired_active = (
         bool(getattr(existing, 'desired_active', True)) if existing else bool(is_active)
     )
-    # Without persisted state, fail closed: never report a plugin as active or
-    # trigger lifecycle hooks based on declaration alone.
+    # 没有持久化状态时默认拒绝：不得仅凭声明将插件报告为启用，也不得
+    # 仅凭声明触发生命周期钩子。
     effective_active = desired_active and not errors and not db_error
 
     data = {

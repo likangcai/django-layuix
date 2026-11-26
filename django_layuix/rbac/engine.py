@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : engine.py
+# -----------------------------
 """
 RBAC3 permission engine.
 
@@ -52,7 +57,7 @@ def get_assigned_role_ids(user):
     try:
         return set(user.roles.filter(status=True).values_list('id', flat=True))
     except (AttributeError, ValueError):
-        # Unsaved user instance or custom user model without roles
+        # 未保存的用户实例或没有 roles 字段的自定义用户模型
         return set()
 
 
@@ -123,10 +128,10 @@ def get_active_role_ids(user):
         DSD_STRATEGY_KEY, 'greedy', 'LAYUI_RBAC_DSD_STRATEGY'
     )).lower()
     if strategy == 'explicit':
-        # Explicit mode never auto-activates a conflicting set; user must choose.
+        # explicit 模式不会自动激活冲突角色集，必须由用户选择。
         return {min(assigned)}
 
-    # Greedy mode: keep roles in stable order, skip DSD conflicts.
+    # greedy 模式：保持角色稳定顺序，跳过 DSD 冲突。
     groups = _active_mutex_groups('dsd')
     selected = set()
     for role_id in sorted(assigned):

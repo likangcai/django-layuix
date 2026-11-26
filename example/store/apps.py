@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : apps.py
+# -----------------------------
 from django.apps import AppConfig
 from django.db.models.signals import post_migrate
 
@@ -58,7 +64,7 @@ class StoreConfig(AppConfig):
                     name_en=name_en, name_zh_hans=name_zh_hans,
                 )
         except Exception as exc:
-            # A migrate of an unrelated app can fire before RBAC tables exist.
+            # 无关应用的迁移可能在 RBAC 表创建前触发。
             print('[StoreConfig] Menu registration skipped: %s' % exc)
 
     def _register_store_api_urls(self):

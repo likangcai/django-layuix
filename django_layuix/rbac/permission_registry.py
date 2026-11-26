@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : permission_registry.py
+# -----------------------------
 """Central permission catalog for built-in pages, buttons and fields.
 
 A permission is usable only after it is registered as an active ``Menu`` row
@@ -233,7 +238,7 @@ def register_page_permissions():
         try:
             menu.save(update_fields=['catalog_key'])
         except IntegrityError:
-            # Keep legacy duplicate rows readable; the first row owns the key.
+            # 保留历史重复记录可读；第一条记录持有唯一键。
             continue
     admin_role = Role.objects.filter(code='admin').first()
     if admin_role:

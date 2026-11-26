@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : models.py
+# -----------------------------
 """
 django-layuix Ops Models
 Server management for SSH connections
@@ -42,7 +47,7 @@ class Server(models.Model):
             if self.auth_type == 'key' and self.private_key:
                 import io
                 key_file = io.StringIO(self.private_key)
-                # Try different key types
+                # 尝试不同的键类型
                 pkey = None
                 for key_cls in [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]:
                     try:

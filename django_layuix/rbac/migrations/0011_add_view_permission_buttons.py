@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : 0011_add_view_permission_buttons.py
+# -----------------------------
 from django.db import migrations
 
 

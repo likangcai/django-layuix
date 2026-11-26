@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : drf.py
+# -----------------------------
 """Optional DRF adapter. Import is safe to skip when DRF is not installed."""
 try:
     from rest_framework.authentication import BaseAuthentication

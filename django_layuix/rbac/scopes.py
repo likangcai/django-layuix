@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : scopes.py
+# -----------------------------
 """1.4.1 optional data-scope layer.
 
 No database query is filtered unless a business model explicitly declares

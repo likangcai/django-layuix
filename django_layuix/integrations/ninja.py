@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : ninja.py
+# -----------------------------
 """Optional Django Ninja adapter. Import is safe to skip when Ninja is absent."""
 import inspect
 from functools import wraps

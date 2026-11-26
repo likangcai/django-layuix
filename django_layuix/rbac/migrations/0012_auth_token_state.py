@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : 0012_auth_token_state.py
+# -----------------------------
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion

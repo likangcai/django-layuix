@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : init_permission_demo_data.py
+# -----------------------------
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 

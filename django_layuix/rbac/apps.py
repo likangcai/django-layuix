@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : apps.py
+# -----------------------------
 import os
 from django.apps import AppConfig
 
@@ -39,7 +45,7 @@ class RbacConfig(AppConfig):
         """Ensure 'django_layuix' is in INSTALLED_APPS for templatetags and static files"""
         from django.conf import settings
 
-        # Settings may use tuples; normalize to mutable lists before patching.
+        # 配置可能使用元组；修改前先归一化为可变列表。
         for attr in ('INSTALLED_APPS', 'MIDDLEWARE'):
             try:
                 current = getattr(settings, attr)
@@ -52,23 +58,23 @@ class RbacConfig(AppConfig):
             settings.INSTALLED_APPS.insert(0, 'django_layuix')
 
         # Only provide a Chinese default when Django's built-in default is still in place.
-        # Explicitly configured languages (including English) are preserved.
+        # 已显式配置的语言（包括英文）保持不变。
         if getattr(settings, 'LANGUAGE_CODE', 'en-us') == 'en-us':
             settings.LANGUAGE_CODE = 'zh-hans'
         settings.USE_I18N = True
 
-        # Fix CSRF cookie for iframe/embedded environments
+        # 修复 iframe/嵌入环境下的 CSRF Cookie
         # Keep Django's default cookie behavior for normal HTTP deployments.
-        # Cross-domain API clients should use Bearer Token instead of session cookies.
+        # 跨域 API 客户端应使用 Bearer Token，而不是会话 Cookie。
         if getattr(settings, 'CSRF_COOKIE_SAMESITE', 'Lax') != 'None':
             settings.CSRF_COOKIE_SAMESITE = None
         if getattr(settings, 'SESSION_COOKIE_SAMESITE', 'Lax') != 'None':
             settings.SESSION_COOKIE_SAMESITE = None
 
-        # Ensure LocaleMiddleware is present for i18n support
+        # 确保已加载 LocaleMiddleware 以支持国际化
         locale_middleware = 'django.middleware.locale.LocaleMiddleware'
         if locale_middleware not in settings.MIDDLEWARE:
-            # Insert after SessionMiddleware, before CommonMiddleware
+            # 插入到 SessionMiddleware 之后、CommonMiddleware 之前
             session_idx = None
             for i, m in enumerate(settings.MIDDLEWARE):
                 if 'SessionMiddleware' in m:
@@ -79,18 +85,18 @@ class RbacConfig(AppConfig):
             else:
                 settings.MIDDLEWARE.insert(0, locale_middleware)
 
-        # Ensure CsrfViewMiddleware is after LocaleMiddleware
+        # 确保 CsrfViewMiddleware 位于 LocaleMiddleware 之后
         csrf_middleware = 'django.middleware.csrf.CsrfViewMiddleware'
         if csrf_middleware in settings.MIDDLEWARE:
             settings.MIDDLEWARE.remove(csrf_middleware)
-            # Insert after LocaleMiddleware
+            # 插入到 LocaleMiddleware 之后
             locale_idx = settings.MIDDLEWARE.index(locale_middleware) if locale_middleware in settings.MIDDLEWARE else 0
             settings.MIDDLEWARE.insert(locale_idx + 1, csrf_middleware)
 
-        # Manually register templatetags (too late for auto-discovery)
+        # 手动注册模板标签（已错过自动发现时机）
         self._register_templatetag_library('django_layuix.templatetags.layui_tags', 'layui_tags')
 
-        # Manually register static files finder (too late for auto-discovery)
+        # 手动注册静态文件查找器（已错过自动发现时机）
         self._register_static_files()
 
     def _register_templatetag_library(self, module_path, tag_name):
@@ -102,7 +108,7 @@ class RbacConfig(AppConfig):
             for engine in _engines.all():
                 if isinstance(engine, DjangoTemplates):
                     engine.engine.libraries[tag_name] = module_path
-                    # Also register in template_libraries (Django pre-loads these at init)
+                    # 同时注册到 template_libraries（Django 初始化时会预加载）
                     if hasattr(engine.engine, 'template_libraries'):
                         engine.engine.template_libraries[tag_name] = import_library(module_path)
         except Exception:
@@ -117,7 +123,7 @@ class RbacConfig(AppConfig):
             if not os.path.isdir(static_dir):
                 return
 
-            # Method 1: Add to STATICFILES_DIRS
+            # 方式一：添加到 STATICFILES_DIRS
             from django.conf import settings
             staticfiles_dirs = list(getattr(settings, 'STATICFILES_DIRS', []))
             already_in_dirs = any(static_dir in d for d in staticfiles_dirs if isinstance(d, str))
@@ -125,7 +131,7 @@ class RbacConfig(AppConfig):
                 staticfiles_dirs.insert(0, static_dir)
                 settings.STATICFILES_DIRS = staticfiles_dirs
 
-            # Method 2: Patch AppDirectoriesFinder instances
+            # 方式二：修补 AppDirectoriesFinder 实例
             from django.contrib.staticfiles.finders import get_finder
             finder = get_finder('django.contrib.staticfiles.finders.AppDirectoriesFinder')
             if hasattr(finder, 'storages') and 'django_layuix' not in finder.storages:
@@ -145,13 +151,13 @@ class RbacConfig(AppConfig):
         if not os.path.isdir(templates_dir):
             return
 
-        # Add to TEMPLATES DIRS setting
+        # 添加到 TEMPLATES 的 DIRS 配置
         if settings.TEMPLATES:
             dirs = list(settings.TEMPLATES[0].get('DIRS', []))
             if templates_dir not in dirs:
                 settings.TEMPLATES[0]['DIRS'] = dirs + [templates_dir]
 
-        # Patch engine.dirs to ensure filesystem loader uses our templates dir
+        # 修补 engine.dirs，确保文件系统加载器使用本项目的模板目录
         try:
             from django.template import engines
             for engine in engines.all():
@@ -192,7 +198,7 @@ class RbacConfig(AppConfig):
 
         middleware_path = 'django_layuix.rbac.middleware.OperationLogMiddleware'
         if middleware_path not in settings.MIDDLEWARE:
-            # Insert after the last middleware (at the end of the list)
+            # 插入到最后一个中间件之后（列表末尾）
             settings.MIDDLEWARE.append(middleware_path)
 
     def _register_rbac_session_middleware(self):
@@ -214,7 +220,7 @@ class RbacConfig(AppConfig):
         """Ensure default system configs exist in database"""
         try:
             from .models import SystemConfig
-            # Check if table exists first to avoid errors during initial migrations
+            # 首次迁移时先检查表是否存在，避免报错
             from django.db import connection
             table_exists = 'sys_config' in connection.introspection.table_names()
             if not table_exists:

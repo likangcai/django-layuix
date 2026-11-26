@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : models.py
+# -----------------------------
 """
 store/models.py - 商品管理示例模型
 演示 django-layuix 主题在普通 Django Admin 模型上的效果
