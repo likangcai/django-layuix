@@ -2093,6 +2093,14 @@ a:hover {
     color: var(--text-primary) !important;
 }
 
+/* 复选框列宽 44px，默认 15px 左右内边距会挤出省略号 */
+.layui-table-cell.laytable-cell-checkbox,
+.layui-table-cell.layui-table-cell-checkbox {
+    padding: 6px 11px;
+    overflow: visible;
+    text-overflow: clip;
+}
+
 [data-theme-mode="dark"] .layui-table-cell-c {
     background: var(--bg-secondary) !important;
     border-color: var(--border-color) !important;
