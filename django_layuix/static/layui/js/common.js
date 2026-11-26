@@ -122,11 +122,12 @@ if (typeof window !== 'undefined') {
 
 // layui 的 form 模块没有 off()，这里用标志位保证同一个事件处理器只注册一次。
 function bindFormOnce(filter, callback) {
-    if (typeof form === 'undefined' || typeof form.on !== 'function') return;
+    var api = _getLayui();
+    if (!api || !api.form || typeof api.form.on !== 'function') return;
     var key = '__layuiFormBound_' + filter.replace(/[^a-zA-Z0-9]/g, '_');
     if (window[key]) return;
     window[key] = true;
-    form.on(filter, callback);
+    api.form.on(filter, callback);
 }
 
 /**
