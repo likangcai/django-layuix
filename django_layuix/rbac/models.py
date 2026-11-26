@@ -19,6 +19,10 @@ class Menu(models.Model):
     component = models.CharField(max_length=200, blank=True, default='', verbose_name='组件路径')
     menu_type = models.IntegerField(choices=((1, '目录'), (2, '菜单'), (3, '按钮')), default=2, verbose_name='类型')
     permission = models.CharField(max_length=100, blank=True, default='', verbose_name='权限标识')
+    catalog_key = models.CharField(
+        max_length=200, null=True, blank=True, unique=True,
+        editable=False, verbose_name='权限目录唯一键',
+    )
     plugin_key = models.CharField(max_length=100, blank=True, default='', verbose_name='所属插件')
     sort = models.IntegerField(default=0, verbose_name='排序')
     visible = models.BooleanField(default=True, verbose_name='是否显示')
@@ -45,6 +49,16 @@ class Menu(models.Model):
             'en': self.name_en or self.name,
         }
         return lang_map.get(lang_code, self.name)
+
+    def save(self, *args, **kwargs):
+        if self.plugin_key == 'permission_catalog' and self.permission:
+            self.catalog_key = 'permission_catalog:%s' % self.permission
+        else:
+            self.catalog_key = None
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None:
+            kwargs['update_fields'] = set(update_fields) | {'catalog_key'}
+        super().save(*args, **kwargs)
 
 
 class Role(models.Model):
@@ -254,7 +268,10 @@ class UserProfile(AbstractUser):
     )
     position = models.ForeignKey(
         'Position', null=True, blank=True, on_delete=models.SET_NULL,
-        related_name='users', verbose_name='岗位',
+        related_name='users', verbose_name='主岗',
+    )
+    positions = models.ManyToManyField(
+        'Position', blank=True, related_name='multi_users', verbose_name='兼任岗位',
     )
     
     # 主题配置 - 深色/浅色双模式

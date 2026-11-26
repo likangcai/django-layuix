@@ -18,6 +18,7 @@ API_FIELD_REGISTRY = {
         'id', 'username', 'nickname', 'phone', 'email', 'avatar',
         'is_active', 'is_superuser', 'is_staff', 'is_tester', 'roles',
         'department_id', 'department_name', 'position_id', 'position_name',
+        'position_ids', 'position_names',
         'last_login', 'date_joined',
     ),
     'rbac.OperationLog': (

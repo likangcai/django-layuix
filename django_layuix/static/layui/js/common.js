@@ -925,6 +925,7 @@ var PAGE_PERMISSION_MAP = {
     '/static/layui/pages/log.html': 'log:view',
     '/static/layui/pages/config.html': 'config:view',
     '/static/layui/pages/dict.html': 'dict:view',
+    '/static/layui/pages/permission.html': 'permission:view',
     '/static/layui/pages/dept.html': 'dept:view',
     '/static/layui/pages/position.html': 'position:view',
     '/static/layui/pages/region.html': 'region:view',

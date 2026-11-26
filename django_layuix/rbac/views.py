@@ -1464,6 +1464,8 @@ def user_list(request):
     users = User.objects.all()
     if hasattr(User, 'department'):
         users = users.select_related('department', 'position')
+    if hasattr(User, 'positions'):
+        users = users.prefetch_related('positions')
     users = users.order_by('-id')
 
     # keyword 过滤（username/nickname/email/phone 模糊搜索）
@@ -1503,6 +1505,10 @@ def user_list(request):
         roles = []
         if hasattr(u, 'roles'):
             roles = [{'id': r.id, 'name': r.name, 'code': r.code} for r in u.roles.all()]
+        user_positions = list(u.positions.all()) if hasattr(u, 'positions') else []
+        primary_position = getattr(u, 'position', None)
+        if primary_position and all(item.pk != primary_position.pk for item in user_positions):
+            user_positions.insert(0, primary_position)
         data.append({
             'id': u.id,
             'username': u.username,
@@ -1519,6 +1525,8 @@ def user_list(request):
             'department_name': getattr(getattr(u, 'department', None), 'name', ''),
             'position_id': getattr(u, 'position_id', None),
             'position_name': getattr(getattr(u, 'position', None), 'name', ''),
+            'position_ids': [item.pk for item in user_positions],
+            'position_names': [item.name for item in user_positions],
             'last_login': fmt_time(u.last_login),
             'date_joined': fmt_time(u.date_joined),
         })
@@ -1605,6 +1613,56 @@ def _apply_user_organization(user, body):
             if position is None:
                 raise ValueError('岗位不存在或已停用')
             user.position = position
+        if hasattr(user.__class__, 'positions'):
+            user._pending_position_ids = [user.position_id] if user.position_id else []
+
+    if 'position_ids' in body and hasattr(user.__class__, 'positions'):
+        raw_ids = body.get('position_ids')
+        if raw_ids is None:
+            raw_ids = []
+        if not isinstance(raw_ids, (list, tuple)):
+            raise ValueError('岗位列表格式不正确')
+        try:
+            position_ids = [int(item) for item in raw_ids if item not in (None, '')]
+        except (TypeError, ValueError):
+            raise ValueError('岗位 ID 必须是整数')
+        if len(position_ids) != len(set(position_ids)):
+            raise ValueError('岗位不能重复选择')
+        by_id = {
+            position.pk: position
+            for position in Position.objects.filter(pk__in=position_ids, status=True)
+        }
+        if len(by_id) != len(position_ids):
+            raise ValueError('岗位不存在或已停用')
+        positions = [by_id[pk] for pk in position_ids]
+
+        primary_from_body = 'position_id' in body
+        if positions:
+            if user.position_id and (
+                primary_from_body or user.position_id in position_ids
+            ):
+                if all(item.pk != user.position_id for item in positions):
+                    positions.insert(0, user.position)
+            else:
+                user.position = positions[0]
+        elif primary_from_body and user.position_id:
+            positions = [user.position]
+        else:
+            user.position = None
+        user._pending_positions = positions
+
+
+def _sync_user_positions(user):
+    if not hasattr(user, 'positions'):
+        return
+    pending = getattr(user, '_pending_positions', None)
+    if pending is None:
+        pending_ids = getattr(user, '_pending_position_ids', None)
+        if pending_ids is None:
+            return
+        from .models import Position
+        pending = list(Position.objects.filter(pk__in=pending_ids))
+    user.positions.set(pending)
 
 
 @csrf_exempt
@@ -1677,6 +1735,7 @@ def user_create(request):
 
     user.set_password(password)
     user.save()
+    _sync_user_positions(user)
 
     if final_role_ids is not None:
         from .models import Role
@@ -1731,6 +1790,7 @@ def user_update(request, pk):
             return error_response(e.message, 400)
 
     user.save()
+    _sync_user_positions(user)
 
     if final_role_ids is not None:
         from .models import Role

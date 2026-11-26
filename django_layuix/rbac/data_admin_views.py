@@ -349,7 +349,9 @@ def region_list(request):
     """GET /api/rbac/regions/ - list regions.
 
     ``_region_payload`` is the explicit response whitelist for this large
-    collection; applying the generic decorator would serialize 3000+ rows twice.
+    collection; applying the generic decorator would serialize 40k+ rows twice.
+    ``page`` enables server-side paging; omitting it keeps the legacy full-list
+    response for exports and existing integrations.
     """
     queryset = Region.objects.select_related('parent')
     keyword = str(request.GET.get('keyword') or '').strip()
@@ -361,8 +363,79 @@ def region_list(request):
     status = request.GET.get('status')
     if status not in (None, ''):
         queryset = queryset.filter(status=_as_bool(status))
-    rows = [_region_payload(row) for row in queryset.order_by('sort', 'id')]
-    return success_response({'list': rows, 'total': len(rows)})
+    max_level = request.GET.get('max_level')
+    if max_level not in (None, ''):
+        try:
+            queryset = queryset.filter(level__lte=int(max_level))
+        except (TypeError, ValueError):
+            return error_response('max_level 必须是整数', 400)
+
+    node_id = request.GET.get('node_id')
+    if node_id not in (None, ''):
+        try:
+            node = Region.objects.get(pk=int(node_id))
+        except (TypeError, ValueError, Region.DoesNotExist):
+            return error_response('地区节点不存在', 400)
+        prefix_len = {1: 2, 2: 4, 3: 6}.get(node.level, len(node.code))
+        queryset = queryset.filter(code__startswith=node.code[:prefix_len])
+
+    queryset = queryset.order_by('sort', 'id')
+    page = request.GET.get('page')
+    if page in (None, ''):
+        rows = [_region_payload(row) for row in queryset]
+        return success_response({'list': rows, 'total': len(rows)})
+
+    try:
+        page = max(1, int(page))
+        page_size = min(200, max(10, int(request.GET.get('page_size') or 20)))
+    except (TypeError, ValueError):
+        return error_response('分页参数必须是整数', 400)
+    total = queryset.count()
+    start = (page - 1) * page_size
+    rows = [_region_payload(row) for row in queryset[start:start + page_size]]
+    return success_response({
+        'list': rows, 'total': total, 'page': page, 'page_size': page_size,
+    })
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('region:view')
+def region_tree(request):
+    """GET /api/rbac/regions/tree/ - province/city plus municipality districts."""
+    provinces = list(Region.objects.filter(level=1).order_by('sort', 'id'))
+    province_ids = [row.pk for row in provinces]
+    cities = list(Region.objects.filter(
+        level=2, parent_id__in=province_ids
+    ).order_by('sort', 'id'))
+    city_ids = [row.pk for row in cities]
+    municipality_districts = list(Region.objects.filter(
+        level=3, parent_id__in=province_ids
+    ).order_by('sort', 'id'))
+    district_parent_ids = {row.parent_id for row in municipality_districts}
+
+    children = {province.pk: [] for province in provinces}
+    for city in cities:
+        children.setdefault(city.parent_id, []).append(city)
+    for district in municipality_districts:
+        children.setdefault(district.parent_id, []).append(district)
+
+    def node(row):
+        return {
+            'id': row.pk, 'name': row.name, 'code': row.code,
+            'level': row.level, 'status': row.status,
+            'children': [node(child) for child in children.get(row.pk, [])],
+        }
+
+    roots = [
+        node(province) for province in provinces
+        if children.get(province.pk) or province.pk not in district_parent_ids
+    ]
+    return success_response({
+        'list': roots,
+        'total': len(provinces) + len(cities) + len(municipality_districts),
+        'city_count': len(city_ids),
+    })
 
 
 @csrf_exempt

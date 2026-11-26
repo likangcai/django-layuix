@@ -1,5 +1,5 @@
 from django.urls import path
-from . import data_admin_views, dictionary_views, views
+from . import data_admin_views, dictionary_views, permission_catalog_views, views
 
 urlpatterns = [
     # User info & menus
@@ -104,7 +104,10 @@ urlpatterns = [
     path('positions/', data_admin_views.position_list, name='rbac_position_list'),
     path('positions/create/', data_admin_views.position_create, name='rbac_position_create'),
     path('positions/<int:pk>/', data_admin_views.position_detail, name='rbac_position_detail'),
+    path('permission-catalog/', permission_catalog_views.permission_catalog_list, name='rbac_permission_catalog_list'),
+    path('permission-catalog/<int:pk>/status/', permission_catalog_views.permission_catalog_set_status, name='rbac_permission_catalog_status'),
     path('regions/', data_admin_views.region_list, name='rbac_region_list'),
+    path('regions/tree/', data_admin_views.region_tree, name='rbac_region_tree'),
     path('regions/create/', data_admin_views.region_create, name='rbac_region_create'),
     path('regions/<int:pk>/', data_admin_views.region_detail, name='rbac_region_detail'),
     path('member-levels/', data_admin_views.member_level_list, name='rbac_member_level_list'),

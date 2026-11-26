@@ -61,7 +61,8 @@ class Command(BaseCommand):
             self._init_menus(force)
 
         self._ensure_data_menus()
-            
+        self._ensure_permission_menu()
+
         # 无论菜单是否已存在，都继续执行角色和配置的初始化
         # 这确保了即使其他 app 抢跑了菜单注册，角色和配置也能正确创建
         from django_layuix.rbac.permission_registry import register_page_permissions
@@ -208,6 +209,33 @@ class Command(BaseCommand):
             admin_role.menus.add(group)
         if created_any or group_created:
             self.stdout.write(self.style.SUCCESS('  创建菜单: 数据管理 / 部门 / 岗位 / 地区 / 会员等级'))
+
+    def _ensure_permission_menu(self):
+        parent = Menu.objects.filter(name='权限管理').first()
+        if not parent:
+            return
+        menu, created = Menu.objects.get_or_create(
+            name='权限总览',
+            defaults={
+                'name_en': 'Permission Catalog',
+                'name_zh_hans': '权限总览',
+                'icon': 'layui-icon-vercode',
+                'path': '/permission/catalog',
+                'permission': 'permission:view',
+                'menu_type': 2,
+                'sort': 7,
+                'parent': parent,
+                'status': True,
+                'visible': True,
+                'backend_visible': True,
+                'frontend_visible': True,
+            },
+        )
+        if created:
+            admin_role = Role.objects.filter(code='admin').first()
+            if admin_role:
+                admin_role.menus.add(menu)
+            self.stdout.write(self.style.SUCCESS('  创建菜单: 权限目录'))
 
     def _init_menus(self, force=False):
         """初始化菜单数据"""

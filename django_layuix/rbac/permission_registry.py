@@ -16,6 +16,7 @@ PAGE_PERMISSIONS = {
     '/static/layui/pages/log.html': 'log:view',
     '/static/layui/pages/config.html': 'config:view',
     '/static/layui/pages/dict.html': 'dict:view',
+    '/static/layui/pages/permission.html': 'permission:view',
     '/static/layui/pages/dept.html': 'dept:view',
     '/static/layui/pages/position.html': 'position:view',
     '/static/layui/pages/region.html': 'region:view',
@@ -209,6 +210,16 @@ def register_page_permissions():
     Menu.objects.filter(parent_id__in=[parent.pk, button_parent.pk]).update(
         plugin_key='permission_catalog'
     )
+    from django.db import IntegrityError
+
+    for menu in Menu.objects.filter(
+        plugin_key='permission_catalog', permission__gt='', catalog_key__isnull=True
+    ).order_by('id'):
+        try:
+            menu.save(update_fields=['catalog_key'])
+        except IntegrityError:
+            # Keep legacy duplicate rows readable; the first row owns the key.
+            continue
     admin_role = Role.objects.filter(code='admin').first()
     if admin_role:
         admin_role.menus.add(parent)

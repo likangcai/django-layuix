@@ -1612,6 +1612,12 @@ class RbacFinalAuditTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         city_id = response.json()['data']['id']
+        page = self.client.get('/admin/api/rbac/regions/?page=1&page_size=10').json()['data']
+        self.assertEqual(len(page['list']), min(10, page['total']))
+        self.assertEqual(page['page'], 1)
+        tree = self.client.get('/admin/api/rbac/regions/tree/').json()['data']
+        self.assertGreaterEqual(tree['total'], 2)
+        self.assertTrue(any(node['id'] == province_id for node in tree['list']))
         self.assertEqual(
             self.client.delete('/admin/api/rbac/regions/%s/' % province_id).status_code,
             400,
@@ -1675,11 +1681,13 @@ class RbacFinalAuditTests(TestCase):
 
         department = Department.objects.create(name='研发部', code='user_dept')
         position = Position.objects.create(name='开发工程师', code='user_pos')
+        position2 = Position.objects.create(name='项目经理', code='user_pm')
         response = self.client.post(
             '/admin/api/rbac/users/create/',
             {
                 'username': 'org_user', 'password': 'pass12345',
                 'department_id': department.id, 'position_id': position.id,
+                'position_ids': [position.id, position2.id],
             },
             content_type='application/json',
         )
@@ -1687,6 +1695,8 @@ class RbacFinalAuditTests(TestCase):
         listed = self.client.get('/admin/api/rbac/users/?keyword=org_user').json()['data']['list']
         self.assertEqual(listed[0]['department_name'], '研发部')
         self.assertEqual(listed[0]['position_name'], '开发工程师')
+        self.assertEqual(set(listed[0]['position_ids']), {position.id, position2.id})
+        self.assertEqual(set(listed[0]['position_names']), {'开发工程师', '项目经理'})
 
         options = self.client.get('/admin/api/rbac/users/org-options/').json()['data']
         self.assertIn(department.id, [row['id'] for row in options['departments']])
@@ -1702,6 +1712,71 @@ class RbacFinalAuditTests(TestCase):
         listed = self.client.get('/admin/api/rbac/users/?keyword=org_user').json()['data']['list']
         self.assertEqual(listed[0]['department_name'], '')
         self.assertEqual(listed[0]['position_name'], '')
+        self.assertEqual(listed[0]['position_ids'], [])
+        self.assertEqual(listed[0]['position_names'], [])
+
+    def test_catalog_permission_code_has_database_unique_key(self):
+        from django.db import IntegrityError, transaction
+        from .models import Menu
+
+        Menu.objects.create(
+            name='唯一权限一', menu_type=3, permission='audit:unique',
+            plugin_key='permission_catalog',
+        )
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Menu.objects.create(
+                    name='唯一权限二', menu_type=3, permission='audit:unique',
+                    plugin_key='permission_catalog',
+                )
+        Menu.objects.create(name='业务节点一', menu_type=3, permission='audit:unique')
+        Menu.objects.create(name='业务节点二', menu_type=3, permission='audit:unique')
+
+    def test_permission_catalog_can_toggle_non_core_codes(self):
+        from .permission_registry import PAGE_PERMISSIONS, register_page_permissions
+
+        register_page_permissions()
+        self.assertIn('/static/layui/pages/permission.html', PAGE_PERMISSIONS)
+        listed = self.client.get('/admin/api/rbac/permission-catalog/').json()['data']
+        self.assertGreater(listed['total'], 10)
+        self.assertGreater(listed['page_count'], 1)
+        self.assertTrue(any(row['code'] == 'permission:view' for row in listed['list']))
+
+        protected = Menu.objects.get(plugin_key='permission_catalog', permission='permission:view')
+        response = self.client.post(
+            '/admin/api/rbac/permission-catalog/%s/status/' % protected.pk,
+            {'status': False}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+        target = Menu.objects.get(plugin_key='permission_catalog', permission='dict:view')
+        response = self.client.post(
+            '/admin/api/rbac/permission-catalog/%s/status/' % target.pk,
+            {'status': False}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        target.refresh_from_db()
+        self.assertFalse(target.status)
+        response = self.client.post(
+            '/admin/api/rbac/permission-catalog/%s/status/' % target.pk,
+            {'status': True}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        target.refresh_from_db()
+        self.assertTrue(target.status)
+
+    def test_region_seed_contains_street_level_data(self):
+        import json
+        from pathlib import Path
+
+        seed = Path(__file__).resolve().parent / 'data' / 'china_streets.json'
+        payload = json.loads(seed.read_text(encoding='utf-8'))
+        rows = payload['regions']
+        self.assertGreaterEqual(len(rows), 40000)
+        self.assertEqual(payload['max_level'], 4)
+        self.assertTrue(all(row['level'] == 4 for row in rows))
+        self.assertTrue(all(row['parent_code'] for row in rows))
+        self.assertIn('110101001', {row['code'] for row in rows[:500]})
 
     def test_region_seed_contains_full_province_city_county_data(self):
         import json
