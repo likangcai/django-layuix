@@ -53,6 +53,12 @@ fetch('/admin/api/rbac/userinfo/', {
 
 `?token=` 查询参数默认关闭。SSE 使用短时 `stream_ticket`：先调用 `/admin/api/rbac/system/info/stream-ticket/` 获取 60 秒票据，再用 `?stream_ticket=...` 建立 EventSource，避免把 JWT 写入 URL、浏览器历史或访问日志。
 
+后台自带前端的恢复策略：
+
+- 本地**没有** Token 但 Django Session 有效：写请求收到 401 后自动调用 `POST /admin/api/rbac/token/issue/` 换取新 Token 并重试一次，用于旧版本升级后的兼容。
+- 本地**已有** Token 但被拒绝：视为 Token 过期，先调用 `POST /admin/api/rbac/logout/` 清除 Session，再跳转登录页。
+- 两个恢复接口都受同源 Origin/Referer 校验，不属于公开接口。
+
 ## 4. 前端权限数据流
 
 1. 用 Token 调 `/admin/api/rbac/userinfo/` 获取 `permissions` 与后台 `menus`。

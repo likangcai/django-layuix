@@ -942,6 +942,22 @@ def logout(request):
 
 @csrf_exempt
 @api_login_required
+def api_token_issue(request):
+    """POST /api/rbac/token/issue/ - 已登录会话换取新 Token。
+
+    用于旧版本升级后浏览器没有本地 Token，或 Token 过期但 Session 仍有效的场景。
+    仍受同源 Origin/Referer 中间件保护，不对外公开。
+    """
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    from .token_auth import generate_token
+
+    token = generate_token(request.user, request=request)
+    return success_response({'token': token}, msg='Token 已刷新')
+
+
+@csrf_exempt
+@api_login_required
 @api_permission_required('dashboard:view')
 def stats_data(request):
     """获取仪表盘统计数据。"""
@@ -2059,6 +2075,58 @@ def user_update(request, pk):
         clear_active_roles(request)
 
     return success_response(msg='更新成功')
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:edit')
+def user_avatar_upload(request, pk):
+    """POST /api/rbac/users/<pk>/avatar/ - 管理员上传指定用户头像。"""
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+
+    from io import BytesIO
+    import secrets
+
+    from django.core.files.storage import default_storage
+    from django.utils import timezone
+    from PIL import Image, UnidentifiedImageError
+
+    User = _get_user_model()
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return error_response('用户不存在', 404)
+    if not hasattr(user, 'avatar'):
+        return error_response('当前用户模型不支持头像', 400)
+
+    avatar_file = request.FILES.get('avatar')
+    if not avatar_file:
+        return error_response('请选择头像文件', 400)
+    if avatar_file.size > 2 * 1024 * 1024:
+        return error_response('头像文件不能超过 2MB', 400)
+
+    format_map = {'JPEG': '.jpg', 'PNG': '.png', 'GIF': '.gif', 'WEBP': '.webp'}
+    try:
+        avatar_file.seek(0)
+        with Image.open(BytesIO(avatar_file.read())) as image:
+            image_format = (image.format or '').upper()
+            image.verify()
+    except (UnidentifiedImageError, OSError, ValueError):
+        return error_response('头像文件不是有效图片', 400)
+    ext = format_map.get(image_format)
+    if not ext:
+        return error_response('仅支持 JPG、PNG、GIF、WebP 格式', 400)
+
+    avatar_file.seek(0)
+    filename = 'avatar/%s_%s%s' % (
+        timezone.now().strftime('%Y%m%d%H%M%S'), secrets.token_hex(8), ext
+    )
+    if user.avatar:
+        user.avatar.delete(save=False)
+    user.avatar = default_storage.save(filename, avatar_file)
+    user.save(update_fields=['avatar'])
+    return success_response({'avatar': user.avatar_url}, msg='头像上传成功')
 
 
 @csrf_exempt

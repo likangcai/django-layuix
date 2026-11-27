@@ -2870,6 +2870,17 @@ textarea:focus-visible,
     border-top: 1px solid var(--card-border);
 }
 .layui-layer.layui-layer-admin .layui-dialog-actions .layui-btn { margin-left: 0; }
+.layui-layer.layui-layer-admin .layui-dialog-actions .layui-btn,
+.layui-layer.layui-layer-admin .menu-form-actions .layui-btn,
+.layui-layer.layui-layer-admin .role-form-actions .layui-btn {
+    height: 34px;
+    line-height: 32px;
+}
+.layui-btn.btn-submit {
+    height: 34px;
+    line-height: 32px;
+    border-radius: var(--button-radius);
+}
 
 /* 长表单弹窗需要清晰的滚动提示 */
 .layui-layer.layui-layer-admin .layui-layer-content[style*="max-height"] {

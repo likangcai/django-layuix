@@ -1078,6 +1078,57 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertIn('Token', response.json()['msg'])
 
+    def test_session_logout_without_token_clears_session(self):
+        client = Client()
+        client.force_login(self.admin)
+        response = client.post(
+            '/admin/api/rbac/logout/', {}, content_type='application/json',
+            HTTP_ORIGIN='http://testserver',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(client.get('/admin/api/rbac/userinfo/').status_code, 401)
+
+    def test_admin_can_upload_user_avatar(self):
+        from io import BytesIO
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        image = Image.new('RGB', (8, 8), (30, 120, 200))
+        buffer = BytesIO()
+        image.save(buffer, format='PNG')
+        target = get_user_model().objects.create_user(
+            username='avatar_target', password='pass12345'
+        )
+        upload = SimpleUploadedFile(
+            'avatar.png', buffer.getvalue(), content_type='image/png'
+        )
+        response = self.client.post(
+            '/admin/api/rbac/users/%s/avatar/' % target.pk,
+            {'avatar': upload}, format='multipart',
+        )
+        self.assertEqual(response.status_code, 200)
+        target.refresh_from_db()
+        self.assertIn('avatar', target.avatar.name)
+
+    def test_session_can_issue_token_for_recovery(self):
+        from .token_auth import verify_token
+
+        client = Client()
+        client.force_login(self.admin)
+        response = client.post(
+            '/admin/api/rbac/token/issue/', {}, content_type='application/json',
+            HTTP_ORIGIN='http://testserver',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(verify_token(response.json()['data']['token'])['valid'])
+
+        blocked = client.post(
+            '/admin/api/rbac/token/issue/', {}, content_type='application/json',
+            HTTP_ORIGIN='https://evil.example',
+        )
+        self.assertEqual(blocked.status_code, 403)
+
     def test_public_login_without_origin_is_allowed(self):
         client = Client()
         client.defaults.pop('HTTP_ORIGIN', None)

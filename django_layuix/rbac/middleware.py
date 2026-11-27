@@ -260,7 +260,8 @@ class ApiOriginGuardMiddleware:
             return self.get_response(request)
 
         public_write = self._is_public_api_path(request.path)
-        if getattr(settings, 'LAYUIX_REQUIRE_TOKEN_FOR_WRITES', True) and not public_write:
+        session_recovery = self._is_session_recovery_path(request.path)
+        if getattr(settings, 'LAYUIX_REQUIRE_TOKEN_FOR_WRITES', True) and not public_write and not session_recovery:
             if not self._has_header_token(request):
                 return JsonResponse({'code': 401, 'msg': 'Token required for write operations'}, status=401)
             if not self._is_valid_token_request(request):
@@ -299,6 +300,15 @@ class ApiOriginGuardMiddleware:
                 for prefix in prefixes
             ]
         return any(str(item) and path == str(item) for item in public_paths or [])
+
+    def _is_session_recovery_path(self, path):
+        """会话恢复相关写接口：允许无 Token，但仍受同源 Origin/Referer 校验。"""
+        prefixes = getattr(settings, 'LAYUIX_API_PREFIXES', ['/admin/api/'])
+        suffixes = ('/rbac/token/issue/', '/rbac/logout/')
+        return any(
+            any(str(prefix).rstrip('/') + suffix == path for suffix in suffixes)
+            for prefix in prefixes or []
+        )
 
     def _has_header_token(self, request):
         authorization = str(request.META.get('HTTP_AUTHORIZATION') or '').strip()

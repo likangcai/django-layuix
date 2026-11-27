@@ -39,14 +39,22 @@ function handleLoginExpired(payload, callback) {
     if (window.layer) {
         window.layer.msg((typeof t === 'function' ? t('login.expired') : '登录已过期，请重新登录'), {icon: 2});
     }
-    setTimeout(function() {
+    // 同步清除 Django Session，避免登录页因会话仍有效而跳回后台。
+    var logout = fetch('/admin/api/rbac/logout/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json'},
+        body: '{}'
+    });
+    var goLogin = function() {
         var loginUrl = window.ADMIN_LOGIN_URL || '/admin/login/';
         if (window.top) {
             window.top.location.href = loginUrl;
         } else {
             window.location.href = loginUrl;
         }
-    }, 1200);
+    };
+    logout.then(goLogin, goLogin);
     if (callback) callback(payload || {code: 401, msg: '未登录'});
 }
 
@@ -131,6 +139,53 @@ function bindFormOnce(filter, callback) {
 }
 
 /**
+ * 使用当前同源会话换取新 Token，用于旧会话无本地 Token 或 Token 过期后的自动恢复。
+ * @returns {Promise<boolean>}
+ */
+var tokenIssuePromise = null;
+function issueApiToken() {
+    if (tokenIssuePromise) return tokenIssuePromise;
+    tokenIssuePromise = fetch('/admin/api/rbac/token/issue/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json'},
+        body: '{}'
+    }).then(function(response) {
+        if (!response.ok) return null;
+        return response.json();
+    }).then(function(res) {
+        if (res && res.code === 200 && res.data && res.data.token) {
+            setToken(res.data.token);
+            return true;
+        }
+        return false;
+    }).catch(function() {
+        return false;
+    }).then(function(result) {
+        tokenIssuePromise = null;
+        return result;
+    });
+    return tokenIssuePromise;
+}
+
+function handleApiUnauthorized(options, url, payload, callback) {
+    // 本地已有 Token 但被拒绝：按既有逻辑视为过期，直接跳转登录页。
+    if (options.__hadToken || options.__tokenRetried || String(url).indexOf('/rbac/token/issue/') > -1) {
+        handleLoginExpired(payload, callback);
+        return;
+    }
+    // 仅处理旧版本升级后本地没有 Token、但会话仍有效的恢复场景。
+    issueApiToken().then(function(ok) {
+        if (ok) {
+            options.__tokenRetried = true;
+            $.ajax(options);
+            return;
+        }
+        handleLoginExpired(payload, callback);
+    });
+}
+
+/**
  * API请求封装
  * @param {string} method - HTTP方法
  * @param {string} url - 请求URL
@@ -152,6 +207,7 @@ function api(method, url, data, callback) {
         beforeSend: function(xhr) {
             // Token认证（优先级更高）
             var token = getToken();
+            options.__hadToken = !!token;
             if (token) {
                 xhr.setRequestHeader('Authorization', 'Bearer ' + token);
             } else {
@@ -171,7 +227,7 @@ function api(method, url, data, callback) {
         },
         success: function(res) {
             if (res.code === 401) {
-                handleLoginExpired(res, callback);
+                handleApiUnauthorized(options, url, res, callback);
                 return;
             }
             if (res.code === 403) {
@@ -186,7 +242,7 @@ function api(method, url, data, callback) {
             if (xhr && xhr.status === 401) {
                 var expiredRes = {code: 401, msg: '未登录'};
                 try { expiredRes = JSON.parse(xhr.responseText) || expiredRes; } catch (e) {}
-                handleLoginExpired(expiredRes, callback);
+                handleApiUnauthorized(options, url, expiredRes, callback);
                 return;
             }
             // 尝试解析后端返回的JSON错误信息

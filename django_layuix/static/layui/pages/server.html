@@ -6,7 +6,7 @@
     <title>服务器管理</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130d">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130f">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -163,7 +163,7 @@
     <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="log">{{ t('server.viewLog') }}</a>
     {{# } }}
     {{# if(layui.$.inArray('server:terminal', perms) > -1){ }}
-    <a class="layui-btn layui-btn-xs" lay-event="terminal" style="background:#5FB878;border-color:#5FB878;">{{ t('server.terminal') }}</a>
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="terminal">{{ t('server.terminal') }}</a>
     {{# } }}
     {{# if(layui.$.inArray('server:delete', perms) > -1){ }}
     <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">{{ t('common.delete') }}</a>
@@ -230,7 +230,7 @@
             </div>
         </div>
         <div class="layui-form-item" style="text-align:right;padding-top:10px;border-top:1px solid var(--layui-color-gray-2);margin-top:10px;">
-            <button type="button" class="layui-btn layui-btn-warm" id="testConnectBtn" style="margin-right:8px;">
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-warm" id="testConnectBtn" style="margin-right:8px;">
                 <i class="layui-icon layui-icon-engine"></i> {{ t('server.testConnect') }}
             </button>
             <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="serverSubmit">{{ t('common.save') }}</button>
@@ -296,7 +296,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-<script src="/static/layui/js/common.js?v=20261130d"></script>
+<script src="/static/layui/js/common.js?v=20261130f"></script>
 <script src="/static/layui/js/i18n.js"></script>
 <script>
 inheritTheme();

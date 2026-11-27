@@ -40,6 +40,9 @@ urlpatterns = [
     # 登出
     path('logout/', views.logout, name='rbac_logout'),
 
+    # 会话换取 Token（同源写请求 Token 自动恢复）
+    path('token/issue/', views.api_token_issue, name='rbac_token_issue'),
+
     # 统计
     path('stats/', views.stats_data, name='rbac_stats_data'),
 
@@ -67,6 +70,7 @@ urlpatterns = [
     path('users/batch-delete/', views.user_batch_delete, name='rbac_user_batch_delete'),
     path('users/create/', views.user_create, name='rbac_user_create'),
     path('users/<int:pk>/update/', views.user_update, name='rbac_user_update'),
+    path('users/<int:pk>/avatar/', views.user_avatar_upload, name='rbac_user_avatar_upload'),
     path('users/<int:pk>/delete/', views.user_delete, name='rbac_user_delete'),
     path('users/<int:pk>/reset-password/', views.user_reset_password, name='rbac_user_reset_password'),
     path('users/<int:pk>/status/', views.user_toggle_status, name='rbac_user_toggle_status'),
