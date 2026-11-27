@@ -1613,6 +1613,19 @@ class RbacFinalAuditTests(TestCase):
         self.assertFalse(has_permission(self.user, 'user:view'))
         self.assertTrue(catalog.status)
 
+    def test_log_modules_endpoint_returns_distinct_modules(self):
+        from .models import OperationLog
+
+        OperationLog.objects.create(module='departments', action='新增部门', status=1)
+        OperationLog.objects.create(module='departments', action='编辑部门', status=1)
+        OperationLog.objects.create(module='menus', action='新增菜单', status=1)
+
+        response = self.client.get('/admin/api/rbac/logs/modules/')
+        self.assertEqual(response.status_code, 200)
+        rows = response.json()['data']['list']
+        self.assertEqual([row['value'] for row in rows], ['departments', 'menus'])
+        self.assertEqual(rows[0]['label'], '部门')
+
     def test_department_tree_crud_and_cycle_protection(self):
         response = self.client.post(
             '/admin/api/rbac/departments/create/',

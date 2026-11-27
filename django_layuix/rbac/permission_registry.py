@@ -5,6 +5,8 @@
 # @FileName  : permission_registry.py
 # -----------------------------
 """内置页面、按钮和字段的集中权限目录。权限只有在注册为状态启用的 ``Menu`` 行且权限码非空后才可用；随后由角色分配决定用户是否可使用该权限。"""
+from functools import lru_cache
+
 from django.conf import settings
 
 
@@ -52,6 +54,25 @@ BUTTON_ACTIONS = {
 }
 
 
+_PERMISSION_REGISTRY_CACHE = {}
+
+
+_SYS_MENU_TABLE_EXISTS = None
+
+
+def _sys_menu_table_exists():
+    global _SYS_MENU_TABLE_EXISTS
+    if _SYS_MENU_TABLE_EXISTS is None:
+        from django.db import connection
+        _SYS_MENU_TABLE_EXISTS = 'sys_menu' in connection.introspection.table_names()
+    return _SYS_MENU_TABLE_EXISTS
+
+
+def clear_permission_registry_cache():
+    """菜单注册状态变更后清空权限码缓存。"""
+    _PERMISSION_REGISTRY_CACHE.clear()
+
+
 def _allow_unregistered():
     return bool(getattr(settings, 'LAYUI_RBAC_ALLOW_UNREGISTERED_PERMISSIONS', False))
 
@@ -60,27 +81,35 @@ def is_registered_permission(permission_code):
     """判断权限码是否存在为启用的菜单注册项。内置权限码在初始化前通过集中目录可用；一旦存在对应的 ``sys_menu`` 行，其启用/可见状态即为权威状态，因此停用已注册权限会立即生效。自定义权限码必须注册为启用菜单行。"""
     if not permission_code:
         return False
+    cached = _PERMISSION_REGISTRY_CACHE.get(permission_code)
+    if cached is not None:
+        return cached
     if _allow_unregistered():
+        _PERMISSION_REGISTRY_CACHE[permission_code] = True
         return True
-    from django.db import connection
-
     builtin = permission_code in permission_catalog()
-    if 'sys_menu' not in connection.introspection.table_names():
-        return builtin
-    from .models import Menu
+    if not _sys_menu_table_exists():
+        result = builtin
+    else:
+        from .models import Menu
 
-    rows = Menu.objects.filter(permission=permission_code)
-    if not builtin:
-        return rows.filter(status=True, visible=True).exists()
-    if not rows.exists():
-        return True
-    catalog_rows = rows.filter(plugin_key='permission_catalog')
-    if catalog_rows.exists():
-        return catalog_rows.filter(status=True, visible=True).exists()
-    business_rows = rows.exclude(plugin_key='permission_catalog')
-    if business_rows.exists():
-        return business_rows.filter(status=True, visible=True).exists()
-    return builtin
+        rows = Menu.objects.filter(permission=permission_code)
+        if not builtin:
+            result = rows.filter(status=True, visible=True).exists()
+        elif not rows.exists():
+            result = True
+        else:
+            catalog_rows = rows.filter(plugin_key='permission_catalog')
+            if catalog_rows.exists():
+                result = catalog_rows.filter(status=True, visible=True).exists()
+            else:
+                business_rows = rows.exclude(plugin_key='permission_catalog')
+                if business_rows.exists():
+                    result = business_rows.filter(status=True, visible=True).exists()
+                else:
+                    result = builtin
+    _PERMISSION_REGISTRY_CACHE[permission_code] = result
+    return result
 
 
 def permission_for_path(path):
@@ -96,6 +125,7 @@ def permission_for_path(path):
     return ''
 
 
+@lru_cache(maxsize=1)
 def permission_catalog():
     """返回集中目录中的全部内置权限码。"""
     codes = set(PAGE_PERMISSIONS.values())

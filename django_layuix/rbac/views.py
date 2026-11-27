@@ -2294,6 +2294,24 @@ def log_list(request):
     return success_response({'list': data, 'total': total})
 
 
+@csrf_exempt
+@api_login_required
+@api_permission_required('log:view')
+def log_modules(request):
+    """GET /api/rbac/logs/modules/ - 操作日志中已出现的模块，用于搜索下拉框自动更新。"""
+    from .middleware import MODULE_NAME_MAP
+    from .models import OperationLog
+
+    modules = OperationLog.objects.exclude(module='').order_by().values_list(
+        'module', flat=True
+    ).distinct().order_by('module')
+    rows = [
+        {'value': module, 'label': MODULE_NAME_MAP.get(module, module)}
+        for module in modules
+    ]
+    return success_response({'list': rows, 'total': len(rows)})
+
+
 # ==================== 系统配置 CRUD ====================
 
 @csrf_exempt

@@ -278,6 +278,10 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
         });
     }
 
+    function hasTableFilters() {
+        return !!($('#deptKeyword').val().trim() || $('#deptStatus').val());
+    }
+
     function loadData() {
         fetchDepartments({}, function(rows) {
             allRows = rows;
@@ -286,7 +290,12 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
             }
             $('#deptScopeTitle').text(selectedName());
             renderTree();
-            loadTableData();
+            if (hasTableFilters()) {
+                loadTableData();
+            } else {
+                tableRows = allRows.slice();
+                renderTable();
+            }
         });
     }
 

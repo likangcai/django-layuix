@@ -56,6 +56,23 @@ MODULE_NAME_MAP = {
     'profile': '个人中心',
     'set-language': '语言切换',
     'set-default': '默认设置',
+    'departments': '部门',
+    'positions': '岗位',
+    'regions': '地区',
+    'member-levels': '会员等级',
+    'dictionaries': '数据字典',
+    'dictionary-items': '数据字典',
+    'permission-catalog': '权限目录',
+    'scope-nodes': '数据范围',
+    'abac-policies': 'ABAC策略',
+    'constraints': '约束管理',
+    'sod-constraints': '约束管理',
+    'plugins': '插件管理',
+    'active-roles': '角色管理',
+    'data-batch-delete': '批量删除',
+    'data-batch-status': '批量状态',
+    'position-assignments': '岗位分配',
+    'token': '令牌',
 }
 
 

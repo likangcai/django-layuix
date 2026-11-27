@@ -138,6 +138,7 @@ urlpatterns = [
 
     # 操作日志
     path('logs/', views.log_list, name='rbac_log_list'),
+    path('logs/modules/', views.log_modules, name='rbac_log_modules'),
 
     # 系统配置 CRUD
     path('configs/', views.config_list, name='rbac_config_list'),

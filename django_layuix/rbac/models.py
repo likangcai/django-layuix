@@ -592,3 +592,13 @@ class MemberLevel(models.Model):
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.code)
+
+
+def _invalidate_permission_registry_cache(**kwargs):
+    from .permission_registry import clear_permission_registry_cache
+    clear_permission_registry_cache()
+
+
+from django.db.models.signals import post_delete, post_save
+post_save.connect(_invalidate_permission_registry_cache, sender=Menu, dispatch_uid='layuix_menu_save_permission_cache')
+post_delete.connect(_invalidate_permission_registry_cache, sender=Menu, dispatch_uid='layuix_menu_delete_permission_cache')

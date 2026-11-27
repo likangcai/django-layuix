@@ -267,7 +267,46 @@
             'ai_config': t('ai.title') || 'AI配置',
             'set-language': '语言切换',
             'set-default': '默认设置',
+            'departments': t('data.department') || '部门管理',
+            'positions': t('data.position') || '岗位管理',
+            'regions': t('data.region') || '地区管理',
+            'member-levels': t('data.memberLevel') || '会员等级',
+            'dictionaries': t('dict.title') || '数据字典',
+            'dictionary-items': t('dict.title') || '数据字典',
+            'permission-catalog': t('permission.title') || '权限目录',
+            'scope-nodes': t('scope.title') || '数据范围',
+            'abac-policies': 'ABAC策略',
+            'constraints': t('constraint.title') || '约束管理',
+            'sod-constraints': t('constraint.title') || '约束管理',
+            'plugins': '插件管理',
+            'active-roles': t('role.title') || '角色管理',
+            'data-batch-delete': t('data.batchDelete') || '批量删除',
+            'data-batch-status': '批量状态',
+            'position-assignments': (t('user.position') || '岗位') + '分配',
+            'token': '令牌',
         };
+
+        // 从日志接口自动补全操作模块选项；value 保持数据库原始模块名，确保筛选条件可命中
+        function loadModuleOptions() {
+            getApi('/admin/api/rbac/logs/modules/', function(res) {
+                if (res.code !== 200) return;
+                var select = $('#moduleSelect');
+                var existing = {};
+                select.find('option').each(function() { existing[$(this).val()] = true; });
+                var rows = (res.data && res.data.list) || [];
+                var added = false;
+                rows.forEach(function(row) {
+                    var value = row.value || row;
+                    if (!value || existing[value]) return;
+                    $('<option>').val(value).text(moduleMap[value] || row.label || value).appendTo(select);
+                    existing[value] = true;
+                    added = true;
+                });
+                if (added) form.render('select');
+            });
+        }
+
+        loadModuleOptions();
 
         // 渲染表格
         function renderTable(params) {
