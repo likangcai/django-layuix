@@ -13,9 +13,9 @@
 ## 2. 触发方式
 
 ```bash
-# 先确认 pyproject.toml 的 version，例如 1.7.0
-git tag v1.7.0
-git push origin v1.7.0
+# 先确认 pyproject.toml 的 version，例如 1.8.0
+git tag v1.8.0
+git push origin v1.8.0
 ```
 
 Tag 版本必须与 `pyproject.toml` 的 `[project].version` 完全一致，否则构建任务会失败。

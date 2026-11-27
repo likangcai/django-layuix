@@ -13,7 +13,9 @@
 - 🧩 数据管理（字典、部门、岗位、地区、会员等级；统一树/表格布局、CSV/Excel 导入导出与批量操作）
 - 🗺️ 完整地区数据（657848 条省/市/县/街道/村社区，支持官方数据与街道、村庄独立更新脚本）
 - 👥 用户多岗位（主岗 + 兼任岗位多选，任职有效期、主岗变更历史与结束任职）
-- 🔐 权限总览（322 项页面/按钮权限、授权角色数、启停控制与目录唯一键）
+- 🔐 权限总览（322 项页面/按钮权限、授权角色数、启停控制、业务按钮集中管理与目录唯一键）
+- 🧾 角色授权（数据范围并入授权弹窗、行内状态切换、批量删除与系统角色保护）
+- 🪟 长表单弹窗（自适应高度、吸底按钮、滚动提示，显示不全问题已收敛）
 - 🚀 启动无查库告警（菜单、插件与默认配置改到迁移后初始化）
 - 🖼️ 图片上传（Logo、Favicon 等配置项支持本地上传）
 - 🌐 Favicon 自定义（支持 ICO/PNG/SVG 格式）
@@ -176,7 +178,7 @@ python manage.py runserver
 LAYUI_CONFIG = {
     # 系统信息
     'system_name': 'Django Layuix Admin',
-    'system_version': '1.7.0',         # 系统版本号（显示在侧边栏）
+    'system_version': '1.8.0',         # 系统版本号（显示在侧边栏）
     'system_description': '',          # 系统描述（显示在登录页）
 
     # Logo
@@ -294,7 +296,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
 | `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
-| `system_version` | 版本号 | 包版本（当前 1.7.0） |
+| `system_version` | 版本号 | 包版本（当前 1.8.0） |
 | `system_description` | 系统描述 | （空） |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |

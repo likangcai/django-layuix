@@ -5,4 +5,4 @@
 # @FileName  : __init__.py
 # -----------------------------
 """django-layuix - 基于 Layui 的 Django 后台主题"""
-__version__ = '1.7.0'
+__version__ = '1.8.0'
