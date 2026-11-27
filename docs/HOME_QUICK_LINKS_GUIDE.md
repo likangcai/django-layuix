@@ -153,7 +153,8 @@ LAYUI_CONFIG = {
         # 外部链接
         {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
         {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://layui.dev/'},
-        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/'},
+        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
+        {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django-layuix'},
     ],
 }
 ```

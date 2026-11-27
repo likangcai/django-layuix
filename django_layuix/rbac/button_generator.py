@@ -27,7 +27,7 @@ def derive_permission_prefix(menu):
 def existing_actions(menu):
     """返回该菜单下已生成的动作键。"""
     prefix = derive_permission_prefix(menu)
-    records = menu.children.filter(menu_type=3, plugin_key='').values_list('permission', flat=True)
+    records = menu.children.filter(menu_type=3, plugin_key='', permission_source='business').values_list('permission', flat=True)
     actions = set()
     for code in records:
         if code and code.startswith(prefix + ':'):
@@ -54,7 +54,8 @@ def generate_menu_buttons(menu, actions, replace=False, actor=None):
     removed = []
     with transaction.atomic():
         children = list(Menu.objects.filter(
-            parent=menu, menu_type=3, permission__startswith=prefix + ':', plugin_key=''
+            parent=menu, menu_type=3, permission__startswith=prefix + ':',
+            plugin_key='', permission_source='business'
         ))
         current = {child.permission: child for child in children if child.permission}
         if replace:
@@ -74,7 +75,7 @@ def generate_menu_buttons(menu, actions, replace=False, actor=None):
                 for field, value in (
                     ('name', name), ('name_en', '%s %s' % (labels[1], menu.name)),
                     ('name_zh_hans', name), ('permission', code), ('sort', sort),
-                    ('status', True), ('visible', True),
+                    ('status', True), ('visible', True), ('permission_source', 'business'),
                 ):
                     if getattr(child, field) != value:
                         setattr(child, field, value)
@@ -86,7 +87,7 @@ def generate_menu_buttons(menu, actions, replace=False, actor=None):
                 child = Menu.objects.create(
                     parent=menu, name=name, name_en='%s %s' % (labels[1], menu.name),
                     name_zh_hans=name, menu_type=3, permission=code, sort=sort,
-                    status=True, visible=True,
+                    status=True, visible=True, permission_source='business',
                 )
                 created.append(code)
                 current[code] = child

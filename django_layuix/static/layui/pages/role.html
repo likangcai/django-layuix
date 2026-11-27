@@ -6,7 +6,7 @@
     <title data-i18n="role.title">角色管理</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261127a">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261128a">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -253,8 +253,8 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261127a"></script>
-    <script src="/static/layui/js/i18n.js?v=20261127a"></script>
+    <script src="/static/layui/js/common.js?v=20261128a"></script>
+    <script src="/static/layui/js/i18n.js?v=20261128a"></script>
     <script>
 inheritTheme();
 
@@ -406,14 +406,14 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
         return Object.keys(codes).length;
     }
 
-    // 加载角色列表
+    // 加载角色列表：树形层级使用全量角色，表格本体使用服务端分页
+    var roleTableReady = false;
     function loadTable() {
         getApi('/admin/api/rbac/roles/', function(res) {
             if (res.code !== 200) return;
-            var roles = res.data || [];
-            tableRoles = roles;
-            var byId = buildRoleIndex(roles);
-            var hasAdvanced = roles.some(function(role) {
+            allRoles = res.data || [];
+            var byId = buildRoleIndex(allRoles);
+            var hasAdvanced = allRoles.some(function(role) {
                 return role.parent_id || (role.parent_ids || []).length || role.scope_node;
             });
             var cols = [[
@@ -449,11 +449,22 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                     return t('role.permissionSummary', [own + inherited, own, inherited]);
                 }});
             }
-            LayuiUI.table({
+            var options = {
                 elem: '#roleTable',
+                id: 'roleTable',
                 toolbar: '#toolbarTpl',
                 defaultToolbar: [],
-                data: roles,
+                url: '/admin/api/rbac/roles/',
+                request: {pageName: 'page', limitName: 'page_size'},
+                parseData: function(response) {
+                    var payload = (response && response.data) || {};
+                    return {
+                        code: response && response.code === 200 ? 0 : (response ? response.code : 1),
+                        msg: (response && response.msg) || t('common.fail'),
+                        count: payload.total || 0,
+                        data: payload.list || []
+                    };
+                },
                 height: 'full-220',
                 page: {
                     limit: 10,
@@ -463,10 +474,17 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                 },
                 even: true,
                 done: function() {
+                    tableRoles = table.cache.roleTable || [];
                     form.render('checkbox');
                 },
                 cols: cols
-            });
+            };
+            if (!roleTableReady) {
+                LayuiUI.table(options);
+                roleTableReady = true;
+            } else {
+                table.reload('roleTable', options);
+            }
         });
     }
 
@@ -710,6 +728,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                 area: ['600px', 'auto'],
                 content: renderTpl('roleFormTpl'),
                 success: function(layero, index) {
+                    layero.data('roleFormData', roleData || null);
                     // 渲染权限树
                     tree.render({
                         elem: layero.find('#menuPermTree')[0],
@@ -737,6 +756,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                     
                     // 在 tree 渲染后，按精确 ID 回显，避免父节点级联污染
                     permissionTreeReady = false;
+                    layero.data('permissionTreeReady', false);
                     layero.find('[lay-filter="roleSubmit"]').prop('disabled', true).addClass('layui-btn-disabled');
                     (function applyWhenReady(attempts) {
                         var $tree = layero.find('#menuPermTree');
@@ -750,7 +770,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                                 idSet[String(checkedIds[i])] = true;
                             }
                             applyExactTreeChecks($tree, idSet);
-                            permissionTreeReady = true;
+                            layero.data('permissionTreeReady', true);
                             layero.find('[lay-filter="roleSubmit"]').prop('disabled', false).removeClass('layui-btn-disabled');
                             return;
                         }
@@ -798,82 +818,68 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
                         setChildrenChecked($treeSet, isChecked);
                         syncTreeParentStates(layero.find('#menuPermTree'));
                     });
+
+                    // 当前弹窗的表单提交
+                    layero.find('[lay-filter="roleSubmit"]').off('click.roleSubmit').on('click.roleSubmit', function(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (!layero.data('permissionTreeReady')) {
+                            layer.msg(t('common.loadFailed'), {icon: 2});
+                            return;
+                        }
+                        var $roleLayer = $(layero);
+                        var field = form.val('roleForm');
+                        var id = field.id;
+                        var menuIds = [];
+                        $roleLayer.find('#menuPermTree .layui-tree-set').each(function() {
+                            var $set = $(this);
+                            var $input = $set.find('input[type="checkbox"]');
+                            var $checkbox = $input.next('.layui-form-checkbox');
+                            if ($input.prop('checked') && !$checkbox.hasClass('layui-form-halfchecked')) {
+                                menuIds.push($set.data('id'));
+                            }
+                        });
+                        var parentIds = [];
+                        $roleLayer.find('#parentRoleBox input[name="parent_role"]:checked').each(function() {
+                            parentIds.push(parseInt($(this).val(), 10));
+                        });
+                        var scope = $roleLayer.data('roleFormData') || currentRoleFormData || {};
+                        var submitData = {
+                            name: field.name,
+                            code: field.code,
+                            description: field.description || '',
+                            status: field.status === 'on',
+                            max_users: field.max_users || 0,
+                            parent_ids: parentIds,
+                            parent_id: parentIds[0] || null,
+                            scope_node: scope.scope_node || '',
+                            scope_depth: scope.scope_depth || 0,
+                            menu_ids: menuIds
+                        };
+                        var $btn = $(this);
+                        $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> ' + (t('common.submitting') || '提交中...'));
+                        var finish = function(res, okText) {
+                            $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                            if (res.code === 200) {
+                                layer.msg(okText, {icon: 1});
+                                layer.close(index);
+                                loadTable();
+                            } else {
+                                layer.msg(res.msg || t('common.fail'), {icon: 2});
+                            }
+                        };
+                        if (id) {
+                            putApi('/admin/api/rbac/roles/' + id + '/update/', submitData, function(res) {
+                                finish(res, t('common.updateSuccess'));
+                            });
+                        } else {
+                            postApi('/admin/api/rbac/roles/create/', submitData, function(res) {
+                                finish(res, t('common.addSuccess'));
+                            });
+                        }
+                    });
                 }
             });
-        });
-
-        // 角色表单提交（绑定一次，避免重复绑定）
-        bindFormOnce('submit(roleSubmit)', function(data) {
-            if (!permissionTreeReady) {
-                layer.msg(t('common.loadFailed'), {icon: 2});
-                return false;
-            }
-            var field = data.field;
-            var id = field.id;
-
-            // 手动收集被勾选的节点，排除半选状态的父节点
-            var menuIds = [];
-            $('#menuPermTree').find('.layui-tree-set').each(function() {
-                var $set = $(this);
-                var $input = $set.find('input[type="checkbox"]');
-                var $checkbox = $input.next('.layui-form-checkbox');
-                
-                // 只收集真正被勾选的节点（排除半选状态）
-                if ($input.prop('checked') && !$checkbox.hasClass('layui-form-halfchecked')) {
-                    menuIds.push($set.data('id'));
-                }
-            });
-
-            var parentIds = [];
-            $('#parentRoleBox input[name="parent_role"]:checked').each(function() {
-                parentIds.push(parseInt($(this).val(), 10));
-            });
-
-            var submitData = {
-                name: field.name,
-                code: field.code,
-                description: field.description || '',
-                status: field.status === 'on',
-                max_users: field.max_users || 0,
-                parent_ids: parentIds,
-                parent_id: parentIds[0] || null,
-                scope_node: currentRoleFormData ? (currentRoleFormData.scope_node || '') : '',
-                scope_depth: currentRoleFormData ? (currentRoleFormData.scope_depth || 0) : 0,
-                menu_ids: menuIds
-            };
-
-            // 获取提交按钮并添加动画
-            var $btn = $('button[lay-filter="roleSubmit"]');
-            $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> ' + (t('common.submitting') || '提交中...'));
-
-            if (id) {
-                putApi('/admin/api/rbac/roles/' + id + '/update/', submitData, function(res) {
-                    // 恢复按钮状态
-                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
-                    
-                    if (res.code === 200) {
-                        layer.msg(t('common.updateSuccess'), {icon: 1});
-                        layer.closeAll();
-                        loadTable();
-                    } else {
-                        layer.msg(res.msg || t('common.fail'), {icon: 2});
-                    }
-                });
-            } else {
-                postApi('/admin/api/rbac/roles/create/', submitData, function(res) {
-                    // 恢复按钮状态
-                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
-                    
-                    if (res.code === 200) {
-                        layer.msg(t('common.addSuccess'), {icon: 1});
-                        layer.closeAll();
-                        loadTable();
-                    } else {
-                        layer.msg(res.msg || t('common.fail'), {icon: 2});
-                    }
-                });
-            }
-            return false;
         });
     }
 
@@ -1043,7 +1049,7 @@ layui.use(['table', 'tree', 'form', 'layer', 'element', 'dropdown'], function(){
         var perms = cu.permissions || [];
         var isSuper = cu.is_superuser || false;
         var menu = [{id: 'permissions', title: t('role.permissions')}];
-        if (isSuper || layui.$.inArray('role:copy', perms) > -1) {
+        if (!data.is_system && (isSuper || layui.$.inArray('role:copy', perms) > -1)) {
             menu.push({id: 'copy', title: t('role.copy.title')});
         }
         if (!data.is_system && (isSuper || layui.$.inArray('role:delete', perms) > -1)) {

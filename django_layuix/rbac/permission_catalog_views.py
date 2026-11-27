@@ -21,7 +21,7 @@ PROTECTED_CODES = {'permission:view', 'permission:edit'}
 
 def _catalog_row(menu):
     kind = 'page' if menu.path else 'button'
-    builtin = menu.plugin_key == 'permission_catalog'
+    builtin = menu.permission_source == 'builtin'
     return {
         'id': menu.pk,
         'name': menu.name,
@@ -67,12 +67,34 @@ def permission_catalog_list(request):
     status = request.GET.get('status')
     if status not in (None, ''):
         queryset = queryset.filter(status=str(status).lower() in ('1', 'true', 'on'))
-    rows = [_catalog_row(row) for row in queryset]
+    total = queryset.count()
+    page_count = queryset.exclude(path='').count()
+    button_count = queryset.filter(path='').count()
+    page_raw = request.GET.get('page')
+    if page_raw is None:
+        rows = [_catalog_row(row) for row in queryset]
+        return success_response({
+            'list': rows,
+            'total': total,
+            'page_count': page_count,
+            'button_count': button_count,
+        })
+    try:
+        page = int(page_raw)
+        page_size = int(request.GET.get('page_size') or 20)
+    except (TypeError, ValueError):
+        return error_response('分页参数必须是整数', 400)
+    if page < 1 or page_size < 10 or page_size > 200:
+        return error_response('分页参数超出范围', 400)
+    start = (page - 1) * page_size
+    rows = [_catalog_row(row) for row in queryset[start:start + page_size]]
     return success_response({
         'list': rows,
-        'total': len(rows),
-        'page_count': sum(1 for row in rows if row['kind'] == 'page'),
-        'button_count': sum(1 for row in rows if row['kind'] == 'button'),
+        'total': total,
+        'page_count': page_count,
+        'button_count': button_count,
+        'page': page,
+        'page_size': page_size,
     })
 
 
@@ -144,7 +166,8 @@ def permission_catalog_buttons_create(request):
     result = generate_menu_buttons(parent, actions, replace=replace, actor=request.user)
     codes = result['created'] + result['updated']
     rows = Menu.objects.filter(
-        parent=parent, permission__in=codes, menu_type=3, plugin_key=''
+        parent=parent, permission__in=codes, menu_type=3,
+        plugin_key='', permission_source='business'
     ).values('id', 'permission', 'name')
     return success_response({
         'parent_id': parent.pk,
@@ -163,7 +186,9 @@ def permission_catalog_buttons_delete(request, pk):
     """POST /api/rbac/permission-catalog/buttons/<pk>/delete/ - 删除业务按钮权限。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
-    menu = Menu.objects.filter(pk=pk, menu_type=3, plugin_key='').first()
+    menu = Menu.objects.filter(
+        pk=pk, menu_type=3, plugin_key='', permission_source='business'
+    ).first()
     if menu is None:
         return error_response('业务按钮权限不存在或不可删除', 404)
     if menu.permission in PROTECTED_CODES:

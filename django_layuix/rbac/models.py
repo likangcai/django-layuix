@@ -27,6 +27,12 @@ class Menu(models.Model):
         editable=False, verbose_name='权限目录唯一键',
     )
     plugin_key = models.CharField(max_length=100, blank=True, default='', verbose_name='所属插件')
+    permission_source = models.CharField(
+        max_length=20,
+        choices=(('builtin', '内置'), ('business', '业务')),
+        default='business',
+        verbose_name='权限来源',
+    )
     sort = models.IntegerField(default=0, verbose_name='排序')
     visible = models.BooleanField(default=True, verbose_name='是否显示')
     status = models.BooleanField(default=True, verbose_name='状态')
@@ -56,11 +62,12 @@ class Menu(models.Model):
     def save(self, *args, **kwargs):
         if self.plugin_key == 'permission_catalog' and self.permission:
             self.catalog_key = 'permission_catalog:%s' % self.permission
+            self.permission_source = 'builtin'
         else:
             self.catalog_key = None
         update_fields = kwargs.get('update_fields')
         if update_fields is not None:
-            kwargs['update_fields'] = set(update_fields) | {'catalog_key'}
+            kwargs['update_fields'] = set(update_fields) | {'catalog_key', 'permission_source'}
         super().save(*args, **kwargs)
 
 

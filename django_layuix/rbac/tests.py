@@ -48,6 +48,14 @@ def _client_init_with_origin(self, *args, **kwargs):
 Client.__init__ = _client_init_with_origin
 
 
+def force_login_with_token(client, user):
+    """模拟后台登录后的浏览器：同时持有会话与显式 Token。"""
+    from .token_auth import generate_token
+
+    client.force_login(user)
+    client.defaults['HTTP_AUTHORIZATION'] = 'Bearer ' + generate_token(user)
+
+
 class Rbac3Tests(TestCase):
 
     def setUp(self):
@@ -172,7 +180,7 @@ class Rbac3ApiTests(TestCase):
         self.admin = User.objects.create_superuser(
             username='api_admin', email='admin@example.com', password='pass12345'
         )
-        self.client.force_login(self.admin)
+        force_login_with_token(self.client, self.admin)
         self.employee = Role.objects.create(name='员工', code='api_employee')
         self.manager = Role.objects.create(name='经理', code='api_manager')
         self.cashier = Role.objects.create(name='出纳', code='api_cashier')
@@ -254,7 +262,7 @@ class Rbac4ExtensionTests(TestCase):
 
         self.admin.language = 'en'
         self.admin.save(update_fields=['language'])
-        self.client.force_login(self.admin)
+        force_login_with_token(self.client, self.admin)
         response = self.client.get('/admin/api/rbac/userinfo/')
         self.assertEqual(response.status_code, 200)
         names = [item['name'] for item in response.json()['data']['menus']]
@@ -317,7 +325,7 @@ class Rbac4ExtensionTests(TestCase):
             validate_assignment(self.user, [self.cashier.id, self.accountant.id])
 
     def test_plugin_registry_api(self):
-        self.client.force_login(self.admin)
+        force_login_with_token(self.client, self.admin)
         response = self.client.get('/admin/api/rbac/plugins/')
         self.assertEqual(response.status_code, 200)
         names = [p['key'] for p in response.json()['data']]
@@ -418,7 +426,7 @@ class Rbac4ExtensionTests(TestCase):
             name='插件首页', path='/mycrm/home', menu_type=2,
             permission='mycrm:view', plugin_key='ops',
         )
-        self.client.force_login(self.admin)
+        force_login_with_token(self.client, self.admin)
         response = self.client.get('/admin/api/rbac/plugins/manifest/')
         self.assertEqual(response.status_code, 200)
         ops = next(item for item in response.json()['data'] if item['key'] == 'ops')
@@ -497,7 +505,7 @@ class Rbac141CompatibilityTests(TestCase):
         )
         self.user = User.objects.create_user(username='rbac141_user', password='pass12345')
         self.cashier = Role.objects.create(name='范围角色', code='rbac141_scope')
-        self.client.force_login(self.admin)
+        force_login_with_token(self.client, self.admin)
 
     def _create_role(self, name, code, **extra):
         payload = {'name': name, 'code': code, 'menu_ids': []}
@@ -629,7 +637,7 @@ class Rbac142EnhancementTests(TestCase):
         self.user = User.objects.create_user(username='rbac142_user', password='pass12345')
         self.sales = Role.objects.create(name='销售', code='sales')
         self.user.roles.add(self.sales)
-        self.client.force_login(self.admin)
+        force_login_with_token(self.client, self.admin)
 
     def test_abac_expression_and_policies(self):
         from .abac import AbacError, evaluate_expression, evaluate_policies, filter_fields
@@ -788,7 +796,7 @@ class Rbac142EnhancementTests(TestCase):
         }
         for username, (count, sees_cost) in expectations.items():
             client = Client()
-            client.force_login(User.objects.get(username=username))
+            force_login_with_token(client, User.objects.get(username=username))
             response = client.get('/admin/api/permission-demo/orders/')
             self.assertEqual(response.status_code, 200)
             data = response.json()
@@ -802,7 +810,7 @@ class Rbac142EnhancementTests(TestCase):
 
         call_command('init_permission_demo', verbosity=0)
         client = Client()
-        client.force_login(get_user_model().objects.get(username=self.admin.username))
+        force_login_with_token(client, get_user_model().objects.get(username=self.admin.username))
 
         first = client.get('/admin/api/permission-demo/orders/?page=1&page_size=1').json()
         second = client.get('/admin/api/permission-demo/orders/?page=2&page_size=1').json()
@@ -824,7 +832,7 @@ class RbacFinalAuditTests(TestCase):
             username='audit_admin', email='audit@example.com', password='pass12345'
         )
         self.user = User.objects.create_user(username='audit_user', password='pass12345')
-        self.client.force_login(self.admin)
+        force_login_with_token(self.client, self.admin)
 
     def test_init_permission_demo_syncs_configured_password(self):
         import os
@@ -837,21 +845,24 @@ class RbacFinalAuditTests(TestCase):
         self.assertTrue(user.check_password('Audit@2026'))
 
     def test_api_origin_guard_blocks_cross_site_writes(self):
-        cross = self.client.post(
+        session_client = Client()
+        force_login_with_token(session_client, self.admin)
+        session_client.defaults.pop('HTTP_AUTHORIZATION', None)
+        cross = session_client.post(
             '/admin/api/rbac/scope-nodes/',
             {'code': 'evil', 'name': 'Evil'},
             content_type='application/json',
             HTTP_ORIGIN='https://evil.example',
         )
-        self.assertEqual(cross.status_code, 403)
+        self.assertEqual(cross.status_code, 401)
 
-        same = self.client.post(
+        token_write = self.client.post(
             '/admin/api/rbac/scope-nodes/',
             {'code': 'same', 'name': 'Same'},
             content_type='application/json',
-            HTTP_ORIGIN='http://testserver',
+            HTTP_ORIGIN='https://evil.example',
         )
-        self.assertEqual(same.status_code, 200)
+        self.assertEqual(token_write.status_code, 200)
 
     def test_abac_runtime_error_denies(self):
         from .abac import evaluate_policies
@@ -904,7 +915,7 @@ class RbacFinalAuditTests(TestCase):
             effect='deny', expression='true', priority=1,
         )
         regular = Client()
-        regular.force_login(self.user)
+        force_login_with_token(regular, self.user)
         data = regular.get('/admin/api/rbac/frontend/permissions/').json()['data']
         self.assertEqual(data['abac_policies'], [])
 
@@ -934,18 +945,25 @@ class RbacFinalAuditTests(TestCase):
             HTTP_AUTHORIZATION='Bearer invalid.token',
             HTTP_ORIGIN='https://evil.example',
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 401)
 
-    @override_settings(LAYUIX_API_ALLOWED_ORIGINS=['admin.example.com'])
+    @override_settings(
+        LAYUIX_API_ALLOWED_ORIGINS=['admin.example.com'],
+        LAYUIX_REQUIRE_TOKEN_FOR_WRITES=False,
+    )
     def test_api_allowed_origins_supports_reverse_proxy(self):
-        allowed = self.client.post(
+        from django.test import Client
+
+        session_client = Client()
+        session_client.force_login(self.admin)
+        allowed = session_client.post(
             '/admin/api/rbac/scope-nodes/',
             {'code': 'proxy', 'name': 'Proxy'},
             content_type='application/json',
             HTTP_ORIGIN='https://admin.example.com',
         )
         self.assertEqual(allowed.status_code, 200)
-        blocked = self.client.post(
+        blocked = session_client.post(
             '/admin/api/rbac/scope-nodes/',
             {'code': 'proxy2', 'name': 'Proxy2'},
             content_type='application/json',
@@ -970,7 +988,7 @@ class RbacFinalAuditTests(TestCase):
         editor = get_user_model().objects.create_user(username='audit_editor', password='pass12345')
         editor.roles.add(Role.objects.create(name='编辑', code='audit_editor'))
         client = Client()
-        client.force_login(editor)
+        force_login_with_token(client, editor)
         response = client.post('/admin/api/rbac/abac-check/', {
             'user_id': self.admin.id, 'action': 'view', 'resource': 'audit.Resource',
         }, content_type='application/json')
@@ -1046,7 +1064,19 @@ class RbacFinalAuditTests(TestCase):
         response = client.post('/admin/api/rbac/roles/create/', {
             'name': '无来源', 'code': 'no_origin',
         }, content_type='application/json')
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 401)
+
+    def test_write_requires_token_even_with_session(self):
+        client = Client()
+        client.force_login(self.admin)
+        response = client.post(
+            '/admin/api/rbac/roles/create/',
+            {'name': '无Token角色', 'code': 'no_token_role'},
+            content_type='application/json',
+            HTTP_ORIGIN='http://testserver',
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('Token', response.json()['msg'])
 
     def test_public_login_without_origin_is_allowed(self):
         client = Client()
@@ -1126,7 +1156,7 @@ class RbacFinalAuditTests(TestCase):
 
         low = get_user_model().objects.create_user(username='audit_low', password='pass12345')
         client = Client()
-        client.force_login(low)
+        force_login_with_token(client, low)
         cases = [
             ('delete', '/admin/api/rbac/users/%s/delete/' % self.admin.pk),
             ('put', '/admin/api/rbac/users/%s/reset-password/' % self.admin.pk),
@@ -1143,7 +1173,7 @@ class RbacFinalAuditTests(TestCase):
 
         low = get_user_model().objects.create_user(username='audit_reader', password='pass12345')
         client = Client()
-        client.force_login(low)
+        force_login_with_token(client, low)
         urls = [
             '/admin/api/rbac/users/',
             '/admin/api/rbac/roles/',
@@ -1247,7 +1277,7 @@ class RbacFinalAuditTests(TestCase):
 
         low = get_user_model().objects.create_user(username='audit_ops_low', password='pass12345')
         client = Client()
-        client.force_login(low)
+        force_login_with_token(client, low)
         cases = [
             ('get', '/admin/api/ops/servers/'),
             ('get', '/admin/api/ops/ai/config/list/'),
@@ -1280,7 +1310,7 @@ class RbacFinalAuditTests(TestCase):
         self.user.roles.add(first, second)
 
         client_a = Client()
-        client_a.force_login(self.user)
+        force_login_with_token(client_a, self.user)
         selected = client_a.post('/admin/api/rbac/active-roles/', {
             'role_ids': [second.id],
         }, content_type='application/json')
@@ -1288,7 +1318,7 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(client_a.session[ACTIVE_ROLES_SESSION_KEY], [second.id])
 
         client_b = Client()
-        client_b.force_login(self.user)
+        force_login_with_token(client_b, self.user)
         response = client_b.get('/admin/api/rbac/active-roles/')
         self.assertEqual(response.status_code, 200)
         self.assertNotEqual(response.json()['data']['active_ids'], [second.id])
@@ -1469,7 +1499,7 @@ class RbacFinalAuditTests(TestCase):
 
         low = get_user_model().objects.create_user(username='audit_session_low', password='pass12345')
         client = Client()
-        client.force_login(low)
+        force_login_with_token(client, low)
         response = client.get(
             '/admin/api/rbac/userinfo/',
             HTTP_AUTHORIZATION='Bearer ' + generate_token(self.admin),
@@ -1818,6 +1848,39 @@ class RbacFinalAuditTests(TestCase):
         role.refresh_from_db()
         self.assertEqual(role.scope_node, 'valid_scope')
         self.assertEqual(role.scope_depth, 1)
+
+    def test_role_copy_rejects_system_role(self):
+        from .models import Role
+
+        system_role = Role.objects.create(name='系统源角色', code='system_source', is_system=True)
+        response = self.client.post(
+            '/admin/api/rbac/roles/%s/copy/' % system_role.pk,
+            {'name': '系统副本', 'code': 'system_copy'}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Role.objects.filter(code='system_copy').exists())
+
+    def test_role_list_supports_server_pagination(self):
+        array_response = self.client.get('/admin/api/rbac/roles/')
+        self.assertIsInstance(array_response.json()['data'], list)
+        page_response = self.client.get('/admin/api/rbac/roles/?page=1&page_size=10')
+        payload = page_response.json()['data']
+        self.assertEqual(page_response.status_code, 200)
+        self.assertIn('list', payload)
+        self.assertIn('total', payload)
+        self.assertEqual(payload['page'], 1)
+        self.assertEqual(payload['page_size'], 10)
+
+    def test_permission_catalog_supports_server_pagination(self):
+        response = self.client.get('/admin/api/rbac/permission-catalog/?page=1&page_size=20')
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()['data']
+        self.assertIn('list', payload)
+        self.assertIn('total', payload)
+        self.assertIn('page_count', payload)
+        self.assertIn('button_count', payload)
+        self.assertEqual(payload['page'], 1)
+        self.assertEqual(payload['page_size'], 20)
 
     def test_permission_catalog_rejects_builtin_code_conflict(self):
         from .models import Menu
@@ -2197,7 +2260,7 @@ class RbacFinalAuditTests(TestCase):
             private_key='secret-key',
         )
         client = Client()
-        client.force_login(self.admin)
+        force_login_with_token(client, self.admin)
         response = client.get('/admin/api/ops/servers/%s/detail/' % server.pk)
         self.assertEqual(response.status_code, 200)
         data = response.json()['data']
@@ -2256,7 +2319,7 @@ class RbacFinalAuditTests(TestCase):
         menu = Menu.objects.create(name='审计生成权限', permission='auditgen:view', menu_type=2)
         limited = get_user_model().objects.create_user(username='audit_gen_limited', password='pass12345')
         client = Client()
-        client.force_login(limited)
+        force_login_with_token(client, limited)
         response = client.post(
             '/admin/api/rbac/menus/%s/generate-permissions/' % menu.pk,
             {'actions': ['add']}, content_type='application/json',

@@ -6,7 +6,7 @@
     <title>服务器管理</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261127a">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261128a">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -296,7 +296,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-<script src="/static/layui/js/common.js?v=20261127a"></script>
+<script src="/static/layui/js/common.js?v=20261128a"></script>
 <script src="/static/layui/js/i18n.js"></script>
 <script>
 inheritTheme();
@@ -429,7 +429,10 @@ layui.use(['table', 'form', 'layer'], function(){
                     username: editData.username || '',
                     auth_type: editData.auth_type || 'password'
                 } : null;
-                
+                layero.data('originalData', originalData);
+                layero.data('editData', editData);
+                layero.data('isEdit', isEdit);
+
                 if (isEdit) {
                     form.val(formFilter, {
                         id: editData.id,
@@ -451,8 +454,8 @@ layui.use(['table', 'form', 'layer'], function(){
                 }
                 form.render(null, formFilter);
 
-                bindFormOnce('radio(authType)', function(data) {
-                    if (data.value === 'password') {
+                layero.off('change.authType', 'input[name="auth_type"]').on('change.authType', 'input[name="auth_type"]', function() {
+                    if (this.value === 'password') {
                         layero.find('#passwordField').show();
                         layero.find('#privateKeyField').hide();
                     } else {
@@ -494,15 +497,20 @@ layui.use(['table', 'form', 'layer'], function(){
                     }
                     
                     // 编辑模式，使用数据库中已保存的服务器信息进行测试
-                    testConnection(originalData);
+                    testConnection(layero.data('originalData'));
                 });
 
                 layero.find('#cancelServerForm').off('click.serverForm').on('click.serverForm', function() {
                     layer.close(index);
                 });
 
-                bindFormOnce('submit(serverSubmit)', function(data) {
-                    var field = data.field;
+                layero.find('[lay-filter="serverSubmit"]').off('click.serverSubmit').on('click.serverSubmit', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    var $submitLayer = $(layero);
+                    var currentEdit = !!$submitLayer.data('isEdit');
+                    var currentEditData = $submitLayer.data('editData') || {};
+                    var field = form.val(formFilter);
                     var submitData = {
                         name: field.name,
                         host: field.host,
@@ -514,7 +522,7 @@ layui.use(['table', 'form', 'layer'], function(){
                     };
                     if (submitData.auth_type === 'password') {
                         // 编辑模式下，如果密码框为空，不发送 password 字段（保留原密码）
-                        if (isEdit && !field.password) {
+                        if (currentEdit && !field.password) {
                             // 不更新密码，只更新其他字段
                             submitData.password = undefined;
                         } else {
@@ -527,11 +535,11 @@ layui.use(['table', 'form', 'layer'], function(){
                     }
 
                     // 获取提交按钮并添加动画
-                    var $btn = $('button[lay-filter="serverSubmit"]');
+                    var $btn = $(this);
                     $btn.prop('disabled', true).addClass('layui-btn-disabled').html('<i class="layui-icon layui-icon-loading-1 layui-anim layui-anim-rotate layui-anim-loop"></i> ' + (t('common.submitting') || '提交中...'));
 
-                    if (isEdit) {
-                        putApi('/admin/api/ops/servers/' + editData.id + '/update/', submitData, function(res) {
+                    if (currentEdit) {
+                        putApi('/admin/api/ops/servers/' + currentEditData.id + '/update/', submitData, function(res) {
                             // 恢复按钮状态
                             $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
                             

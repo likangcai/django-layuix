@@ -9,6 +9,19 @@
 
 ## [Unreleased]
 
+### 🔐 安全加固
+- 🔴 **写接口强制 Token** — 后台 API 的 `POST/PUT/PATCH/DELETE` 默认要求显式 `Authorization: Bearer` 或 `X-Token`，登录/注册除外
+- 🔴 **前端 Token 链路** — 登录页直接持久化 Token，图片上传与数据导入补齐 Authorization 头
+- 🟡 **角色复制提权** — 禁止复制系统角色，菜单按调用者可见范围过滤，父角色继承仅完整权限者保留
+- 🟡 **会话写请求** — 无 Token 的会话写请求统一返回 401，不再仅依赖 Origin 校验
+
+### 🧩 交互修复
+- 🟡 **实例级表单绑定** — 菜单、角色、配置、服务器弹窗的联动与提交改为当前层实例绑定，不再持有旧 `layero`
+- 🟡 **分页改造** — 角色列表与权限目录接口支持 `page/page_size` 服务端分页，前端表格改为服务端分页
+- 🟡 **权限来源** — `Menu.permission_source` 独立标记内置/业务权限，删除接口不再依赖 `plugin_key` 推断
+- 🟡 **Django 翻译** — 更新 `locale/zh_Hans` 的模板 msgid 并重新编译 `.mo`
+- 🟡 **国内访问** — README 与快捷链接文档同时提供 GitHub 与 Gitee 地址
+
 ## [1.8.0] - 2026-11-27
 
 ### 🎯 版本摘要

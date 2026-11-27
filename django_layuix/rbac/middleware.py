@@ -259,6 +259,13 @@ class ApiOriginGuardMiddleware:
         ):
             return self.get_response(request)
 
+        public_write = self._is_public_api_path(request.path)
+        if getattr(settings, 'LAYUIX_REQUIRE_TOKEN_FOR_WRITES', True) and not public_write:
+            if not self._has_header_token(request):
+                return JsonResponse({'code': 401, 'msg': 'Token required for write operations'}, status=401)
+            if not self._is_valid_token_request(request):
+                return JsonResponse({'code': 401, 'msg': 'Invalid token'}, status=401)
+
         if self._is_valid_token_request(request):
             return self.get_response(request)
 
@@ -292,6 +299,12 @@ class ApiOriginGuardMiddleware:
                 for prefix in prefixes
             ]
         return any(str(item) and path == str(item) for item in public_paths or [])
+
+    def _has_header_token(self, request):
+        authorization = str(request.META.get('HTTP_AUTHORIZATION') or '').strip()
+        if authorization[:7].lower() == 'bearer ' and authorization[7:].strip():
+            return True
+        return bool(str(request.META.get('HTTP_X_TOKEN') or '').strip())
 
     def _is_valid_token_request(self, request):
         try:

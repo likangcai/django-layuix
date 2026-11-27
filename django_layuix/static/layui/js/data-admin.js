@@ -233,9 +233,11 @@
                 data.append('resource', resource);
                 data.append('mode', layero.find('#dataImportMode').val() || 'upsert');
                 data.append('file', input.files[0]);
+                var token = typeof getToken === 'function' ? getToken() : '';
                 fetch('/admin/api/rbac/data-import/', {
                     method: 'POST',
                     credentials: 'same-origin',
+                    headers: token ? {'Authorization': 'Bearer ' + token} : {},
                     body: data,
                 }).then(function (response) {
                     return response.json();

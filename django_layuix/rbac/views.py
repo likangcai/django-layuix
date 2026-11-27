@@ -1226,8 +1226,28 @@ def role_list(request):
     """GET /api/rbac/roles/ - 角色列表"""
     from .models import Role
 
-    roles = Role.objects.all().order_by('id')
-    return success_response([_role_payload(role) for role in roles])
+    roles = Role.objects.prefetch_related(
+        'parent_roles', 'children', 'child_roles', 'menus'
+    ).order_by('id')
+    page_raw = request.GET.get('page')
+    if page_raw is None:
+        return success_response([_role_payload(role) for role in roles])
+    try:
+        page = int(page_raw)
+        page_size = int(request.GET.get('page_size') or 20)
+    except (TypeError, ValueError):
+        return error_response('分页参数必须是整数', 400)
+    if page < 1 or page_size < 10 or page_size > 200:
+        return error_response('分页参数超出范围', 400)
+    total = roles.count()
+    start = (page - 1) * page_size
+    payload = [_role_payload(role) for role in roles[start:start + page_size]]
+    return success_response({
+        'list': payload,
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+    })
 
 
 @csrf_exempt
@@ -1510,33 +1530,58 @@ def role_copy(request, pk):
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
 
+    from django.db import IntegrityError, transaction
+
+    from .engine import (
+        RbacConstraintError, is_full_access, validate_assignable_menus,
+        validate_role_parents, visible_menu_queryset,
+    )
     from .models import Role
 
     try:
         role = Role.objects.get(pk=pk)
     except Role.DoesNotExist:
         return error_response('角色不存在', 404)
+    if role.is_system:
+        return error_response('系统内置角色不能复制', 400)
 
     body = get_request_body(request)
-    new_name = body.get('name', f'{role.name}_copy').strip()
-    new_code = body.get('code', f'{role.code}_copy').strip()
+    new_name = str(body.get('name') or f'{role.name}_copy').strip()
+    new_code = str(body.get('code') or f'{role.code}_copy').strip()
+    if not new_name or not new_code:
+        return error_response('角色名称和编码不能为空', 400)
+    if Role.objects.filter(code=new_code).exists() or Role.objects.filter(name=new_name).exists():
+        return error_response('角色名称或编码已存在', 400)
 
-    if Role.objects.filter(code=new_code).exists():
-        return error_response('角色编码已存在', 400)
+    full_access = is_full_access(request.user)
+    try:
+        menu_ids = validate_assignable_menus(list(role.menus.values_list('id', flat=True)))
+        if not full_access:
+            allowed_menu_ids = set(visible_menu_queryset(request.user).values_list('id', flat=True))
+            menu_ids = [item for item in menu_ids if item in allowed_menu_ids]
+        parent_ids = list(role.parent_roles.values_list('id', flat=True)) if full_access else []
+        validate_role_parents(0, parent_ids)
+    except RbacConstraintError as error:
+        return error_response(error.message, 400)
 
-    new_role = Role(
-        name=new_name,
-        code=new_code,
-        description=role.description,
-        status=role.status,
-        max_users=role.max_users,
-        parent=role.parent,
-        scope_node=role.scope_node,
-        scope_depth=role.scope_depth,
-    )
-    new_role.save()
-    new_role.menus.set(role.menus.all())
-    new_role.parent_roles.set(role.parent_roles.all())
+    try:
+        with transaction.atomic():
+            new_role = Role.objects.create(
+                name=new_name,
+                code=new_code,
+                description=role.description,
+                status=role.status,
+                max_users=role.max_users,
+                parent=role.parent if full_access else None,
+                scope_node=role.scope_node,
+                scope_depth=role.scope_depth,
+            )
+            new_role.menus.set(menu_ids)
+            new_role.parent_roles.set(parent_ids)
+    except IntegrityError:
+        return error_response('角色名称或编码已存在', 400)
+    except RbacConstraintError as error:
+        return error_response(error.message, 400)
     return success_response({'id': new_role.id}, msg='复制成功')
 
 

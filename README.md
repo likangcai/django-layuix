@@ -7,6 +7,7 @@
 - 🌗 现代化 Layui 后台管理界面（深色/浅色主题切换）
 - 🌐 **完整国际化支持**（中文/英文），前端 JS + 后端 Django i18n 双层翻译，菜单多语言字段
 - 🔐 RBAC3 权限管理（菜单管理、角色管理、用户管理、按钮级权限控制、角色继承、SSD/DSD 约束、前置角色与人数限制）
+- 🛡️ 写接口强制 Token（后台 API 写操作默认要求显式 Bearer Token，登录/注册除外）
 - 📊 Dashboard 仪表盘（CPU/内存折线图、磁盘饼图、网络监控）
 - 📝 操作日志（自动记录用户操作，支持自定义路径前缀，可记录前端 API）
 - ⚙️ 系统配置（键值对配置，数据库动态管理，实时生效）
@@ -178,7 +179,7 @@ python manage.py runserver
 LAYUI_CONFIG = {
     # 系统信息
     'system_name': 'Django Layuix Admin',
-    'system_version': '1.8.0',         # 系统版本号（显示在侧边栏）
+    'system_version': '1.9.0',         # 系统版本号（显示在侧边栏）
     'system_description': '',          # 系统描述（显示在登录页）
 
     # Logo
@@ -296,7 +297,7 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
 | `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
-| `system_version` | 版本号 | 包版本（当前 1.8.0） |
+| `system_version` | 版本号 | 包版本（当前 1.9.0） |
 | `system_description` | 系统描述 | （空） |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |
@@ -1094,7 +1095,7 @@ django-layuix 内置深色/浅色双模式切换功能：
 
 ## 🆘 常见问题与故障排查
 
-本章节汇总了用户在使用 django-layuix 时遇到的**高频问题**及解决方案。如果您遇到的问题未在此列出，请 [提交 Issue](https://github.com/likangcai/django-layuix/issues)。
+本章节汇总了用户在使用 django-layuix 时遇到的**高频问题**及解决方案。如果您遇到的问题未在此列出，请通过 [GitHub Issues](https://github.com/likangcai/django-layuix/issues) 或 [Gitee Issues](https://gitee.com/yingzi_shadow/django-layuix/issues) 提交。
 
 ---
 
@@ -1470,7 +1471,7 @@ python manage.py runserver
 如果以上方法都无法解决您的问题：
 
 1. **查看详细文档**: `docs/` 目录下的各专题指南
-2. **搜索已知 Issues**: [GitHub Issues](https://github.com/likangcai/django-layuix/issues)
+2. **搜索已知 Issues**: [GitHub Issues](https://github.com/likangcai/django-layuix/issues) / [Gitee Issues](https://gitee.com/yingzi_shadow/django-layuix/issues)
 3. **提交新 Issue**: 请包含以下信息：
    - Django 版本 (`python -c "import django; print(django.VERSION)"`)
    - django-layuix 版本 (`pip show django-layuix`)

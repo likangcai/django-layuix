@@ -214,10 +214,10 @@ def register_page_permissions():
         if is_new:
             created.append(code)
     Menu.objects.filter(pk__in=[parent.pk, button_parent.pk]).update(
-        plugin_key='permission_catalog'
+        plugin_key='permission_catalog', permission_source='builtin'
     )
     Menu.objects.filter(parent_id__in=[parent.pk, button_parent.pk]).update(
-        plugin_key='permission_catalog'
+        plugin_key='permission_catalog', permission_source='builtin'
     )
     from django.db import IntegrityError
 

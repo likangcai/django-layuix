@@ -206,10 +206,13 @@
                 try {
                     var res = JSON.parse(xhr.responseText);
                     if (xhr.status === 200 && res.code === 200) {
-                        // 保存token（用于SSE认证）
+                        // 保存 token，后续所有 API 写请求必须使用显式 Token
                         if (res.data && res.data.token) {
-                            if (window.setToken) {
-                                window.setToken(res.data.token);
+                            try {
+                                sessionStorage.setItem('admin_token', res.data.token);
+                                localStorage.setItem('admin_token', res.data.token);
+                            } catch (error) {
+                                console.warn('Unable to persist API token', error);
                             }
                         }
                         // 使用后端返回的next URL，如果没有则使用默认值

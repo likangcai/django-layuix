@@ -6,7 +6,7 @@
     <title>系统配置 - 软件测试管理后台</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261127a">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261128a">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -177,7 +177,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261127a"></script>
+    <script src="/static/layui/js/common.js?v=20261128a"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -312,66 +312,65 @@ layui.use(['table', 'form', 'layer'], function(){
     }
 
     // 切换配置值输入区域
-    function switchValueInput(type) {
-        $('#valueInputDefault, #valueInputImage, #valueInputColor, #valueInputJson, #valueInputBoolean, #valueInputText').hide();
+    function switchValueInput(type, $root) {
+        var $scope = $root || $(document);
+        $scope.find('#valueInputDefault, #valueInputImage, #valueInputColor, #valueInputJson, #valueInputBoolean, #valueInputText').hide();
         if (type === 'image') {
-            $('#valueInputImage').show();
+            $scope.find('#valueInputImage').show();
         } else if (type === 'color') {
-            $('#valueInputColor').show();
+            $scope.find('#valueInputColor').show();
         } else if (type === 'json') {
-            $('#valueInputJson').show();
+            $scope.find('#valueInputJson').show();
         } else if (type === 'boolean') {
-            $('#valueInputBoolean').show();
+            $scope.find('#valueInputBoolean').show();
         } else if (type === 'text') {
-            $('#valueInputText').show();
+            $scope.find('#valueInputText').show();
         } else {
-            $('#valueInputDefault').show();
+            $scope.find('#valueInputDefault').show();
         }
     }
 
     // 获取当前配置值
-    function getCurrentValue(type) {
+    function getCurrentValue(type, $root) {
+        var $scope = $root || $(document);
         if (type === 'image') {
-            return $('[name="value_image"]').val() || '';
+            return $scope.find('[name="value_image"]').val() || '';
         } else if (type === 'color') {
-            return $('[name="value_color"]').val() || '';
+            return $scope.find('[name="value_color"]').val() || '';
         } else if (type === 'json') {
-            return $('[name="value_json"]').val() || '';
+            return $scope.find('[name="value_json"]').val() || '';
         } else if (type === 'boolean') {
-            return $('[name="value_boolean"]').is(':checked') ? 'true' : 'false';
+            return $scope.find('[name="value_boolean"]').is(':checked') ? 'true' : 'false';
         } else if (type === 'text') {
-            return $('[name="value_text"]').val() || '';
+            return $scope.find('[name="value_text"]').val() || '';
         } else {
-            return $('[name="value"]').val() || '';
+            return $scope.find('[name="value"]').val() || '';
         }
     }
 
     // 设置配置值到对应输入框
-    function setCurrentValue(type, value) {
+    function setCurrentValue(type, value, $root) {
+        var $scope = $root || $(document);
         if (type === 'image') {
-            $('[name="value_image"]').val(value || '');
+            $scope.find('[name="value_image"]').val(value || '');
             if (value) {
-                $('#imagePreview').attr('src', value).show().css('cursor', 'pointer');
-                $('#imagePreviewHint').html('<span style="color:var(--primary-color);cursor:pointer;" class="preview-link">' + t('config.preview') + '</span>');
+                $scope.find('#imagePreview').attr('src', value).show().css('cursor', 'pointer');
+                $scope.find('#imagePreviewHint').html('<span style="color:var(--primary-color);cursor:pointer;" class="preview-link">' + t('config.preview') + '</span>');
             } else {
-                $('#imagePreview').hide();
-                $('#imagePreviewHint').text(t('config.previewHint'));
+                $scope.find('#imagePreview').hide();
+                $scope.find('#imagePreviewHint').text(t('config.previewHint'));
             }
         } else if (type === 'color') {
-            $('[name="value_color"]').val(value || '');
-            $('#colorPicker').val(value || '#1e9fff');
+            $scope.find('[name="value_color"]').val(value || '');
+            $scope.find('#colorPicker').val(value || '#1e9fff');
         } else if (type === 'json') {
-            $('[name="value_json"]').val(value || '');
+            $scope.find('[name="value_json"]').val(value || '');
         } else if (type === 'boolean') {
-            if (value === 'true' || value === true) {
-                $('[name="value_boolean"]').prop('checked', true);
-            } else {
-                $('[name="value_boolean"]').prop('checked', false);
-            }
+            $scope.find('[name="value_boolean"]').prop('checked', value === 'true' || value === true);
         } else if (type === 'text') {
-            $('[name="value_text"]').val(value || '');
+            $scope.find('[name="value_text"]').val(value || '');
         } else {
-            $('[name="value"]').val(value || '');
+            $scope.find('[name="value"]').val(value || '');
         }
     }
 
@@ -402,17 +401,17 @@ layui.use(['table', 'form', 'layer'], function(){
 
                     // 设置配置值
                     var type = editData.config_type || 'string';
-                    switchValueInput(type);
-                    setCurrentValue(type, editData.value);
+                    switchValueInput(type, layero);
+                    setCurrentValue(type, editData.value, layero);
                 } else {
-                    switchValueInput('string');
+                    switchValueInput('string', layero);
                 }
 
                 form.render(null, formFilter);
 
-                // 类型切换事件
-                bindFormOnce('select(configType)', function(data) {
-                    switchValueInput(data.value);
+                // 类型切换事件：仅绑定当前弹窗
+                layero.off('change.configType', 'select[name="config_type"]').on('change.configType', 'select[name="config_type"]', function() {
+                    switchValueInput(this.value, layero);
                     form.render(null, formFilter);
                 });
 
@@ -472,7 +471,10 @@ layui.use(['table', 'form', 'layer'], function(){
                         data: formData,
                         processData: false,
                         contentType: false,
-                        headers: {'X-CSRFToken': getCookie('csrftoken')},
+                        headers: {
+                            'Authorization': 'Bearer ' + (typeof getToken === 'function' ? getToken() : ''),
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
                         success: function(res) {
                             layer.close(loadIndex);
                             if (res.code === 200) {
@@ -502,7 +504,7 @@ layui.use(['table', 'form', 'layer'], function(){
     form.on('submit(configSubmit)', function(data) {
         var field = data.field;
         var type = field.config_type || 'string';
-        var value = getCurrentValue(type);
+        var value = getCurrentValue(type, $(data.elem).closest('.layui-layer'));
 
         var submitData = {
             key: field.key,

@@ -1,9 +1,10 @@
 # 纯跨域 Token 认证接入指南
 
-版本：v3.0　适用版本：django-layuix 1.4.5+
+版本：v4.0　适用版本：django-layuix 1.9.0+
 
 ## 结论（TL;DR）
-【事实】`api_login_required` 与 `api_permission_required` 统一通过 `resolve_api_user()` 解析 Session 或 Bearer Token。
+【事实】1.9.0 起，后台 API 的写请求默认必须使用显式 Token，登录/注册除外。
+【事实】`api_login_required` 与 `api_permission_required` 统一通过 `resolve_api_user()` 解析 Session 或 Bearer Token；显式 Token 优先于 Session。
 【事实】1.4.4 起签发标准 HS256 JWT，包含 `jti`，状态写入 `sys_auth_token` 与 Django cache（可配置为 Redis）。
 【判断】跨域前端推荐使用 Bearer Token，避免依赖会话 Cookie 的 SameSite 行为。
 【本期不做】OAuth2 / OpenID Connect 服务端能力；刷新 Token。
@@ -15,7 +16,9 @@
 
 ## 1. 结论
 
-`api_login_required` 与 `api_permission_required` 现已统一走 `resolve_api_user()`：**Session 优先，未登录时自动解析 Bearer Token**。因此 Vue/React 独立前端可以在不携带 Cookie 的情况下调用所有 RBAC API。
+`api_login_required` 与 `api_permission_required` 统一走 `resolve_api_user()`：显式 Token 优先于 Session；显式 Token 无效时不会回退到 Session。Vue/React 独立前端可以在不携带 Cookie 的情况下调用所有 RBAC API。
+
+后台自带前端的写请求也已改为显式 Token：`POST/PUT/PATCH/DELETE` 必须携带 `Authorization: Bearer <token>` 或 `X-Token`，仅登录、注册等公共路径豁免。可通过 `LAYUIX_REQUIRE_TOKEN_FOR_WRITES=False` 临时关闭，但不建议长期关闭。
 
 ## 2. 获取 Token
 
