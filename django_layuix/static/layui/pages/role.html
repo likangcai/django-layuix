@@ -6,7 +6,7 @@
     <title data-i18n="role.title">角色管理</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126v">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126w">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -62,6 +62,8 @@
         .btn-disabled { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
         .role-row-actions { display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
         .role-row-actions .layui-btn { margin-left: 0; }
+        .role-form-actions { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; gap: 8px; margin: 0 -30px -1px; padding: 12px 30px 14px; background: var(--bg-primary); border-top: 1px solid var(--card-border); }
+        .role-form-actions .layui-btn { margin-left: 0; }
         .role-more-btn .layui-icon { margin-left: 2px; font-size: 12px; }
         .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
         .layui-card-header { border-bottom: 1px solid var(--card-border); }
@@ -183,7 +185,7 @@
                 <input type="checkbox" name="status" lay-skin="switch" lay-text="{{ t('common.enable') }}|{{ t('common.disable') }}" checked>
             </div>
         </div>
-        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;">
+        <div class="role-form-actions">
             <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="roleSubmit">{{ t('common.confirm') }}</button>
             <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.reset') }}</button>
         </div>
@@ -251,8 +253,8 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261126v"></script>
-    <script src="/static/layui/js/i18n.js?v=20261126v"></script>
+    <script src="/static/layui/js/common.js?v=20261126w"></script>
+    <script src="/static/layui/js/i18n.js?v=20261126w"></script>
     <script>
 inheritTheme();
 
