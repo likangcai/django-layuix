@@ -449,6 +449,7 @@ function openStandardDialog(options) {
     if (!api || !api.layer) return null;
     var layer = api.layer;
     var form = api.form;
+    var $ = api.$ || window.jQuery;
     var settings = Object.assign({}, options || {});
     var content = settings.content || '';
     if (settings.tplId) {
@@ -500,6 +501,12 @@ function openStandardDialog(options) {
                     layerEl.style.top = Math.max(10, (window.innerHeight - actualHeight) / 2) + 'px';
                 }
             }
+            layero.find('.layui-form-item').filter(function() {
+                var $item = $(this);
+                return $item.find('[lay-submit]').length
+                    && !$item.hasClass('menu-form-actions')
+                    && !$item.hasClass('role-form-actions');
+            }).addClass('layui-dialog-actions');
             if (typeof renderI18n === 'function') renderI18n();
             if (typeof originalSuccess === 'function') originalSuccess(layero, idx);
         },
@@ -968,27 +975,40 @@ function currentUserPermissions() {
     return user.permissions || [];
 }
 
+// 当前用户信息请求缓存，避免多个页面初始化时并发重复请求
+var currentUserFetch = null;
+
 // 等待当前用户信息就绪后再渲染依赖权限的表格，避免工具栏按空权限渲染
 function ensureCurrentUser(callback) {
     var root = window.parent && window.parent !== window ? window.parent : window;
     var user = root.currentUser || window.currentUser;
+    var done = function(data) { if (typeof callback === 'function') callback(data || {}); };
     if (user && user.permissions) {
-        callback(user);
+        done(user);
         return;
     }
     if (typeof fetch !== 'function') {
-        callback({});
+        done({});
         return;
     }
-    fetch('/admin/api/rbac/userinfo/', {credentials: 'same-origin'})
-        .then(function(response) { return response.ok ? response.json() : {code: 401}; })
-        .then(function(res) {
-            var data = res && res.code === 200 ? res.data : {};
-            root.currentUser = data;
-            window.currentUser = data;
-            callback(data);
-        })
-        .catch(function() { callback({}); });
+    if (!currentUserFetch) {
+        currentUserFetch = fetch('/admin/api/rbac/userinfo/', {credentials: 'same-origin'})
+            .then(function(response) { return response.ok ? response.json() : {code: 401}; })
+            .then(function(res) {
+                var data = res && res.code === 200 ? res.data : null;
+                if (data && data.permissions) {
+                    root.currentUser = data;
+                    window.currentUser = data;
+                }
+                currentUserFetch = null;
+                return data || {};
+            })
+            .catch(function() {
+                currentUserFetch = null;
+                return {};
+            });
+    }
+    currentUserFetch.then(done);
 }
 
 function requiredPagePermission(path) {

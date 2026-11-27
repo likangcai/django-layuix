@@ -8,11 +8,12 @@
 from django.db.models import Count, Q
 from django.views.decorators.csrf import csrf_exempt
 
-from .button_generator import generate_menu_buttons
+from .button_generator import derive_permission_prefix, generate_menu_buttons
+from .permission_registry import BUTTON_ACTIONS, build_permission_code, permission_catalog
 from .models import Menu
 from .views import (
     api_login_required, api_permission_required, error_response,
-    get_request_body, success_response,
+    get_request_body, parse_bool_value, success_response,
 )
 
 PROTECTED_CODES = {'permission:view', 'permission:edit'}
@@ -91,7 +92,9 @@ def permission_catalog_set_status(request, pk):
     body = get_request_body(request)
     if 'status' not in body:
         return error_response('缺少目标状态', 400)
-    desired = bool(body.get('status'))
+    desired = parse_bool_value(body.get('status'))
+    if desired is None:
+        return error_response('状态值无效', 400)
     if menu.permission in PROTECTED_CODES and not desired:
         return error_response('核心权限不能停用', 400)
     menu.status = desired
@@ -124,7 +127,21 @@ def permission_catalog_buttons_create(request):
         actions = [item for item in actions.split(',') if item]
     if not isinstance(actions, list) or not actions:
         return error_response('请至少选择一个按钮动作', 400)
-    result = generate_menu_buttons(parent, actions, replace=False, actor=request.user)
+    prefix = derive_permission_prefix(parent)
+    builtin_codes = set(permission_catalog())
+    conflicts = []
+    for action in actions:
+        key = action.get('value') if isinstance(action, dict) else action
+        key = str(key or '').strip()
+        if key not in BUTTON_ACTIONS:
+            continue
+        code = build_permission_code(prefix, key)
+        if code and code in builtin_codes:
+            conflicts.append(code)
+    if conflicts:
+        return error_response('以下权限码已由内置目录管理，不能重复创建：%s' % '、'.join(sorted(set(conflicts))), 400)
+    replace = parse_bool_value(body.get('replace'), False)
+    result = generate_menu_buttons(parent, actions, replace=replace, actor=request.user)
     codes = result['created'] + result['updated']
     rows = Menu.objects.filter(
         parent=parent, permission__in=codes, menu_type=3, plugin_key=''

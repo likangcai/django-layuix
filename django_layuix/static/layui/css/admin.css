@@ -2859,6 +2859,18 @@ textarea:focus-visible,
 .layui-layer.layui-layer-admin .layui-layer-content {
     overflow: visible;
 }
+/* 弹窗内表单按钮统一吸底，避免长表单滚动后才能提交 */
+.layui-layer.layui-layer-admin .layui-dialog-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 0 -30px -1px;
+    padding: 12px 30px 14px;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--card-border);
+}
+.layui-layer.layui-layer-admin .layui-dialog-actions .layui-btn { margin-left: 0; }
+
 /* 长表单弹窗需要清晰的滚动提示 */
 .layui-layer.layui-layer-admin .layui-layer-content[style*="max-height"] {
     scrollbar-width: thin;

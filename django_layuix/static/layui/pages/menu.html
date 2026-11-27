@@ -6,7 +6,7 @@
     <title>菜单管理 - 软件测试管理后台</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126w">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261126x">
     <script>
         // 同步父页面主题
         function syncParentTheme() {
@@ -245,7 +245,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261126w"></script>
+    <script src="/static/layui/js/common.js?v=20261126x"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -740,7 +740,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         var iconLayerIndex = LayuiUI.dialog({
             type: 1,
             title: t('menu.iconPicker.title'),
-            area: ['580px', '560px'],
+            area: ['580px', 'auto'],
             content: renderTpl('iconPickerTpl'),
             success: function(layero, index) {
                 function renderIcons(keyword) {
@@ -814,9 +814,11 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         }
     });
 
-    // 初始化
-    loadMenuTree();
-    loadTable();
+    // 初始化：等待用户信息就绪后再渲染依赖权限的树与工具栏
+    LayuiUI.ensureCurrentUser(function() {
+        loadMenuTree();
+        loadTable();
+    });
 });
 </script>
 </body>

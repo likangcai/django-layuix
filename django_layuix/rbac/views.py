@@ -52,6 +52,20 @@ def get_request_body(request):
         return {}
 
 
+def parse_bool_value(value, default=None):
+    """解析 JSON 与表单布尔值，拒绝模糊字符串。"""
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    normalized = str(value).strip().lower()
+    if normalized in ('true', '1', 'on', 'yes'):
+        return True
+    if normalized in ('false', '0', 'off', 'no', ''):
+        return False
+    return default
+
+
 def success_response(data=None, msg='success'):
     return JsonResponse({'code': 200, 'msg': msg, 'data': data})
 
@@ -1260,14 +1274,24 @@ def role_detail(request, pk):
         if 'description' in body:
             role.description = body['description']
         if 'status' in body:
-            role.status = bool(body['status'])
+            parsed_status = parse_bool_value(body['status'])
+            if parsed_status is None:
+                return error_response('状态值无效', 400)
+            role.status = parsed_status
         if 'max_users' in body:
             try:
                 role.max_users = int(body['max_users']) or None
             except (TypeError, ValueError):
                 return error_response('人数上限必须是整数', 400)
         if 'scope_node' in body:
-            role.scope_node = str(body['scope_node'] or '')[:100]
+            from .models import ScopeNode
+
+            scope_code = str(body['scope_node'] or '').strip()[:100]
+            if scope_code and not ScopeNode.objects.filter(
+                code=scope_code, is_active=True
+            ).exists():
+                return error_response('数据作用域节点不存在或已停用', 400)
+            role.scope_node = scope_code
         if 'scope_depth' in body:
             try:
                 role.scope_depth = max(0, int(body['scope_depth'] or 0))
@@ -1343,7 +1367,10 @@ def role_toggle_status(request, pk):
     body = get_request_body(request)
     if 'status' not in body:
         return error_response('缺少目标状态', 400)
-    role.status = bool(body.get('status'))
+    desired = parse_bool_value(body.get('status'))
+    if desired is None:
+        return error_response('状态值无效', 400)
+    role.status = desired
     role.save(update_fields=['status'])
     return success_response(
         {'id': role.pk, 'status': role.status},
@@ -1369,18 +1396,22 @@ def role_batch_delete(request):
     if not isinstance(ids, list) or not ids:
         return error_response('请选择要删除的角色', 400)
     try:
-        role_ids = [int(item) for item in ids]
+        role_ids = sorted(set(int(item) for item in ids))
     except (TypeError, ValueError):
         return error_response('角色 ID 格式错误', 400)
-    roles = list(Role.objects.filter(id__in=role_ids))
-    if len(roles) != len(set(role_ids)):
-        return error_response('部分角色不存在', 404)
-    system_names = [role.name for role in roles if role.is_system]
-    if system_names:
-        return error_response('系统内置角色不能删除：%s' % '、'.join(system_names), 400)
     with transaction.atomic():
-        Role.objects.filter(id__in=role_ids).delete()
-    return success_response({'deleted': len(roles)}, msg='角色已删除')
+        roles = list(Role.objects.filter(id__in=role_ids))
+        if len(roles) != len(role_ids):
+            return error_response('部分角色不存在', 404)
+        system_names = [role.name for role in roles if role.is_system]
+        if system_names:
+            return error_response('系统内置角色不能删除：%s' % '、'.join(system_names), 400)
+        deleted = Role.objects.filter(id__in=role_ids).delete()[0]
+    return success_response({
+        'requested': len(ids),
+        'deleted': len(role_ids),
+        'cascade_objects': deleted,
+    }, msg='角色已删除')
 
 
 @csrf_exempt

@@ -1800,6 +1800,39 @@ class RbacFinalAuditTests(TestCase):
         Menu.objects.create(name='业务节点一', menu_type=3, permission='audit:unique')
         Menu.objects.create(name='业务节点二', menu_type=3, permission='audit:unique')
 
+    def test_role_scope_node_must_exist_and_be_active(self):
+        from .models import Role, ScopeNode
+
+        role = Role.objects.create(name='作用域验证角色', code='scope_verify')
+        response = self.client.put(
+            '/admin/api/rbac/roles/%s/update/' % role.pk,
+            {'scope_node': 'not_exists'}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        ScopeNode.objects.create(code='valid_scope', name='有效作用域', is_active=True)
+        response = self.client.put(
+            '/admin/api/rbac/roles/%s/update/' % role.pk,
+            {'scope_node': 'valid_scope', 'scope_depth': 1}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        role.refresh_from_db()
+        self.assertEqual(role.scope_node, 'valid_scope')
+        self.assertEqual(role.scope_depth, 1)
+
+    def test_permission_catalog_rejects_builtin_code_conflict(self):
+        from .models import Menu
+
+        parent = Menu.objects.create(
+            name='角色中心', menu_type=2, permission='role:view', status=True
+        )
+        response = self.client.post(
+            '/admin/api/rbac/permission-catalog/buttons/create/',
+            {'parent_id': parent.pk, 'actions': ['add']},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('role:add', response.json()['msg'])
+
     def test_permission_catalog_business_button_create_and_delete(self):
         from .models import Menu
 
@@ -1847,6 +1880,12 @@ class RbacFinalAuditTests(TestCase):
         self.assertEqual(response.status_code, 200)
         role_a.refresh_from_db()
         self.assertFalse(role_a.status)
+
+        response = self.client.post(
+            '/admin/api/rbac/roles/%s/status/' % role_a.pk,
+            {'status': 'maybe'}, content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
 
         response = self.client.post(
             '/admin/api/rbac/roles/%s/status/' % system_role.pk,
