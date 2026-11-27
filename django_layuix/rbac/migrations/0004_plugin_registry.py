@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Persist plugin registry metadata."""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : 0004_plugin_registry.py
+# -----------------------------
+"""持久化插件注册表元数据。"""
 from django.db import migrations, models
 
 

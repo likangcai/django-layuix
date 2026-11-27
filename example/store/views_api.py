@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : views_api.py
+# -----------------------------
 """
 store/views_api.py - 商品管理 REST API 视图
 提供 Category / Product / Order 的 CRUD 接口
@@ -10,6 +15,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import localtime
 from django_layuix.rbac.views import api_login_required, get_request_body, success_response, error_response
+from django_layuix.rbac.serializers import field_whitelisted
 from .models import Category, Product, Order, OrderItem
 
 
@@ -21,11 +27,12 @@ def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
 
 
 # ============================================================
-# Category API
+# 分类 API
 # ============================================================
 
 @csrf_exempt
 @api_login_required
+@field_whitelisted('store.Category')
 def category_list(request):
     """GET /admin/api/store/categories/ - 分类列表"""
     queryset = Category.objects.all().order_by('sort', 'id')
@@ -89,6 +96,7 @@ def category_create(request):
 
 @csrf_exempt
 @api_login_required
+@field_whitelisted('store.Category')
 def category_detail(request, pk):
     """GET/PUT/DELETE /admin/api/store/categories/<pk>/ - 分类详情/更新/删除"""
     try:
@@ -105,7 +113,9 @@ def category_detail(request, pk):
             'product_count': cat.products.count(),
             'create_time': fmt_time(cat.create_time),
         }
-        return success_response(data)
+        from django_layuix.rbac.serializers import serialize_instance
+
+        return success_response(serialize_instance(data, request, 'store.Category'))
 
     elif request.method == 'PUT':
         body = get_request_body(request)
@@ -137,11 +147,12 @@ def category_detail(request, pk):
 
 
 # ============================================================
-# Product API
+# 商品 API
 # ============================================================
 
 @csrf_exempt
 @api_login_required
+@field_whitelisted('store.Product')
 def product_list(request):
     """GET /admin/api/store/products/ - 商品列表"""
     queryset = Product.objects.select_related('category').all().order_by('-create_time')
@@ -250,6 +261,7 @@ def product_create(request):
 
 @csrf_exempt
 @api_login_required
+@field_whitelisted('store.Product')
 def product_detail(request, pk):
     """GET/PUT/DELETE /admin/api/store/products/<pk>/ - 商品详情/更新/删除"""
     try:
@@ -333,7 +345,7 @@ def product_detail(request, pk):
 
 
 # ============================================================
-# Order API
+# 订单 API
 # ============================================================
 
 STATUS_LABELS = {
@@ -344,6 +356,7 @@ STATUS_LABELS = {
 
 @csrf_exempt
 @api_login_required
+@field_whitelisted('store.Order')
 def order_list(request):
     """GET /admin/api/store/orders/ - 订单列表"""
     queryset = Order.objects.all().order_by('-create_time')
@@ -475,6 +488,7 @@ def order_create(request):
 
 @csrf_exempt
 @api_login_required
+@field_whitelisted('store.Order')
 def order_detail(request, pk):
     """GET/PUT/DELETE /admin/api/store/orders/<pk>/ - 订单详情/更新/删除"""
     try:

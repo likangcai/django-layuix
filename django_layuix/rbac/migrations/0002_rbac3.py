@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""RBAC3: role inheritance, mutex groups, prerequisites and cardinality."""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : 0002_rbac3.py
+# -----------------------------
+"""RBAC3：角色继承、互斥组、前置角色和基数约束。"""
 from django.db import migrations, models
 
 

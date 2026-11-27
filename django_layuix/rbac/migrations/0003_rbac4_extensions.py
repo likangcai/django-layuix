@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""RBAC4 extensions: permission-level mutex and strategy defaults."""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : 0003_rbac4_extensions.py
+# -----------------------------
+"""RBAC4 扩展：权限级互斥与策略默认值。"""
 from django.db import migrations, models
 
 

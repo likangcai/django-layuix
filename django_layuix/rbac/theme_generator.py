@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : theme_generator.py
+# -----------------------------
 """
 Theme CSS Generator
 动态生成主题CSS文件
@@ -275,9 +280,7 @@ pre code .layui-code-h3 {{
 
 
 def generate_all_themes():
-    """
-    Generate CSS files for all available themes (dark/light only)
-    """
+    """为全部可用主题生成 CSS 文件（仅深色/浅色）。"""
     from django_layuix.rbac.themes import DJANGO_LAYUIX_THEMES
     
     # 获取输出目录

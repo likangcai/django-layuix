@@ -1,6 +1,16 @@
 # 第三方插件体系
 
-版本：v2.0　适用版本：django-layuix 1.4.0+
+版本：v2.0　适用版本：django-layuix 1.4.2+
+
+## 结论（TL;DR）
+【事实】插件通过 `PluginConfig`、菜单声明、API 路由与数据库注册表接入后台。
+【判断】插件启用状态持久化，`entry_points` 只负责发现，不覆盖管理员停用决定。
+【本期不做】插件热插拔与运行时卸载。
+【待确认】是否提供插件依赖的可视化检查页。
+【待确认】是否支持插件级配置表单。
+【待确认】是否发布官方插件模板仓库。
+
+---
 
 ## 1. 插件组成
 
@@ -29,7 +39,7 @@ class MyAppConfig(PluginConfig):
     plugin_api_prefix = '/admin/api/my_crm/'
     plugin_menu_path = '/mycrm/customers'
     plugin_dependencies = ('requests>=2.0',)
-    min_layuix_version = '1.4.0'
+    min_layuix_version = '1.4.2'
 
     plugin_menus = [
         ('CRM 管理', 'layui-icon-component', '/mycrm/customers', 2, 1, None),

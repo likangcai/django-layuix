@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : admin.py
+# -----------------------------
 """
 store/admin.py - 商品管理 Admin 注册
 改为使用 django-layuix 的 LayuiAjaxAdmin，支持 AJAX 批量操作

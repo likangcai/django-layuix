@@ -1,17 +1,18 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>个人中心 - 软件测试管理后台</title>
+    <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130i">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'light';
                 }
             } catch(e) {}
             document.documentElement.setAttribute('data-theme-mode', themeMode);
@@ -220,8 +221,8 @@
     </div>
 
     <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js"></script>
-    <script src="/static/layui/js/i18n.js"></script>
+    <script src="/static/layui/js/common.js?v=20261130i"></script>
+    <script src="/static/layui/js/i18n.js?v=20261130i"></script>
     <script>
     inheritTheme();
 
@@ -275,6 +276,10 @@
             if (!user) {
                 layer.msg(t('profile.noUserInfo'), {icon: 2});
                 return;
+            }
+            if (user.language && I18N.currentLang !== user.language) {
+                I18N.setLang(user.language);
+                renderI18n();
             }
 
             renderAvatar(user.avatar, user.nickname || user.username);
@@ -422,24 +427,23 @@
                     if (nickname) {
                         renderAvatar(currentUser.avatar, nickname);
                     }
-                    if (newLang !== (user.language || 'zh-hans')) {
-                        postApi('/admin/api/rbac/set-language/', {language: newLang}, function(langRes) {
-                            if (langRes.code !== 200) return;
-                            I18N.setLang(newLang);
-                            renderI18n();
-                            $('[data-i18n]').each(function() {
-                                var key = $(this).attr('data-i18n');
-                                if (key) $(this).text(t(key));
-                            });
-                            user.language = newLang;
-                            try {
-                                if (window.parent) {
-                                    window.parent.postMessage({type: 'languageChange', lang: newLang}, '*');
-                                }
-                            } catch (e) {}
-                            layer.msg(t('common.languageChanged'), {icon: 1});
+                    postApi('/admin/api/rbac/set-language/', {language: newLang}, function(langRes) {
+                        if (langRes.code !== 200) return;
+                        var appliedLang = (langRes.data && langRes.data.language) || newLang;
+                        I18N.setLang(appliedLang);
+                        renderI18n();
+                        $('[data-i18n]').each(function() {
+                            var key = $(this).attr('data-i18n');
+                            if (key) $(this).text(t(key));
                         });
-                    }
+                        if (currentUser) currentUser.language = appliedLang;
+                        try {
+                            if (window.parent) {
+                                window.parent.postMessage({type: 'languageChange', lang: appliedLang}, '*');
+                            }
+                        } catch (e) {}
+                        layer.msg(t('common.languageChanged'), {icon: 1});
+                    });
                 } else {
                     layer.msg(res.msg || t('common.fail'), {icon: 2});
                 }

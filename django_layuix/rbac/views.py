@@ -1,21 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-RBAC API Views - User info, menu data, system info, profile management
-"""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : views.py
+# -----------------------------
+"""RBAC API 视图：用户信息、菜单数据、系统信息和个人资料管理。"""
 import json
 import os
 import platform
 import socket
-from functools import wraps
 from datetime import datetime
 import time
+
+import django_layuix
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from django.contrib.auth import update_session_auth_hash
 from django.utils.timezone import localtime
-from .permissions import api_permission_required, resolve_api_user
+from .permissions import (
+    api_login_required, api_permission_by_method, api_permission_required,
+    resolve_api_user,
+)
+from .serializers import field_whitelisted
 
 
 def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
@@ -25,34 +33,37 @@ def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
     return localtime(dt).strftime(format_str)
 
 
-def api_login_required(view_func):
-    """API 登录校验：Session 与 Bearer Token 双通道。"""
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        user = resolve_api_user(request)
-        if user is None or not getattr(user, 'is_authenticated', False):
-            return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
-
 def get_request_body(request):
-    """Get parsed request body - supports JSON and form data for all HTTP methods"""
+    """获取解析后的请求体，支持所有 HTTP 方法的 JSON 和表单数据。"""
     try:
         if request.content_type == 'application/json':
             return json.loads(request.body)
-        # For form data (application/x-www-form-urlencoded), try POST first, then parse body for PUT/PATCH
+        # 表单数据（application/x-www-form-urlencoded）优先尝试 POST，再为 PUT/PATCH 解析请求体
         if request.POST:
             return dict(request.POST)
-        # Try to parse form data from body for PUT/PATCH requests
+        # 尝试从 PUT/PATCH 请求体中解析表单数据
         if request.body:
             from urllib.parse import parse_qs
             data = parse_qs(request.body.decode('utf-8'))
-            # parse_qs returns lists, convert single-item lists to values
+            # parse_qs 返回列表，将单元素列表转换为标量值
             return {k: v[0] if len(v) == 1 else v for k, v in data.items()}
         return {}
     except (json.JSONDecodeError, ValueError, TypeError, UnicodeDecodeError):
         return {}
+
+
+def parse_bool_value(value, default=None):
+    """解析 JSON 与表单布尔值，拒绝模糊字符串。"""
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    normalized = str(value).strip().lower()
+    if normalized in ('true', '1', 'on', 'yes'):
+        return True
+    if normalized in ('false', '0', 'off', 'no', ''):
+        return False
+    return default
 
 
 def success_response(data=None, msg='success'):
@@ -64,36 +75,66 @@ def error_response(msg='error', code=400):
 
 
 def _get_user_model():
-    """Get the user model"""
+    """获取用户模型。"""
     from django.contrib.auth import get_user_model
     return get_user_model()
 
 
-def _build_menu_tree(menus, parent_id=None):
-    """Build menu tree from flat menu list"""
+def _build_menu_tree(menus, parent_id=None, visited=None):
+    """从扁平列表构建菜单树；检测到环时跳过，避免无限递归。"""
+    if visited is None:
+        visited = set()
     tree = []
     for menu in menus:
+        menu_id = menu.get('id')
+        if menu_id in visited:
+            continue
         parent_val = menu.get('parent_id') or menu.get('parent')
         if parent_val == parent_id or (parent_val is None and parent_id is None):
-            children = _build_menu_tree(menus, menu['id'])
+            visited.add(menu_id)
             item = dict(menu)
+            children = _build_menu_tree(menus, menu_id, visited)
             if children:
                 item['children'] = children
             tree.append(item)
     return tree
 
 
+def _validate_menu_parent(menu_id, parent_id):
+    """拒绝菜单层级中的自我上级和环形引用。"""
+    if not parent_id:
+        return True
+    try:
+        parent_id = int(parent_id)
+    except (TypeError, ValueError):
+        return False
+    if menu_id and int(menu_id) == parent_id:
+        return False
+
+    from .models import Menu
+    seen = set()
+    current = Menu.objects.filter(pk=parent_id).first()
+    while current and current.pk not in seen:
+        if menu_id and current.pk == int(menu_id):
+            return False
+        seen.add(current.pk)
+        if not current.parent_id:
+            break
+        current = Menu.objects.filter(pk=current.parent_id).first()
+    return True
+
+
 @csrf_exempt
 @api_login_required
 def user_info(request):
-    """Get current user info with menus"""
+    """获取当前用户信息及菜单。"""
     User = _get_user_model()
     try:
         user = User.objects.get(pk=request.user.pk)
     except Exception:
         user = request.user
 
-    # Build user data
+    # 构建用户数据
     def get_client_ip(request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
@@ -111,23 +152,29 @@ def user_info(request):
         'email': getattr(user, 'email', ''),
         'is_superuser': user.is_superuser,
         'is_active': user.is_active,
-        'theme': getattr(user, 'theme', '默认深色'),
+        'theme': getattr(user, 'theme', '默认浅色'),
         'language': getattr(user, 'language', 'zh-hans'),
         'ip': get_client_ip(request),
     }
 
-    # Get roles
+    # 获取角色
     roles = []
     if hasattr(user, 'roles'):
         roles = [{'id': r.id, 'name': r.name, 'code': r.code, 'description': r.description or ''} for r in user.roles.filter(status=True)]
     user_data['roles'] = roles
 
-    # Get menus based on permissions
+    # 根据权限获取菜单
     menus = _get_user_menus(user)
     user_data['menus'] = menus
 
-    # Get permissions count
+    # 获取权限及该用户可见的权限目录子集
     user_data['permissions'] = _get_user_permissions(user)
+    page_permissions, button_actions, catalog = _permission_catalog_payload(
+        user, user_data['permissions']
+    )
+    user_data['page_permissions'] = page_permissions
+    user_data['button_actions'] = button_actions
+    user_data['permission_catalog'] = catalog or []
 
     return success_response(user_data)
 
@@ -201,15 +248,36 @@ def _get_frontend_menus(user):
 
 
 def _get_user_permissions(user):
-    """Get user permission strings (inheritance and active roles included)."""
+    """获取用户权限码（包含继承和激活角色）。"""
     from .engine import get_effective_permissions
     return list(get_effective_permissions(user))
 
 
+def _permission_catalog_payload(user, permissions):
+    """仅暴露与当前用户相关的权限目录子集。"""
+    from .permission_registry import BUTTON_ACTIONS, PAGE_PERMISSIONS, permission_catalog
+
+    is_admin = bool(
+        getattr(user, 'is_superuser', False)
+        or 'menu:view' in permissions or 'menu:edit' in permissions
+    )
+    page_permissions = {
+        path: code for path, code in PAGE_PERMISSIONS.items()
+        if is_admin or code in permissions
+    }
+    actions = [
+        {'value': key, 'zh_hans': value[0], 'en': value[1]}
+        for key, value in BUTTON_ACTIONS.items()
+    ] if is_admin else []
+    catalog = permission_catalog() if is_admin else sorted(set(page_permissions.values()))
+    return page_permissions, actions, catalog
+
+
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:view')
 def system_info(request):
-    """Get system information including CPU, memory, disk, network"""
+    """获取系统信息，包括 CPU、内存、磁盘和网络。"""
     import psutil
     data = {
         'python_version': platform.python_version(),
@@ -223,7 +291,7 @@ def system_info(request):
         'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
 
-    # CPU info
+    # CPU 信息
     try:
         data['cpu_count'] = psutil.cpu_count(logical=True)
         data['cpu_count_physical'] = psutil.cpu_count(logical=False)
@@ -233,7 +301,7 @@ def system_info(request):
         data['cpu_count'] = 0
         data['cpu_percent'] = 0
 
-    # Memory info
+    # 内存信息
     try:
         mem = psutil.virtual_memory()
         data['memory'] = {
@@ -249,11 +317,11 @@ def system_info(request):
     except Exception:
         data['memory'] = {}
 
-    # Disk info - aggregate all physical partitions
+    # 磁盘信息——汇总所有物理分区
     try:
         total_disk = used_disk = free_disk = 0
         if platform.system() == 'Windows':
-            # Windows: iterate all physical drives (C:, D:, etc.)
+            # Windows：遍历所有物理磁盘（C:、D: 等）
             for part in psutil.disk_partitions():
                 if 'cdrom' in part.opts.lower() or part.fstype == '':
                     continue
@@ -265,9 +333,9 @@ def system_info(request):
                 except (PermissionError, OSError):
                     continue
         else:
-            # Linux/Mac: iterate all non-virtual partitions
+            # Linux/Mac：遍历所有非虚拟分区
             for part in psutil.disk_partitions():
-                # Skip virtual/loop filesystems
+                # 跳过虚拟/回环文件系统
                 if part.fstype in ('tmpfs', 'devtmpfs', 'overlay', 'proc', 'sysfs',
                                    'cgroup', 'cgroup2', 'devpts', 'mqueue', 'hugetlbfs',
                                    'nfs', 'nfs4', 'squashfs', 'iso9660', 'fuseblk'):
@@ -291,7 +359,7 @@ def system_info(request):
                 'free_human': _bytes_to_human(free_disk),
             }
         else:
-            # Fallback: directly check root partition (Docker/container environments)
+            # 回退方案：直接检查根分区（Docker/容器环境）
             try:
                 disk = psutil.disk_usage('/')
                 data['disk'] = {
@@ -308,7 +376,7 @@ def system_info(request):
     except Exception:
         data['disk'] = {}
 
-    # Network info
+    # 网络信息
     try:
         net = psutil.net_io_counters()
         data['network'] = {
@@ -322,13 +390,26 @@ def system_info(request):
     except Exception:
         data['network'] = {}
 
-    # Database info
+    # 数据库信息
     try:
         data['database'] = _get_db_info()
     except Exception:
         data['database'] = {}
 
     return success_response(data)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('config:view')
+def system_info_stream_ticket(request):
+    """为 EventSource 签发短期票据，避免将 JWT 放入 URL。"""
+    from .token_auth import generate_stream_ticket
+
+    return success_response({
+        'ticket': generate_stream_ticket(request.user),
+        'expires_in': 60,
+    })
 
 
 @csrf_exempt
@@ -353,7 +434,10 @@ def system_info_stream(request):
     
     if not user or not user.is_authenticated:
         return error_response('未登录', 401)
-    
+    from .permissions import has_permission
+    if not has_permission(user, 'config:view', request):
+        return error_response('无权限', 403)
+
     def event_stream():
         """生成SSE事件流"""
         try:
@@ -375,7 +459,7 @@ def system_info_stream(request):
                     'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 }
                 
-                # CPU
+                # CPU 信息
                 try:
                     data['cpu_count'] = psutil.cpu_count(logical=True)
                     data['cpu_percent'] = psutil.cpu_percent(interval=0.3)
@@ -501,13 +585,13 @@ def system_info_stream(request):
 
 
 def _get_django_version():
-    """Get Django version"""
+    """获取 Django 版本。"""
     import django
     return django.get_version()
 
 
 def _bytes_to_human(n):
-    """Convert bytes to human readable format (1TB=1024GB)"""
+    """将字节数转换为易读格式（1TB=1024GB）。"""
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         if abs(n) < 1024.0:
             return f"{n:.2f} {unit}"
@@ -516,7 +600,7 @@ def _bytes_to_human(n):
 
 
 def _get_db_info():
-    """Get database information"""
+    """获取数据库信息。"""
     from django.db import connections
 
     db_info = {}
@@ -528,7 +612,7 @@ def _get_db_info():
         db_name = db_settings.get('NAME', '')
         if db_name and os.path.exists(db_name):
             db_info['size'] = _bytes_to_human(os.path.getsize(db_name))
-        # Get table count
+        # 获取数据表数量
         try:
             with connections['default'].cursor() as cursor:
                 cursor.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
@@ -564,7 +648,7 @@ def _get_db_info():
 
 @csrf_exempt
 def public_config(request):
-    """Get public system configuration (no auth required) - for login page etc."""
+    """获取公开系统配置（无需认证），用于登录页等场景。"""
     from .models import SystemConfig
 
     db_configs = {}
@@ -583,7 +667,7 @@ def public_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.4.0'),
+        'system_version': get_config('system_version', django_layuix.__version__),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),
         'favicon_url': get_config('favicon_url', ''),
@@ -597,7 +681,7 @@ def public_config(request):
 @csrf_exempt
 @api_login_required
 def system_config(request):
-    """Get system configuration - database first, settings as fallback"""
+    """获取系统配置：优先数据库，settings 作为回退。"""
     from .models import SystemConfig
 
     # 从 settings 获取默认值
@@ -619,7 +703,7 @@ def system_config(request):
 
     return success_response({
         'system_name': get_config('system_name', 'Django Layuix Admin'),
-        'system_version': get_config('system_version', '1.4.0'),
+        'system_version': get_config('system_version', django_layuix.__version__),
         'system_description': get_config('system_description', ''),
         'logo_icon': get_config('logo_icon', 'layui-icon-code-circle'),
         'logo_url': get_config('logo_url', ''),
@@ -632,7 +716,7 @@ def system_config(request):
 @csrf_exempt
 @api_login_required
 def profile_update(request):
-    """Update user profile"""
+    """更新用户资料。"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
 
@@ -654,7 +738,7 @@ def profile_update(request):
 @csrf_exempt
 @api_login_required
 def profile_password(request):
-    """Change user password"""
+    """修改用户密码。"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
 
@@ -676,6 +760,8 @@ def profile_password(request):
 
     user.set_password(new_password)
     user.save()
+    from .token_auth import revoke_user_tokens
+    revoke_user_tokens(user, reason='password_change')
     # 注意：不调用 update_session_auth_hash，让 session 失效，强制重新登录
     return success_response(msg='密码修改成功')
 
@@ -683,7 +769,7 @@ def profile_password(request):
 @csrf_exempt
 @api_login_required
 def profile_theme(request):
-    """Update user theme preference - supports both new format ('dark'/'light') and legacy Chinese theme names"""
+    """更新用户主题偏好，同时支持新格式（'dark'/'light'）和旧版中文主题名称。"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
 
@@ -704,7 +790,7 @@ def profile_theme(request):
 @csrf_exempt
 @api_login_required
 def available_themes(request):
-    """GET /api/rbac/available-themes/ - Get available themes (dark/light only)"""
+    """GET /api/rbac/available-themes/ - 获取可用主题（仅深色/浅色）。"""
     from .themes import get_all_themes
 
     themes = get_all_themes()
@@ -716,7 +802,7 @@ def available_themes(request):
 @csrf_exempt
 @api_login_required
 def set_language(request):
-    """Set user language preference"""
+    """设置用户语言偏好。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
 
@@ -733,7 +819,7 @@ def set_language(request):
 
     # Django <=5 使用 session 键；Django 6 起 LocaleMiddleware 只读取语言 Cookie
     request.session['_language'] = language
-    response = success_response(msg='语言已切换')
+    response = success_response({'language': language}, msg='语言已切换')
     response.set_cookie(
         settings.LANGUAGE_COOKIE_NAME,
         language,
@@ -749,9 +835,11 @@ def set_language(request):
 
 @csrf_exempt
 def register(request):
-    """POST /api/rbac/register/ - 用户注册"""
+    """POST /api/rbac/register/ - 用户注册（默认关闭）"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
+    if not getattr(settings, 'LAYUI_ALLOW_REGISTRATION', False):
+        return error_response('注册功能未开放', 403)
 
     User = _get_user_model()
     body = get_request_body(request)
@@ -762,6 +850,8 @@ def register(request):
 
     if not username:
         return error_response('用户名不能为空', 400)
+    if username.lower() in {'admin', 'root', 'superuser'}:
+        return error_response('该用户名为系统保留名称', 400)
     if not password:
         return error_response('密码不能为空', 400)
     if len(password) < 6:
@@ -813,8 +903,8 @@ def api_login(request):
     # Django Session登录（保持兼容）
     django_login(request, user)
     
-    # 生成Token（用于SSE等场景）
-    token = generate_token(user)
+    # 生成标准 JWT（用于 SSE / 前后端分离客户端）
+    token = generate_token(user, request=request)
     
     return success_response(
         msg='登录成功', 
@@ -833,16 +923,44 @@ def api_login(request):
 @csrf_exempt
 @api_login_required
 def logout(request):
-    """AJAX logout - clear session and return success"""
+    """AJAX 登出：清除会话、撤销当前令牌并返回成功。"""
     from django.contrib.auth import logout as django_logout
+
+    from .token_auth import revoke_token
+
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    token = ''
+    if auth_header.lower().startswith('bearer '):
+        token = auth_header[7:].strip()
+    if not token:
+        token = request.META.get('HTTP_X_TOKEN') or ''
+    if token:
+        revoke_token(token, reason='logout', user=request.user)
     django_logout(request)
     return success_response(msg='已退出登录')
 
 
 @csrf_exempt
 @api_login_required
+def api_token_issue(request):
+    """POST /api/rbac/token/issue/ - 已登录会话换取新 Token。
+
+    用于旧版本升级后浏览器没有本地 Token，或 Token 过期但 Session 仍有效的场景。
+    仍受同源 Origin/Referer 中间件保护，不对外公开。
+    """
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    from .token_auth import generate_token
+
+    token = generate_token(request.user, request=request)
+    return success_response({'token': token}, msg='Token 已刷新')
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('dashboard:view')
 def stats_data(request):
-    """Get statistics data for dashboard"""
+    """获取仪表盘统计数据。"""
     from .models import Menu, Role, OperationLog
 
     User = _get_user_model()
@@ -857,15 +975,55 @@ def stats_data(request):
     return success_response(data)
 
 
-# ==================== Menu CRUD ====================
+# ==================== 菜单 CRUD ====================
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('menu:view')
 def menu_tree(request):
-    """GET /api/rbac/menus/tree/ - 获取所有菜单树（管理用，包含所有菜单）"""
+    """GET /api/rbac/menus/tree/ - 获取菜单树；权限目录默认可通过 exclude_catalog=1 隐藏"""
     from .models import Menu
 
     menus = Menu.objects.all().order_by('sort', 'id')
+    if request.GET.get('exclude_catalog') == '1':
+        button_root = Menu.objects.filter(
+            name='按钮权限目录', plugin_key='permission_catalog'
+        ).first()
+        if button_root:
+            button_ids = {button_root.pk}
+            frontier = [button_root.pk]
+            while frontier:
+                children = list(Menu.objects.filter(parent_id__in=frontier).values_list('id', flat=True))
+                children = [pk for pk in children if pk not in button_ids]
+                button_ids.update(children)
+                frontier = children
+
+            business_codes = set(Menu.objects.exclude(
+                pk__in=button_ids
+            ).exclude(permission='').values_list('permission', flat=True))
+            keep_codes = set()
+            raw_keep_ids = request.GET.get('keep_ids', '')
+            if raw_keep_ids:
+                try:
+                    keep_ids = {
+                        int(item) for item in raw_keep_ids.split(',') if item.strip()
+                    }
+                except (TypeError, ValueError):
+                    keep_ids = set()
+                keep_codes = set(Menu.objects.filter(
+                    pk__in=keep_ids
+                ).exclude(permission='').values_list('permission', flat=True))
+            button_rows = list(Menu.objects.filter(pk__in=button_ids))
+            duplicate_ids = {
+                row.pk for row in button_rows
+                if row.permission and row.permission in business_codes
+                and row.permission not in keep_codes
+            }
+            kept_button_ids = button_ids - duplicate_ids
+            if kept_button_ids == {button_root.pk}:
+                menus = menus.exclude(pk__in=button_ids)
+            else:
+                menus = menus.exclude(pk__in=duplicate_ids)
     menu_list = []
     for m in menus:
         menu_list.append({
@@ -903,6 +1061,7 @@ def frontend_menu_tree(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('menu:view')
 def menu_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/menus/<id>/ - 菜单详情/更新/删除"""
     from .models import Menu
@@ -946,7 +1105,10 @@ def menu_detail(request, pk):
         if 'name_zh_hans' in body:
             menu.name_zh_hans = body['name_zh_hans']
         if 'parent_id' in body:
-            menu.parent_id = body['parent_id'] if body['parent_id'] else None
+            parent_id = body['parent_id'] if body['parent_id'] else None
+            if not _validate_menu_parent(menu.pk, parent_id):
+                return error_response('上级菜单不能形成循环', 400)
+            menu.parent_id = parent_id
         if 'icon' in body:
             menu.icon = body['icon']
         if 'path' in body:
@@ -998,6 +1160,8 @@ def menu_create(request):
         return error_response('菜单名称不能为空', 400)
 
     parent_id = body.get('parent_id')
+    if not _validate_menu_parent(None, parent_id):
+        return error_response('上级菜单不存在', 400)
     menu = Menu(
         name=name,
         name_en=body.get('name_en', ''),
@@ -1018,35 +1182,106 @@ def menu_create(request):
     return success_response({'id': menu.id}, msg='创建成功')
 
 
-# ==================== Role CRUD ====================
+@csrf_exempt
+@api_login_required
+@api_permission_required('menu:edit')
+def menu_generate_permissions(request, pk):
+    """POST /api/rbac/menus/<pk>/generate-permissions/ - 自动生成按钮权限"""
+    from .button_generator import generate_menu_buttons
+    from .models import Menu
+
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    menu = Menu.objects.filter(pk=pk).first()
+    if not menu:
+        return error_response('菜单不存在', 404)
+    if menu.menu_type not in (1, 2):
+        return error_response('只能为目录或菜单生成按钮权限', 400)
+    body = get_request_body(request)
+    result = generate_menu_buttons(
+        menu,
+        body.get('actions') or [],
+        replace=bool(body.get('replace', True)),
+        actor=request.user,
+    )
+    return success_response(result, msg='按钮权限已生成')
+
+
+# ==================== 角色 CRUD ====================
+
+def _role_payload(role):
+    parent_ids = list(role.parent_roles.values_list('id', flat=True))
+    children_ids = sorted(set(
+        list(role.children.values_list('id', flat=True)) +
+        list(role.child_roles.values_list('id', flat=True))
+    ))
+    return {
+        'id': role.id,
+        'name': role.name,
+        'code': role.code,
+        'description': role.description,
+        'is_system': role.is_system,
+        'status': role.status,
+        'menu_ids': list(role.menus.values_list('id', flat=True)),
+        'parent_ids': parent_ids,
+        'parent_id': role.parent_id or (parent_ids[0] if parent_ids else None),
+        'children_ids': children_ids,
+        'max_users': role.max_users,
+        'scope_node': role.scope_node,
+        'scope_depth': role.scope_depth,
+        'create_time': fmt_time(role.create_time),
+        'update_time': fmt_time(role.update_time),
+    }
+
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('role:view')
+@field_whitelisted('rbac.Role')
 def role_list(request):
     """GET /api/rbac/roles/ - 角色列表"""
     from .models import Role
 
-    roles = Role.objects.all().order_by('id')
-    data = []
-    for r in roles:
-        data.append({
-            'id': r.id,
-            'name': r.name,
-            'code': r.code,
-            'description': r.description,
-            'is_system': r.is_system,
-            'status': r.status,
-            'menu_ids': list(r.menus.values_list('id', flat=True)),
-            'parent_ids': list(r.parent_roles.values_list('id', flat=True)),
-            'max_users': r.max_users,
-            'create_time': fmt_time(r.create_time),
-            'update_time': fmt_time(r.update_time),
-        })
+    roles = Role.objects.prefetch_related(
+        'parent_roles', 'children', 'child_roles', 'menus'
+    ).order_by('id')
+    page_raw = request.GET.get('page')
+    if page_raw is None:
+        return success_response([_role_payload(role) for role in roles])
+    try:
+        page = int(page_raw)
+        page_size = int(request.GET.get('page_size') or 20)
+    except (TypeError, ValueError):
+        return error_response('分页参数必须是整数', 400)
+    if page < 1 or page_size < 10 or page_size > 200:
+        return error_response('分页参数超出范围', 400)
+    total = roles.count()
+    start = (page - 1) * page_size
+    payload = [_role_payload(role) for role in roles[start:start + page_size]]
+    return success_response({
+        'list': payload,
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+    })
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:view')
+def role_effective_permissions(request, pk):
+    """GET /api/rbac/roles/<id>/effective_permissions/ - 自有与继承权限来源"""
+    from .engine import effective_permissions_for_role
+    data = effective_permissions_for_role(pk)
+    if data is None:
+        return error_response('角色不存在', 404)
     return success_response(data)
 
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('role:view')
+@field_whitelisted('rbac.Role')
 def role_detail(request, pk):
     """GET/PUT/DELETE /api/rbac/roles/<id>/ - 角色详情/更新/删除"""
     from .models import Role
@@ -1057,25 +1292,16 @@ def role_detail(request, pk):
         return error_response('角色不存在', 404)
 
     if request.method == 'GET':
-        data = {
-            'id': role.id,
-            'name': role.name,
-            'code': role.code,
-            'description': role.description,
-            'is_system': role.is_system,
-            'status': role.status,
-            'menu_ids': list(role.menus.values_list('id', flat=True)),
-            'parent_ids': list(role.parent_roles.values_list('id', flat=True)),
-            'max_users': role.max_users,
-            'create_time': fmt_time(role.create_time),
-            'update_time': fmt_time(role.update_time),
-        }
-        return success_response(data)
+        return success_response(_role_payload(role))
 
     elif request.method == 'PUT':
         if not request.user.has_perm('role:edit'):
             return error_response('无权限', 403)
-        from .engine import RbacConstraintError, validate_role_parents
+        from django.db import IntegrityError, transaction
+
+        from .engine import (
+            RbacConstraintError, validate_assignable_menus, validate_role_parents,
+        )
         body = get_request_body(request)
         if 'name' in body:
             role.name = body['name']
@@ -1084,21 +1310,69 @@ def role_detail(request, pk):
         if 'description' in body:
             role.description = body['description']
         if 'status' in body:
-            role.status = bool(body['status'])
+            parsed_status = parse_bool_value(body['status'])
+            if parsed_status is None:
+                return error_response('状态值无效', 400)
+            role.status = parsed_status
         if 'max_users' in body:
             try:
                 role.max_users = int(body['max_users']) or None
             except (TypeError, ValueError):
                 return error_response('人数上限必须是整数', 400)
-        role.save()
-        if 'menu_ids' in body:
-            role.menus.set(body['menu_ids'])
-        if 'parent_ids' in body:
+        if 'scope_node' in body:
+            from .models import ScopeNode
+
+            scope_code = str(body['scope_node'] or '').strip()[:100]
+            if scope_code and not ScopeNode.objects.filter(
+                code=scope_code, is_active=True
+            ).exists():
+                return error_response('数据作用域节点不存在或已停用', 400)
+            role.scope_node = scope_code
+        if 'scope_depth' in body:
             try:
-                parents = validate_role_parents(role.id, body['parent_ids'])
+                role.scope_depth = max(0, int(body['scope_depth'] or 0))
+            except (TypeError, ValueError):
+                return error_response('作用域层数必须是非负整数', 400)
+
+        parent_ids_payload = body.get('parent_ids')
+        if 'parent_id' in body:
+            raw_parent = body['parent_id']
+            try:
+                parent_id = int(raw_parent) if raw_parent else None
+            except (TypeError, ValueError):
+                return error_response('上级角色必须是整数', 400)
+            if parent_id == role.pk:
+                return error_response('上级角色不能是自身', 400)
+            try:
+                parent_ids_payload = validate_role_parents(
+                    role.id, [parent_id] if parent_id else []
+                )
             except RbacConstraintError as e:
                 return error_response(e.message, 400)
-            role.parent_roles.set(parents)
+            role.parent_id = parent_id
+
+        assignable = None
+        if 'menu_ids' in body:
+            try:
+                assignable = validate_assignable_menus(body['menu_ids'])
+            except RbacConstraintError as e:
+                return error_response(e.message, 400)
+
+        try:
+            with transaction.atomic():
+                role.save()
+                if assignable is not None:
+                    role.menus.set(assignable)
+                if parent_ids_payload is not None:
+                    parents = validate_role_parents(role.id, parent_ids_payload)
+                    role.parent_roles.set(parents)
+                    if 'parent_id' not in body:
+                        role.parent = Role.objects.filter(id__in=parents).order_by('id').first()
+                        role.save(update_fields=['parent'])
+        except IntegrityError:
+            return error_response('角色编码已存在', 400)
+        except RbacConstraintError as e:
+            return error_response(e.message, 400)
         return success_response(msg='更新成功')
 
     elif request.method == 'DELETE':
@@ -1110,6 +1384,70 @@ def role_detail(request, pk):
         return success_response(msg='删除成功')
 
     return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:edit')
+def role_toggle_status(request, pk):
+    """POST /api/rbac/roles/<pk>/status/ - 启用或停用角色。"""
+    from .models import Role
+
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    role = Role.objects.filter(pk=pk).first()
+    if role is None:
+        return error_response('角色不存在', 404)
+    if role.is_system:
+        return error_response('系统内置角色不能修改状态', 400)
+    body = get_request_body(request)
+    if 'status' not in body:
+        return error_response('缺少目标状态', 400)
+    desired = parse_bool_value(body.get('status'))
+    if desired is None:
+        return error_response('状态值无效', 400)
+    role.status = desired
+    role.save(update_fields=['status'])
+    return success_response(
+        {'id': role.pk, 'status': role.status},
+        msg='角色已启用' if role.status else '角色已停用',
+    )
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('role:delete')
+def role_batch_delete(request):
+    """POST /api/rbac/roles/batch-delete/ - 批量删除角色。"""
+    from django.db import transaction
+
+    from .models import Role
+
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    body = get_request_body(request)
+    ids = body.get('ids') or []
+    if isinstance(ids, str):
+        ids = [item for item in ids.split(',') if item]
+    if not isinstance(ids, list) or not ids:
+        return error_response('请选择要删除的角色', 400)
+    try:
+        role_ids = sorted(set(int(item) for item in ids))
+    except (TypeError, ValueError):
+        return error_response('角色 ID 格式错误', 400)
+    with transaction.atomic():
+        roles = list(Role.objects.filter(id__in=role_ids))
+        if len(roles) != len(role_ids):
+            return error_response('部分角色不存在', 404)
+        system_names = [role.name for role in roles if role.is_system]
+        if system_names:
+            return error_response('系统内置角色不能删除：%s' % '、'.join(system_names), 400)
+        deleted = Role.objects.filter(id__in=role_ids).delete()[0]
+    return success_response({
+        'requested': len(ids),
+        'deleted': len(role_ids),
+        'cascade_objects': deleted,
+    }, msg='角色已删除')
 
 
 @csrf_exempt
@@ -1135,8 +1473,19 @@ def role_create(request):
     from .engine import RbacConstraintError, validate_role_parents
     try:
         max_users = int(body.get('max_users') or 0) or None
+        scope_depth = max(0, int(body.get('scope_depth') or 0))
     except (TypeError, ValueError):
-        return error_response('人数上限必须是整数', 400)
+        return error_response('人数上限/作用域层数必须是整数', 400)
+
+    parent_ids_payload = body.get('parent_ids')
+    parent_id = None
+    if 'parent_id' in body:
+        raw_parent = body['parent_id']
+        try:
+            parent_id = int(raw_parent) if raw_parent else None
+        except (TypeError, ValueError):
+            return error_response('上级角色必须是整数', 400)
+        parent_ids_payload = [parent_id] if parent_id else []
 
     role = Role(
         name=name,
@@ -1144,34 +1493,47 @@ def role_create(request):
         description=body.get('description', ''),
         status=bool(body.get('status', True)),
         max_users=max_users,
+        scope_node=str(body.get('scope_node') or '')[:100],
+        scope_depth=scope_depth,
+        parent_id=parent_id,
     )
-    role.save()
 
-    if 'parent_ids' in body:
-        try:
-            role.parent_roles.set(validate_role_parents(role.id, body['parent_ids']))
-        except RbacConstraintError as e:
-            role.delete()
-            return error_response(e.message, 400)
+    from django.db import IntegrityError, transaction
 
-    if 'menu_ids' in body and body['menu_ids']:
-        role.menus.set(body['menu_ids'])
-    else:
-        from .models import Menu
-        default_menus = Menu.objects.filter(
-            permission__in=['profile:view', 'profile:edit']
-        ) | Menu.objects.filter(
-            path__icontains='/profile'
-        )
-        if default_menus.exists():
-            role.menus.set(default_menus)
-        else:
-            profile_menu = Menu.objects.filter(
-                menu_type=2,
-                path__icontains='profile'
-            ).first()
-            if profile_menu:
-                role.menus.set([profile_menu.id])
+    from .engine import validate_assignable_menus
+
+    try:
+        with transaction.atomic():
+            role.save()
+            if parent_ids_payload is not None:
+                parents = validate_role_parents(role.id, parent_ids_payload)
+                role.parent_roles.set(parents)
+                if 'parent_id' not in body:
+                    role.parent = Role.objects.filter(id__in=parents).order_by('id').first()
+                    role.save(update_fields=['parent'])
+
+            if 'menu_ids' in body and body['menu_ids']:
+                role.menus.set(validate_assignable_menus(body['menu_ids']))
+            else:
+                from .models import Menu
+                default_menus = Menu.objects.filter(
+                    permission__in=['profile:view', 'profile:edit']
+                ) | Menu.objects.filter(
+                    path__icontains='/profile'
+                )
+                if default_menus.exists():
+                    role.menus.set(default_menus)
+                else:
+                    profile_menu = Menu.objects.filter(
+                        menu_type=2,
+                        path__icontains='profile'
+                    ).first()
+                    if profile_menu:
+                        role.menus.set([profile_menu.id])
+    except IntegrityError:
+        return error_response('角色编码已存在', 400)
+    except RbacConstraintError as e:
+        return error_response(e.message, 400)
 
     return success_response({'id': role.id}, msg='创建成功')
 
@@ -1184,44 +1546,79 @@ def role_copy(request, pk):
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
 
+    from django.db import IntegrityError, transaction
+
+    from .engine import (
+        RbacConstraintError, is_full_access, validate_assignable_menus,
+        validate_role_parents, visible_menu_queryset,
+    )
     from .models import Role
 
     try:
         role = Role.objects.get(pk=pk)
     except Role.DoesNotExist:
         return error_response('角色不存在', 404)
+    if role.is_system:
+        return error_response('系统内置角色不能复制', 400)
 
     body = get_request_body(request)
-    new_name = body.get('name', f'{role.name}_copy').strip()
-    new_code = body.get('code', f'{role.code}_copy').strip()
+    new_name = str(body.get('name') or f'{role.name}_copy').strip()
+    new_code = str(body.get('code') or f'{role.code}_copy').strip()
+    if not new_name or not new_code:
+        return error_response('角色名称和编码不能为空', 400)
+    if Role.objects.filter(code=new_code).exists() or Role.objects.filter(name=new_name).exists():
+        return error_response('角色名称或编码已存在', 400)
 
-    if Role.objects.filter(code=new_code).exists():
-        return error_response('角色编码已存在', 400)
+    full_access = is_full_access(request.user)
+    try:
+        menu_ids = validate_assignable_menus(list(role.menus.values_list('id', flat=True)))
+        if not full_access:
+            allowed_menu_ids = set(visible_menu_queryset(request.user).values_list('id', flat=True))
+            menu_ids = [item for item in menu_ids if item in allowed_menu_ids]
+        parent_ids = list(role.parent_roles.values_list('id', flat=True)) if full_access else []
+        validate_role_parents(0, parent_ids)
+    except RbacConstraintError as error:
+        return error_response(error.message, 400)
 
-    new_role = Role(
-        name=new_name,
-        code=new_code,
-        description=role.description,
-        status=role.status,
-        max_users=role.max_users,
-    )
-    new_role.save()
-    new_role.menus.set(role.menus.all())
-    new_role.parent_roles.set(role.parent_roles.all())
+    try:
+        with transaction.atomic():
+            new_role = Role.objects.create(
+                name=new_name,
+                code=new_code,
+                description=role.description,
+                status=role.status,
+                max_users=role.max_users,
+                parent=role.parent if full_access else None,
+                scope_node=role.scope_node,
+                scope_depth=role.scope_depth,
+            )
+            new_role.menus.set(menu_ids)
+            new_role.parent_roles.set(parent_ids)
+    except IntegrityError:
+        return error_response('角色名称或编码已存在', 400)
+    except RbacConstraintError as error:
+        return error_response(error.message, 400)
     return success_response({'id': new_role.id}, msg='复制成功')
 
 
-# ==================== User CRUD ====================
+# ==================== 用户 CRUD ====================
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:view')
+@field_whitelisted('rbac.User')
 def user_list(request):
     """GET /api/rbac/users/ - 用户列表"""
     from django.db.models import Q
 
     User = _get_user_model()
 
-    users = User.objects.all().order_by('-id')
+    users = User.objects.all()
+    if hasattr(User, 'department'):
+        users = users.select_related('department', 'position')
+    if hasattr(User, 'positions'):
+        users = users.prefetch_related('positions')
+    users = users.order_by('-id')
 
     # keyword 过滤（username/nickname/email/phone 模糊搜索）
     keyword = request.GET.get('keyword', '').strip()
@@ -1260,6 +1657,10 @@ def user_list(request):
         roles = []
         if hasattr(u, 'roles'):
             roles = [{'id': r.id, 'name': r.name, 'code': r.code} for r in u.roles.all()]
+        user_positions = list(u.positions.all()) if hasattr(u, 'positions') else []
+        primary_position = getattr(u, 'position', None)
+        if primary_position and all(item.pk != primary_position.pk for item in user_positions):
+            user_positions.insert(0, primary_position)
         data.append({
             'id': u.id,
             'username': u.username,
@@ -1272,10 +1673,283 @@ def user_list(request):
             'is_staff': u.is_staff,
             'is_tester': getattr(u, 'is_tester', False),
             'roles': roles,
+            'department_id': getattr(u, 'department_id', None),
+            'department_name': getattr(getattr(u, 'department', None), 'name', ''),
+            'position_id': getattr(u, 'position_id', None),
+            'position_name': getattr(getattr(u, 'position', None), 'name', ''),
+            'position_ids': [item.pk for item in user_positions],
+            'position_names': [item.name for item in user_positions],
             'last_login': fmt_time(u.last_login),
             'date_joined': fmt_time(u.date_joined),
         })
     return success_response({'list': data, 'total': total})
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:delete')
+def user_batch_delete(request):
+    """POST /api/rbac/users/batch-delete/ - 批量删除用户"""
+    if request.method not in ('POST', 'DELETE'):
+        return error_response('Method not allowed', 405)
+
+    from django.db import transaction
+    from .engine import is_full_access
+
+    User = _get_user_model()
+    body = get_request_body(request)
+    raw_ids = body.get('ids')
+    if isinstance(raw_ids, str):
+        raw_ids = [item for item in raw_ids.split(',') if item.strip()]
+    if not isinstance(raw_ids, list):
+        return error_response('用户 ID 列表无效', 400)
+
+    try:
+        ids = list({int(item) for item in raw_ids if str(item).strip()})
+    except (TypeError, ValueError):
+        return error_response('用户 ID 必须是整数', 400)
+    if not ids:
+        return error_response('请选择要删除的用户', 400)
+
+    users = list(User.objects.filter(id__in=ids))
+    deletable = []
+    skipped = []
+    for user in users:
+        if user.pk == request.user.pk or is_full_access(user):
+            skipped.append({'id': user.pk, 'username': user.username, 'reason': 'protected'})
+        else:
+            deletable.append(user)
+
+    deleted_ids = []
+    with transaction.atomic():
+        from .token_auth import revoke_user_tokens
+
+        for user in deletable:
+            revoke_user_tokens(user, reason='user_deleted')
+            deleted_ids.append(user.pk)
+            user.delete()
+
+    return success_response({
+        'deleted': len(deleted_ids),
+        'deleted_ids': deleted_ids,
+        'skipped': skipped,
+    }, msg='批量删除完成')
+
+
+def _apply_user_organization(user, body):
+    from .models import Department, Position
+
+    if 'department_id' in body and hasattr(user, 'department_id'):
+        raw = body.get('department_id')
+        if raw in (None, ''):
+            user.department = None
+        else:
+            try:
+                department_id = int(raw)
+            except (TypeError, ValueError):
+                raise ValueError('部门 ID 必须是整数')
+            department = Department.objects.filter(pk=department_id, status=True).first()
+            if department is None:
+                raise ValueError('部门不存在或已停用')
+            user.department = department
+    if 'position_id' in body and hasattr(user, 'position_id'):
+        raw = body.get('position_id')
+        if raw in (None, ''):
+            user.position = None
+        else:
+            try:
+                position_id = int(raw)
+            except (TypeError, ValueError):
+                raise ValueError('岗位 ID 必须是整数')
+            position = Position.objects.filter(pk=position_id, status=True).first()
+            if position is None:
+                raise ValueError('岗位不存在或已停用')
+            user.position = position
+        if hasattr(user.__class__, 'positions'):
+            user._pending_position_ids = [user.position_id] if user.position_id else []
+
+    if 'position_ids' in body and hasattr(user.__class__, 'positions'):
+        raw_ids = body.get('position_ids')
+        if raw_ids is None:
+            raw_ids = []
+        if not isinstance(raw_ids, (list, tuple)):
+            raise ValueError('岗位列表格式不正确')
+        try:
+            position_ids = [int(item) for item in raw_ids if item not in (None, '')]
+        except (TypeError, ValueError):
+            raise ValueError('岗位 ID 必须是整数')
+        if len(position_ids) != len(set(position_ids)):
+            raise ValueError('岗位不能重复选择')
+        by_id = {
+            position.pk: position
+            for position in Position.objects.filter(pk__in=position_ids, status=True)
+        }
+        if len(by_id) != len(position_ids):
+            raise ValueError('岗位不存在或已停用')
+        positions = [by_id[pk] for pk in position_ids]
+
+        primary_from_body = 'position_id' in body
+        if positions:
+            if user.position_id and (
+                primary_from_body or user.position_id in position_ids
+            ):
+                if all(item.pk != user.position_id for item in positions):
+                    positions.insert(0, user.position)
+            else:
+                user.position = positions[0]
+        elif primary_from_body and user.position_id:
+            positions = [user.position]
+        else:
+            user.position = None
+        user._pending_positions = positions
+
+    raw_start = body.get('position_start_date')
+    if raw_start:
+        from datetime import date
+
+        try:
+            user._pending_position_start_date = date.fromisoformat(str(raw_start))
+        except ValueError:
+            raise ValueError('任职生效日期格式必须为 YYYY-MM-DD')
+
+
+def _record_position_history(user, positions, actor=None, start_date=None):
+    from django.utils import timezone
+
+    from .models import PositionAssignment
+
+    today = start_date or timezone.localdate()
+    active = {
+        item.position_id: item
+        for item in user.position_assignments.filter(end_date__isnull=True)
+    }
+    desired = {position.pk: position for position in positions}
+    primary_id = user.position_id
+
+    for position_id, assignment in active.items():
+        if position_id not in desired:
+            assignment.end_date = today
+            assignment.save(update_fields=['end_date', 'update_time'])
+        elif assignment.is_primary and position_id != primary_id:
+            assignment.end_date = today
+            assignment.is_primary = False
+            assignment.save(update_fields=['end_date', 'is_primary', 'update_time'])
+
+    for position_id, position in desired.items():
+        current = active.get(position_id)
+        desired_primary = position_id == primary_id
+        if current and current.end_date is None and current.is_primary == desired_primary:
+            continue
+        if current and current.end_date is None:
+            current.end_date = today
+            current.save(update_fields=['end_date', 'update_time'])
+        PositionAssignment.objects.create(
+            user=user,
+            position=position,
+            position_name=position.name,
+            is_primary=desired_primary,
+            start_date=today,
+            changed_by=actor,
+            change_reason='用户岗位调整',
+        )
+
+
+def _sync_user_positions(user, actor=None, start_date=None):
+    if not hasattr(user, 'positions'):
+        return
+    pending = getattr(user, '_pending_positions', None)
+    if pending is None:
+        pending_ids = getattr(user, '_pending_position_ids', None)
+        if pending_ids is None:
+            return
+        from .models import Position
+        pending = list(Position.objects.filter(pk__in=pending_ids))
+    user.positions.set(pending)
+    _record_position_history(user, pending, actor=actor, start_date=start_date)
+
+
+def _position_assignment_payload(item):
+    return {
+        'id': item.pk,
+        'position_id': item.position_id,
+        'position_name': item.position_name or getattr(item.position, 'name', ''),
+        'is_primary': item.is_primary,
+        'start_date': item.start_date.isoformat() if item.start_date else '',
+        'end_date': item.end_date.isoformat() if item.end_date else '',
+        'change_reason': item.change_reason,
+        'changed_by_name': getattr(item.changed_by, 'username', ''),
+        'create_time': fmt_time(item.create_time),
+    }
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:view')
+def user_position_assignments(request, pk):
+    """GET /api/rbac/users/<id>/position-assignments/ - 获取用户任职记录。"""
+    if request.method != 'GET':
+        return error_response('Method not allowed', 405)
+    User = _get_user_model()
+    user = User.objects.filter(pk=pk).first()
+    if user is None:
+        return error_response('用户不存在', 404)
+    rows = user.position_assignments.select_related('position', 'changed_by').all()
+    return success_response({
+        'list': [_position_assignment_payload(item) for item in rows],
+        'primary_position_id': user.position_id,
+    })
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:edit')
+def end_position_assignment(request, pk):
+    """POST /api/rbac/position-assignments/<id>/end/ - 结束一条任职记录。"""
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    from django.utils import timezone
+
+    from .models import PositionAssignment
+
+    assignment = PositionAssignment.objects.select_related(
+        'user', 'position'
+    ).filter(pk=pk).first()
+    if assignment is None:
+        return error_response('任职记录不存在', 404)
+    if assignment.end_date is not None:
+        return error_response('该任职记录已结束', 400)
+    assignment.end_date = timezone.localdate()
+    assignment.save(update_fields=['end_date', 'update_time'])
+    user = assignment.user
+    if assignment.position_id:
+        user.positions.remove(assignment.position_id)
+    if user.position_id == assignment.position_id:
+        next_item = user.position_assignments.filter(
+            end_date__isnull=True,
+        ).exclude(pk=assignment.pk).order_by('-is_primary', 'start_date', 'id').first()
+        user.position = next_item.position if next_item else None
+        user.save(update_fields=['position'])
+        if next_item:
+            next_item.is_primary = True
+            next_item.save(update_fields=['is_primary', 'update_time'])
+    return success_response(msg='任职已结束')
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:view')
+def user_org_options(request):
+    """GET /api/rbac/users/org-options/ - 获取启用的部门和岗位选项。"""
+    from .models import Department, Position
+
+    return success_response({
+        'departments': list(Department.objects.filter(status=True).order_by('sort', 'id').values(
+            'id', 'name', 'code', 'parent_id'
+        )),
+        'positions': list(Position.objects.filter(status=True).order_by('sort', 'id').values(
+            'id', 'name', 'code'
+        )),
+    })
 
 
 @csrf_exempt
@@ -1317,6 +1991,10 @@ def user_create(request):
         user.phone = body.get('phone', '')
     if hasattr(user, 'is_tester'):
         user.is_tester = bool(body.get('is_tester', False))
+    try:
+        _apply_user_organization(user, body)
+    except ValueError as exc:
+        return error_response(str(exc), 400)
 
     final_role_ids = None
     if 'role_ids' in body and hasattr(User, 'roles'):
@@ -1327,6 +2005,10 @@ def user_create(request):
 
     user.set_password(password)
     user.save()
+    _sync_user_positions(
+        user, actor=request.user,
+        start_date=getattr(user, '_pending_position_start_date', None),
+    )
 
     if final_role_ids is not None:
         from .models import Role
@@ -1368,6 +2050,10 @@ def user_update(request, pk):
         user.phone = body['phone']
     if hasattr(user, 'is_tester') and 'is_tester' in body:
         user.is_tester = bool(body['is_tester'])
+    try:
+        _apply_user_organization(user, body)
+    except ValueError as exc:
+        return error_response(str(exc), 400)
 
     final_role_ids = None
     if 'role_ids' in body and hasattr(user, 'roles'):
@@ -1377,6 +2063,10 @@ def user_update(request, pk):
             return error_response(e.message, 400)
 
     user.save()
+    _sync_user_positions(
+        user, actor=request.user,
+        start_date=getattr(user, '_pending_position_start_date', None),
+    )
 
     if final_role_ids is not None:
         from .models import Role
@@ -1389,6 +2079,59 @@ def user_update(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:edit')
+def user_avatar_upload(request, pk):
+    """POST /api/rbac/users/<pk>/avatar/ - 管理员上传指定用户头像。"""
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+
+    from io import BytesIO
+    import secrets
+
+    from django.core.files.storage import default_storage
+    from django.utils import timezone
+    from PIL import Image, UnidentifiedImageError
+
+    User = _get_user_model()
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return error_response('用户不存在', 404)
+    if not hasattr(user, 'avatar'):
+        return error_response('当前用户模型不支持头像', 400)
+
+    avatar_file = request.FILES.get('avatar')
+    if not avatar_file:
+        return error_response('请选择头像文件', 400)
+    if avatar_file.size > 2 * 1024 * 1024:
+        return error_response('头像文件不能超过 2MB', 400)
+
+    format_map = {'JPEG': '.jpg', 'PNG': '.png', 'GIF': '.gif', 'WEBP': '.webp'}
+    try:
+        avatar_file.seek(0)
+        with Image.open(BytesIO(avatar_file.read())) as image:
+            image_format = (image.format or '').upper()
+            image.verify()
+    except (UnidentifiedImageError, OSError, ValueError):
+        return error_response('头像文件不是有效图片', 400)
+    ext = format_map.get(image_format)
+    if not ext:
+        return error_response('仅支持 JPG、PNG、GIF、WebP 格式', 400)
+
+    avatar_file.seek(0)
+    filename = 'avatar/%s_%s%s' % (
+        timezone.now().strftime('%Y%m%d%H%M%S'), secrets.token_hex(8), ext
+    )
+    if user.avatar:
+        user.avatar.delete(save=False)
+    user.avatar = default_storage.save(filename, avatar_file)
+    user.save(update_fields=['avatar'])
+    return success_response({'avatar': user.avatar_url}, msg='头像上传成功')
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('user:delete')
 def user_delete(request, pk):
     """DELETE /api/rbac/users/<id>/delete/ - 删除用户"""
     if request.method != 'DELETE':
@@ -1403,13 +2146,19 @@ def user_delete(request, pk):
 
     if user.pk == request.user.pk:
         return error_response('不能删除当前登录用户', 400)
+    from .engine import is_full_access
+    if is_full_access(user):
+        return error_response('不能删除超级管理员或内置管理员', 403)
 
+    from .token_auth import revoke_user_tokens
+    revoke_user_tokens(user, reason='user_deleted')
     user.delete()
     return success_response(msg='删除成功')
 
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:reset_password')
 def user_reset_password(request, pk):
     """PUT /api/rbac/users/<id>/reset-password/ - 重置用户密码"""
     if request.method != 'PUT':
@@ -1422,6 +2171,10 @@ def user_reset_password(request, pk):
     except User.DoesNotExist:
         return error_response('用户不存在', 404)
 
+    from .engine import is_full_access
+    if is_full_access(user):
+        return error_response('不能重置超级管理员或内置管理员密码', 403)
+
     body = get_request_body(request)
     new_password = body.get('new_password', '')
     if not new_password:
@@ -1431,11 +2184,14 @@ def user_reset_password(request, pk):
 
     user.set_password(new_password)
     user.save()
+    from .token_auth import revoke_user_tokens
+    revoke_user_tokens(user, reason='admin_reset')
     return success_response(msg='密码重置成功')
 
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('user:toggle_status')
 def user_toggle_status(request, pk):
     """PUT /api/rbac/users/<id>/status/ - 切换用户状态"""
     if request.method != 'PUT':
@@ -1451,15 +2207,35 @@ def user_toggle_status(request, pk):
     if user.pk == request.user.pk:
         return error_response('不能禁用当前登录用户', 400)
 
-    user.is_active = not user.is_active
-    user.save(update_fields=['is_active'])
-    return success_response({'is_active': user.is_active}, msg='状态已更新')
+    body = get_request_body(request)
+    if 'is_active' not in body:
+        return error_response('缺少目标状态', 400)
+    desired_active = bool(body['is_active'])
+
+    from django.db import transaction
+
+    from .engine import is_full_access
+    with transaction.atomic():
+        locked_user = User.objects.select_for_update().get(pk=user.pk)
+        if locked_user.pk == request.user.pk:
+            return error_response('不能禁用当前登录用户', 400)
+        if is_full_access(locked_user):
+            return error_response('不能禁用超级管理员或内置管理员', 403)
+        locked_user.is_active = desired_active
+        locked_user.save(update_fields=['is_active'])
+
+    if not locked_user.is_active:
+        from .token_auth import revoke_user_tokens
+        revoke_user_tokens(locked_user, reason='user_disabled')
+    return success_response({'is_active': locked_user.is_active}, msg='状态已更新')
 
 
-# ==================== Operation Log ====================
+# ==================== 操作日志 ====================
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('log:view')
+@field_whitelisted('rbac.OperationLog')
 def log_list(request):
     """GET /api/rbac/logs/ - 操作日志列表（支持搜索和分页）"""
     from .models import OperationLog
@@ -1518,10 +2294,30 @@ def log_list(request):
     return success_response({'list': data, 'total': total})
 
 
-# ==================== System Config CRUD ====================
+@csrf_exempt
+@api_login_required
+@api_permission_required('log:view')
+def log_modules(request):
+    """GET /api/rbac/logs/modules/ - 操作日志中已出现的模块，用于搜索下拉框自动更新。"""
+    from .middleware import MODULE_NAME_MAP
+    from .models import OperationLog
+
+    modules = OperationLog.objects.exclude(module='').order_by().values_list(
+        'module', flat=True
+    ).distinct().order_by('module')
+    rows = [
+        {'value': module, 'label': MODULE_NAME_MAP.get(module, module)}
+        for module in modules
+    ]
+    return success_response({'list': rows, 'total': len(rows)})
+
+
+# ==================== 系统配置 CRUD ====================
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:view')
+@field_whitelisted('rbac.SystemConfig')
 def config_list(request):
     """GET /api/rbac/configs/ - 系统配置列表"""
     from .models import SystemConfig
@@ -1544,6 +2340,7 @@ def config_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:add')
 def config_create(request):
     """POST /api/rbac/configs/create/ - 创建系统配置"""
     if request.method != 'POST':
@@ -1585,6 +2382,7 @@ def config_create(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:edit')
 def config_update(request, pk):
     """PUT /api/rbac/configs/<id>/update/ - 更新系统配置"""
     if request.method != 'PUT':
@@ -1634,11 +2432,13 @@ def config_update(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:delete')
 def config_delete(request, pk):
     """DELETE /api/rbac/configs/<id>/delete/ - 删除系统配置"""
     if request.method != 'DELETE':
         return error_response('Method not allowed', 405)
 
+    from .defaults import get_default_configs
     from .models import SystemConfig
 
     try:
@@ -1646,11 +2446,15 @@ def config_delete(request, pk):
     except SystemConfig.DoesNotExist:
         return error_response('配置不存在', 404)
 
+    protected = {row['key'] for row in get_default_configs()}
+    if config.key in protected:
+        return error_response('内置系统配置不能删除', 403)
+
     config.delete()
     return success_response(msg='删除成功')
 
 
-# ==================== Profile Avatar ====================
+# ==================== 个人头像 ====================
 
 @csrf_exempt
 @api_login_required
@@ -1686,10 +2490,11 @@ def profile_avatar(request):
     return success_response({'avatar': user.avatar_url}, msg='头像上传成功')
 
 
-# ==================== Generic Image Upload ====================
+# ==================== 通用图片上传 ====================
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:edit')
 def upload_image(request):
     """POST /api/rbac/upload/image/ - 通用图片上传（用于 Logo、Favicon 等配置）"""
     if request.method != 'POST':
@@ -1699,32 +2504,43 @@ def upload_image(request):
     if not image_file:
         return error_response('请选择图片文件', 400)
 
-    # 验证文件类型
-    allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-icon', 'image/svg+xml']
-    if image_file.content_type not in allowed_types:
-        return error_response('仅支持 JPG、PNG、GIF、WebP、ICO、SVG 格式', 400)
-
     # 验证文件大小（最大 2MB）
     if image_file.size > 2 * 1024 * 1024:
         return error_response('图片文件不能超过 2MB', 400)
 
-    # 保存到 MEDIA_ROOT/uploads/config/ 目录
-    import os
+    # 按文件真实字节识别格式，拒绝 SVG 与伪造 Content-Type
+    import secrets
+    from io import BytesIO
+    from PIL import Image, UnidentifiedImageError
     from django.core.files.storage import default_storage
     from django.utils import timezone
 
-    ext = os.path.splitext(image_file.name)[1].lower() or '.png'
-    filename = f'config/{timezone.now().strftime("%Y%m%d%H%M%S")}{ext}'
+    format_map = {'JPEG': '.jpg', 'PNG': '.png', 'GIF': '.gif', 'WEBP': '.webp', 'ICO': '.ico'}
+    try:
+        image_file.seek(0)
+        raw = image_file.read()
+        with Image.open(BytesIO(raw)) as image:
+            image_format = (image.format or '').upper()
+            image.verify()
+    except (UnidentifiedImageError, OSError, ValueError):
+        return error_response('文件内容不是有效图片', 400)
+    ext = format_map.get(image_format)
+    if not ext:
+        return error_response('仅支持 JPG、PNG、GIF、WebP、ICO 格式', 400)
+
+    image_file.seek(0)
+    filename = f'config/{timezone.now().strftime("%Y%m%d%H%M%S")}_{secrets.token_hex(8)}{ext}'
     saved_path = default_storage.save(filename, image_file)
 
     url = default_storage.url(saved_path)
     return success_response({'url': url, 'filename': filename}, msg='上传成功')
 
 
-# ==================== Plugin Registry ====================
+# ==================== 插件注册 ====================
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:view')
 def plugin_list(request):
     """GET /api/rbac/plugins/ - 已安装插件列表"""
     from .plugins import list_plugins
@@ -1733,6 +2549,7 @@ def plugin_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('config:view')
 def plugin_manifest(request):
     """GET /api/rbac/plugins/manifest/ - 分离前端插件清单"""
     from .models import Menu
@@ -1765,11 +2582,11 @@ def plugin_manifest(request):
     return success_response(result)
 
 
-# ==================== RBAC3 Constraints & Active Roles ====================
+# ==================== RBAC3 约束与激活角色 ====================
 
 @csrf_exempt
 @api_login_required
-@api_permission_required('role:edit')
+@api_permission_by_method({'GET': 'constraint:view', 'POST': 'constraint:add', 'PUT': 'constraint:edit', 'PATCH': 'constraint:edit', 'DELETE': 'constraint:delete'})
 def constraint_list(request):
     """GET /api/rbac/constraints/ - 互斥组、前置角色与全局上限"""
     from .engine import _get_config, DSD_STRATEGY_KEY, PREREQ_STRATEGY_KEY, get_max_roles_per_user
@@ -1807,6 +2624,123 @@ def constraint_list(request):
             'dsd_strategy': _get_config(DSD_STRATEGY_KEY, 'greedy'),
         },
     })
+
+
+def _sod_payload(group):
+    return {
+        'id': group.id,
+        'name': group.name,
+        'mutually_exclusive_roles': [
+            {'id': role.id, 'name': role.name}
+            for role in group.roles.all().order_by('id')
+        ],
+        'role_ids': list(group.roles.values_list('id', flat=True)),
+        'description': group.description,
+        'is_active': group.is_active,
+    }
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_by_method({'GET': 'constraint:view', 'POST': 'constraint:add', 'PUT': 'constraint:edit', 'PATCH': 'constraint:edit', 'DELETE': 'constraint:delete'})
+def sod_constraint_list(request):
+    """GET/POST /api/rbac/sod-constraints/ - 1.4.2 SSD 兼容端点"""
+    from .engine import RbacConstraintError, require_roles
+    from .models import SoDConstraint
+
+    if request.method == 'GET':
+        groups = SoDConstraint.objects.filter(kind='ssd').order_by('id').prefetch_related('roles')
+        return success_response([_sod_payload(group) for group in groups])
+
+    if request.method == 'POST':
+        body = get_request_body(request)
+        name = str(body.get('name', '')).strip()
+        if not name:
+            return error_response('约束名称不能为空', 400)
+        if SoDConstraint.objects.filter(name=name).exists():
+            return error_response('约束名称已存在', 400)
+        try:
+            role_ids = require_roles(body.get('mutually_exclusive_role_ids') or body.get('role_ids') or [])
+        except RbacConstraintError as e:
+            return error_response(e.message, 400)
+        if len(role_ids) < 2:
+            return error_response('互斥约束至少包含两个角色', 400)
+        group = SoDConstraint.objects.create(
+            name=name, kind='ssd',
+            description=body.get('description', ''),
+            is_active=bool(body.get('is_active', True)),
+        )
+        group.roles.set(role_ids)
+        return success_response({'id': group.id}, msg='创建成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_by_method({'GET': 'constraint:view', 'POST': 'constraint:add', 'PUT': 'constraint:edit', 'PATCH': 'constraint:edit', 'DELETE': 'constraint:delete'})
+def sod_constraint_detail(request, pk):
+    """GET/PUT/DELETE /api/rbac/sod-constraints/<id>/ - 1.4.2 SSD 兼容端点"""
+    from .engine import RbacConstraintError, require_roles
+    from .models import SoDConstraint
+
+    group = SoDConstraint.objects.filter(pk=pk, kind='ssd').first()
+    if not group:
+        return error_response('约束不存在', 404)
+
+    if request.method == 'GET':
+        return success_response(_sod_payload(group))
+
+    if request.method == 'PUT':
+        body = get_request_body(request)
+        if 'name' in body:
+            name = str(body['name']).strip()
+            if not name:
+                return error_response('约束名称不能为空', 400)
+            if SoDConstraint.objects.filter(name=name).exclude(pk=pk).exists():
+                return error_response('约束名称已存在', 400)
+            group.name = name
+        if 'description' in body:
+            group.description = body['description']
+        if 'is_active' in body:
+            group.is_active = bool(body['is_active'])
+        group.save()
+        role_key = 'mutually_exclusive_role_ids' if 'mutually_exclusive_role_ids' in body else 'role_ids'
+        if role_key in body:
+            try:
+                role_ids = require_roles(body[role_key] or [])
+            except RbacConstraintError as e:
+                return error_response(e.message, 400)
+            if len(role_ids) < 2:
+                return error_response('互斥约束至少包含两个角色', 400)
+            group.roles.set(role_ids)
+        return success_response(msg='更新成功')
+
+    if request.method == 'DELETE':
+        group.delete()
+        return success_response(msg='删除成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('constraint:view')
+def sod_constraint_check(request):
+    """POST /api/rbac/sod-constraints/check/ - 实时 SSD 预校验"""
+    from .engine import check_sod_conflict
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    body = get_request_body(request)
+    target_user = None
+    user_id = body.get('user_id')
+    if user_id:
+        from django.contrib.auth import get_user_model
+        target_user = get_user_model().objects.filter(pk=user_id).first()
+    result = check_sod_conflict(target_user, body.get('role_ids') or [], audit=False)
+    if result['exempt']:
+        result['message'] = '已豁免，操作将记录审计'
+    return success_response(result)
 
 
 @csrf_exempt
@@ -1920,6 +2854,7 @@ def active_roles(request):
         get_assigned_role_ids, store_active_roles, validate_active_roles,
     )
     from .models import Role
+    from .token_auth import generate_token
 
     assigned_ids = get_assigned_role_ids(request.user)
     assigned = list(Role.objects.filter(id__in=assigned_ids).values('id', 'name', 'code'))
@@ -1933,6 +2868,7 @@ def active_roles(request):
 
     if request.method == 'POST':
         body = get_request_body(request)
+        selected = None
         if 'role_ids' in body and body['role_ids'] is not None:
             try:
                 selected = validate_active_roles(request.user, body['role_ids'])
@@ -1941,9 +2877,322 @@ def active_roles(request):
             store_active_roles(request, selected)
         else:
             clear_active_roles(request)
+        active_ids = get_active_role_ids(request.user)
         return success_response({
             'assigned': assigned,
-            'active_ids': sorted(get_active_role_ids(request.user)),
+            'active_ids': sorted(active_ids),
+            'token': generate_token(request.user, active_roles=selected, request=request),
         }, msg='切换成功')
 
     return error_response('Method not allowed', 405)
+
+
+# ==================== 1.4.2 数据范围节点 ====================
+
+def _scope_node_payload(node):
+    return {
+        'id': node.id,
+        'code': node.code,
+        'name': node.name,
+        'parent_id': node.parent_id,
+        'sort': node.sort,
+        'is_active': node.is_active,
+    }
+
+
+def _build_scope_tree(nodes, parent_id=None):
+    tree = []
+    for node in nodes:
+        if node['parent_id'] == parent_id:
+            item = dict(node)
+            children = _build_scope_tree(nodes, node['id'])
+            if children:
+                item['children'] = children
+            tree.append(item)
+    return tree
+
+
+def _scope_descendant_ids(node_id):
+    from .models import ScopeNode
+
+    result = set()
+    queue = [node_id]
+    while queue:
+        current = queue.pop()
+        for child in ScopeNode.objects.filter(parent_id=current).values_list('id', flat=True):
+            if child not in result:
+                result.add(child)
+                queue.append(child)
+    return result
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_by_method({'GET': 'scope:view', 'POST': 'scope:add', 'PUT': 'scope:edit', 'PATCH': 'scope:edit', 'DELETE': 'scope:delete'})
+def scope_node_list(request):
+    """GET/POST /api/rbac/scope-nodes/ - 组织节点树与创建入口"""
+    from .models import ScopeNode
+
+    if request.method == 'GET':
+        rows = ScopeNode.objects.all().order_by('sort', 'id')
+        return success_response(_build_scope_tree([_scope_node_payload(row) for row in rows]))
+
+    if request.method == 'POST':
+        body = get_request_body(request)
+        code = str(body.get('code', '')).strip()
+        name = str(body.get('name', '')).strip()
+        if not code or not name:
+            return error_response('节点编码和名称不能为空', 400)
+        if ScopeNode.objects.filter(code=code).exists():
+            return error_response('节点编码已存在', 400)
+        try:
+            parent_id = int(body['parent_id']) if body.get('parent_id') else None
+            sort = int(body.get('sort') or 0)
+        except (TypeError, ValueError):
+            return error_response('上级节点或排序参数无效', 400)
+        node = ScopeNode.objects.create(
+            code=code, name=name, parent_id=parent_id,
+            sort=sort,
+            is_active=bool(body.get('is_active', True)),
+        )
+        return success_response({'id': node.id}, msg='创建成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_by_method({'GET': 'scope:view', 'POST': 'scope:add', 'PUT': 'scope:edit', 'PATCH': 'scope:edit', 'DELETE': 'scope:delete'})
+def scope_node_detail(request, pk):
+    """GET/PUT/DELETE /api/rbac/scope-nodes/<id>/ - 查询、更新或删除数据范围节点。"""
+    from .models import Role, ScopeNode
+
+    node = ScopeNode.objects.filter(pk=pk).first()
+    if not node:
+        return error_response('节点不存在', 404)
+
+    if request.method == 'GET':
+        return success_response(_scope_node_payload(node))
+
+    if request.method == 'PUT':
+        body = get_request_body(request)
+        if 'code' in body:
+            code = str(body['code']).strip()
+            if ScopeNode.objects.filter(code=code).exclude(pk=pk).exists():
+                return error_response('节点编码已存在', 400)
+            node.code = code
+        if 'name' in body:
+            node.name = str(body['name']).strip()
+        if 'parent_id' in body:
+            try:
+                parent_id = int(body['parent_id']) if body['parent_id'] else None
+            except (TypeError, ValueError):
+                return error_response('上级节点参数无效', 400)
+            if parent_id == pk or parent_id in _scope_descendant_ids(pk):
+                return error_response('上级节点不能是自身或后代', 400)
+            node.parent_id = parent_id
+        if 'sort' in body:
+            try:
+                node.sort = int(body['sort'] or 0)
+            except (TypeError, ValueError):
+                return error_response('排序参数无效', 400)
+        if 'is_active' in body:
+            node.is_active = bool(body['is_active'])
+        node.save()
+        return success_response(msg='更新成功')
+
+    if request.method == 'DELETE':
+        if Role.objects.filter(scope_node=node.code).exists():
+            return error_response('该节点已被角色数据范围引用，不能删除', 409)
+        from django.db import transaction
+        with transaction.atomic():
+            ScopeNode.objects.filter(parent_id=pk).update(parent=node.parent)
+            node.delete()
+        return success_response(msg='删除成功')
+
+    return error_response('Method not allowed', 405)
+
+
+# ==================== 1.4.2 ABAC 策略 ====================
+
+def _abac_payload(policy, include_expression=True):
+    data = {
+        'id': policy.id,
+        'name': policy.name,
+        'resource': policy.resource,
+        'action': policy.action,
+        'field': policy.field,
+        'effect': policy.effect,
+        'priority': policy.priority,
+        'is_active': policy.is_active,
+    }
+    if include_expression:
+        data['expression'] = policy.expression
+    return data
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_by_method({'GET': 'abac:view', 'POST': 'abac:add', 'PUT': 'abac:edit', 'PATCH': 'abac:edit', 'DELETE': 'abac:delete'})
+def abac_policy_list(request):
+    """GET/POST /api/rbac/abac-policies/ - 获取或创建 ABAC 策略。"""
+    from .abac import AbacError, validate_expression
+    from .models import AbacPolicy
+
+    if request.method == 'GET':
+        rows = AbacPolicy.objects.all().order_by('priority', 'id')
+        return success_response([_abac_payload(row) for row in rows])
+
+    if request.method == 'POST':
+        body = get_request_body(request)
+        expression = str(body.get('expression', '')).strip()
+        try:
+            validate_expression(expression)
+        except AbacError as exc:
+            return error_response('表达式无效：%s' % exc, 400)
+        if not str(body.get('name', '')).strip() or not str(body.get('resource', '')).strip():
+            return error_response('策略名称和资源不能为空', 400)
+        policy = AbacPolicy.objects.create(
+            name=str(body['name']).strip(),
+            resource=str(body['resource']).strip(),
+            action=str(body.get('action') or 'view').strip(),
+            field=str(body.get('field') or '').strip(),
+            effect=str(body.get('effect') or 'allow'),
+            expression=expression,
+            priority=int(body.get('priority') or 100),
+            is_active=bool(body.get('is_active', True)),
+        )
+        return success_response({'id': policy.id}, msg='创建成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_by_method({'GET': 'abac:view', 'POST': 'abac:add', 'PUT': 'abac:edit', 'PATCH': 'abac:edit', 'DELETE': 'abac:delete'})
+def abac_policy_detail(request, pk):
+    """GET/PUT/DELETE /api/rbac/abac-policies/<id>/ - 查询、更新或删除 ABAC 策略。"""
+    from .abac import AbacError, validate_expression
+    from .models import AbacPolicy
+
+    policy = AbacPolicy.objects.filter(pk=pk).first()
+    if not policy:
+        return error_response('策略不存在', 404)
+
+    if request.method == 'GET':
+        return success_response(_abac_payload(policy))
+
+    if request.method == 'PUT':
+        body = get_request_body(request)
+        simple_fields = ('name', 'resource', 'action', 'field', 'effect')
+        for key in simple_fields:
+            if key in body:
+                setattr(policy, key, str(body[key] or '').strip())
+        if 'priority' in body:
+            policy.priority = int(body['priority'] or 100)
+        if 'is_active' in body:
+            policy.is_active = bool(body['is_active'])
+        if 'expression' in body:
+            expression = str(body['expression'] or '').strip()
+            try:
+                validate_expression(expression)
+            except AbacError as exc:
+                return error_response('表达式无效：%s' % exc, 400)
+            policy.expression = expression
+        policy.save()
+        return success_response(msg='更新成功')
+
+    if request.method == 'DELETE':
+        policy.delete()
+        return success_response(msg='删除成功')
+
+    return error_response('Method not allowed', 405)
+
+
+@csrf_exempt
+@api_login_required
+@api_permission_required('abac:view')
+def abac_check(request):
+    """POST /api/rbac/abac-check/ - 策略调试与前端字段/行级控制"""
+    from .abac import evaluate_policies
+
+    if request.method != 'POST':
+        return error_response('Method not allowed', 405)
+    body = get_request_body(request)
+    target_user = request.user
+    user_id = body.get('user_id')
+    if user_id:
+        target_user = _get_user_model().objects.filter(pk=user_id).first()
+        if target_user is None:
+            return error_response('目标用户不存在', 404)
+    if (
+        target_user != request.user
+        and getattr(target_user, 'is_superuser', False)
+        and not getattr(request.user, 'is_superuser', False)
+    ):
+        return error_response('无权以超级管理员上下文调试策略', 403)
+    decision = evaluate_policies(
+        target_user,
+        str(body.get('action') or 'view'),
+        body.get('resource') or '',
+        field=str(body.get('field') or ''),
+        extra_context=body.get('context') if isinstance(body.get('context'), dict) else None,
+    )
+    return success_response({
+        'allowed': decision.allowed,
+        'matched': decision.matched,
+        'errors': decision.errors,
+    })
+
+
+@csrf_exempt
+@api_login_required
+def frontend_permissions(request):
+    """GET /api/rbac/frontend/permissions/ - Vue/React SDK 的统一权限数据入口"""
+    from .engine import visible_menu_queryset
+    from .models import AbacPolicy, ScopeNode
+    from .permissions import has_permission
+    from .plugins import list_plugins
+
+    if request.method != 'GET':
+        return error_response('Method not allowed', 405)
+
+    menus = visible_menu_queryset(request.user, 'frontend').order_by('sort', 'id')
+    language = getattr(request.user, 'language', 'zh-hans')
+    menu_rows = [{
+        'id': menu.id, 'parent_id': menu.parent_id, 'name': menu.get_name_by_lang(language),
+        'path': menu.path, 'component': menu.component, 'menu_type': menu.menu_type,
+        'permission': menu.permission, 'icon': menu.icon, 'sort': menu.sort,
+    } for menu in menus]
+    scope_nodes = list(ScopeNode.objects.filter(is_active=True).order_by('sort', 'id').values(
+        'id', 'code', 'name', 'parent_id', 'sort'
+    ))
+    can_view_policies = (
+        bool(getattr(request.user, 'is_superuser', False))
+        or has_permission(request.user, 'abac:view', request)
+    )
+    policies = [
+        _abac_payload(row, include_expression=False)
+        for row in AbacPolicy.objects.filter(is_active=True)
+    ] if can_view_policies else []
+    permissions = _get_user_permissions(request.user)
+    page_permissions, button_actions, catalog = _permission_catalog_payload(
+        request.user, permissions
+    )
+    return success_response({
+        'user': {
+            'id': request.user.pk,
+            'username': getattr(request.user, 'username', ''),
+            'language': language,
+            'is_superuser': bool(getattr(request.user, 'is_superuser', False)),
+        },
+        'permissions': permissions,
+        'roles': list(request.user.roles.values('id', 'code', 'name')) if hasattr(request.user, 'roles') else [],
+        'menus': _build_menu_tree(menu_rows),
+        'plugins': list_plugins(),
+        'scope_nodes': _build_scope_tree(scope_nodes),
+        'abac_policies': policies,
+        'page_permissions': page_permissions,
+        'button_actions': button_actions,
+        'permission_catalog': catalog,
+    })

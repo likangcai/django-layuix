@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""django-layuix sidebar menu template tag"""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : sidebar_menu.py
+# -----------------------------
+"""django-layuix 侧栏菜单模板标签。"""
 from django import template
 from django.utils.safestring import mark_safe
 register = template.Library()
@@ -12,12 +17,23 @@ _GT = chr(62)
 MENU_PATH_MAP = {
     "/permission/menu": "/static/layui/pages/menu.html",
     "/permission/role": "/static/layui/pages/role.html",
+    "/permission/catalog": "/static/layui/pages/permission.html",
     "/permission/user": "/static/layui/pages/user.html",
     "/system/rbac-constraints": "/static/layui/pages/constraints.html",
+    "/permission/abac": "/static/layui/pages/abac.html",
+    "/permission/data-scope": "/static/layui/pages/scope.html",
+    "/system/scope-nodes": "/static/layui/pages/scope.html",
+    "/permission-demo/orders": "/static/permission_demo/pages/order.html",
+    "/static/permission_demo/pages/order.html": "/static/permission_demo/pages/order.html",
     "/profile": "/static/layui/pages/profile.html",
     "/system/log": "/static/layui/pages/log.html",
     "/system/info": "/static/layui/pages/dashboard.html",
     "/system/config": "/static/layui/pages/config.html",
+    "/data/dictionary": "/static/layui/pages/dict.html",
+    "/data/department": "/static/layui/pages/dept.html",
+    "/data/position": "/static/layui/pages/position.html",
+    "/data/region": "/static/layui/pages/region.html",
+    "/data/member-level": "/static/layui/pages/member-level.html",
     "/ops/server": "/static/layui/pages/server.html",
     "/ops/ai-config": "/static/layui/pages/ai-config.html",
 }
@@ -49,9 +65,9 @@ def render_sidebar_menu(context):
     tree = _build_menu_tree(qs)
     if not tree:
         return mark_safe("")
-    return mark_safe(_render_tree(tree, lang))
+    return mark_safe(_render_tree(tree, lang, request.path))
 
-def _render_tree(items, lang):
+def _render_tree(items, lang, current_path=""):
     parts = []
     for item in items:
         name = item["name"]
@@ -61,13 +77,13 @@ def _render_tree(items, lang):
             name = item["name_zh_hans"]
         children = item.get("children", [])
         if item["menu_type"] == 1:
-            parts.append(_render_dir(item, name, children, lang))
+            parts.append(_render_dir(item, name, children, lang, current_path))
         elif item["menu_type"] == 2:
-            parts.append(_render_item(item, name))
+            parts.append(_render_item(item, name, current_path))
     return chr(10).join(parts)
-def _render_dir(item, name, children, lang):
+def _render_dir(item, name, children, lang, current_path=""):
     icon = item.get("icon", "layui-icon-app")
-    child_html = _render_tree(children, lang) if children else ""
+    child_html = _render_tree(children, lang, current_path) if children else ""
     return (
         _LT + 'div class="menu-group has-children" data-menu-id="%s"' + _GT +
         _LT + 'div class="menu-group-title"' + _GT +
@@ -79,12 +95,13 @@ def _render_dir(item, name, children, lang):
         _LT + '/div' + _GT
     ) % (str(item["id"]), _ea(icon), _e(name), child_html)
 
-def _render_item(item, name):
+def _render_item(item, name, current_path=""):
     icon = item.get("icon", "layui-icon-app")
     raw_url = item.get("path") or item.get("component") or ""
     url = MENU_PATH_MAP.get(raw_url, raw_url)
+    active = ' active' if current_path and current_path.rstrip('/') == url.rstrip('/') else ''
     return (
-        _LT + 'div class="menu-item" data-url="%s" data-title="%s"' + _GT +
+        _LT + 'div class="menu-item' + active + '" data-url="%s" data-title="%s"' + _GT +
         _LT + 'i class="layui-icon %s menu-icon"' + _GT + _LT + '/i' + _GT +
         _LT + 'span class="menu-text"' + _GT + '%s' + _LT + '/span' + _GT +
         _LT + '/div' + _GT

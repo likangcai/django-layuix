@@ -1,18 +1,19 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>菜单管理 - 软件测试管理后台</title>
+    <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130i">
     <script>
         // 同步父页面主题
         function syncParentTheme() {
             var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'light';
                 }
             } catch(e) {}
             document.documentElement.setAttribute('data-theme-mode', themeMode);
@@ -29,15 +30,18 @@
     <style>
         body { padding: 0; margin: 0; background: var(--bg-primary); }
         .page-container { background: var(--bg-primary); padding: 20px 24px; min-height: 100%; }
-        .menu-layout { display: flex; gap: 16px; height: calc(100vh - 140px); }
+        .menu-layout { display: flex; gap: 16px; height: calc(100vh - 140px); min-height: 360px; }
         .menu-tree-panel {
-            width: 280px; min-width: 280px;
+            width: 280px; min-width: 280px; height: 100%;
+            box-sizing: border-box;
+            display: flex; flex-direction: column;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 8px;
-            overflow: auto; padding: 12px;
+            overflow: hidden; padding: 12px;
             box-shadow: var(--shadow-sm);
         }
+        .menu-tree-panel #menuTree { flex: 1; overflow: auto; }
         .menu-tree-panel .panel-title {
             font-size: 14px; font-weight: 600; padding: 8px 4px 12px;
             border-bottom: 1px solid var(--card-border); margin-bottom: 10px;
@@ -45,10 +49,23 @@
             display: flex; align-items: center; gap: 6px;
         }
         .menu-tree-panel .panel-title i { color: var(--primary-color); }
-        .menu-table-panel { flex: 1; overflow: auto; }
+        .menu-tree-toolbar { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+        .menu-tree-toolbar .layui-input { flex: 1; min-width: 0; height: 30px; padding: 0 8px; }
+        .menu-tree-toolbar .layui-btn { margin-left: 0; padding: 0 8px; }
+        .menu-tree-toolbar .layui-btn i { font-size: 14px; }
+        .menu-table-panel { flex: 1; min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+        .menu-table-search {
+            display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-bottom: 0; border-radius: 8px 8px 0 0; flex: 0 0 auto;
+        }
+        .menu-table-search .layui-input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; }
+        .menu-table-search .layui-btn { margin-left: 0; }
         .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
         .layui-input-block { margin-left: 130px; }
         .icon-preview { display: inline-block; width: 20px; text-align: center; margin-right: 5px; }
+        .menu-form-actions { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; gap: 8px; margin: 0 -30px -1px; padding: 12px 30px 14px; background: var(--bg-primary); border-top: 1px solid var(--card-border); }
+        .menu-form-actions .layui-btn { margin-left: 0; }
         .layui-card { border-radius: 8px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
         .layui-card-header { border-bottom: 1px solid var(--card-border); }
     </style>
@@ -68,10 +85,20 @@
                     <div class="panel-title">
                         <i class="layui-icon layui-icon-template"></i> <span data-i18n="menu.tree">菜单树</span>
                     </div>
+                    <div class="menu-tree-toolbar">
+                        <input type="text" id="menuTreeSearch" class="layui-input" data-i18n-placeholder="menu.searchPlaceholder" placeholder="搜索菜单名称或权限码" autocomplete="off">
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="menuTreeExpand" data-i18n-title="menu.expandAll" title="全部展开"><i class="layui-icon layui-icon-down"></i></button>
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="menuTreeCollapse" data-i18n-title="menu.collapseAll" title="全部折叠"><i class="layui-icon layui-icon-up"></i></button>
+                    </div>
                     <div id="menuTree"></div>
                 </div>
                 <!-- 右侧表格 -->
                 <div class="menu-table-panel">
+                    <div class="menu-table-search">
+                        <input type="text" id="menuTableSearch" class="layui-input" data-i18n-placeholder="menu.searchPlaceholder" placeholder="搜索菜单名称或权限码" autocomplete="off">
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="menuTableSearchBtn" data-i18n-title="common.search" title="搜索"><i class="layui-icon layui-icon-search"></i></button>
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="menuTableResetBtn" data-i18n-title="common.reset" title="重置"><i class="layui-icon layui-icon-refresh"></i></button>
+                    </div>
                     <table id="menuTable" lay-filter="menuTable"></table>
                 </div>
             </div>
@@ -152,7 +179,7 @@
                 <div style="display:flex;gap:8px;">
                     <input type="text" name="icon" placeholder="{{ t('menu.iconPicker.placeholder') }}" autocomplete="off" class="layui-input" style="flex:1;">
                     <button type="button" class="layui-btn layui-btn-sm" id="iconPickerBtn">
-                        <i class="layui-icon layui-icon-search"></i> {{ t('common.confirm') }}
+                        <i class="layui-icon layui-icon-search"></i> {{ t('common.search') }}
                     </button>
                 </div>
                 <div id="iconPreview" style="margin-top:5px;font-size:20px;"></div>
@@ -210,9 +237,9 @@
                 <span style="color: var(--text-muted); font-size: 12px; line-height: 30px;">仅控制前台菜单显示（受"可见"总开关影响）</span>
             </div>
         </div>
-        <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;">
-            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="menuSubmit">{{ t('common.confirm') }}</button>
-            <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.reset') }}</button>
+        <div class="menu-form-actions">
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="menuSubmit">{{ t('common.save') }}</button>
+            <button type="button" data-dialog-cancel class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.cancel') }}</button>
         </div>
     </form>
 </script>
@@ -230,7 +257,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js"></script>
+    <script src="/static/layui/js/common.js?v=20261130i"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -319,6 +346,31 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         return html;
     }
 
+    // 按菜单名过滤树节点，命中子级时保留父级路径
+    function filterMenuTree(keyword) {
+        keyword = String(keyword || '').trim().toLowerCase();
+        function walk($set) {
+            var ownText = ($set.find('.layui-tree-txt').first().text() || '').toLowerCase();
+            var ownMatch = !keyword || ownText.indexOf(keyword) > -1;
+            var childMatch = false;
+            $set.children('.layui-tree-pack').children('.layui-tree-set').each(function() {
+                if (walk($(this))) childMatch = true;
+            });
+            var visible = ownMatch || childMatch;
+            $set.toggle(visible);
+            if (visible && childMatch && !ownMatch) {
+                $set.children('.layui-tree-pack').show();
+            }
+            return visible;
+        }
+        $('#menuTree > .layui-tree > .layui-tree-set').each(function() { walk($(this)); });
+    }
+
+    // 展开或折叠全部菜单节点
+    function setMenuTreeSpread(spread) {
+        $('#menuTree .layui-tree-pack').toggle(!!spread);
+    }
+
     // 加载菜单树
     function loadMenuTree() {
         getApi('/admin/api/rbac/menus/tree/', function(res) {
@@ -356,7 +408,81 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                         openMenuForm(obj.data);
                     }
                 });
+                $('#menuTreeSearch').val('').off('input.menuTree').on('input.menuTree', function() {
+                    filterMenuTree($(this).val());
+                });
+                $('#menuTreeExpand').off('click.menuTree').on('click.menuTree', function() {
+                    setMenuTreeSpread(true);
+                });
+                $('#menuTreeCollapse').off('click.menuTree').on('click.menuTree', function() {
+                    setMenuTreeSpread(false);
+                });
             }
+        });
+    }
+
+    // 右侧表格搜索：按名称、权限码、路由和组件路径过滤
+    var menuFlatRows = [];
+    function filteredMenuRows() {
+        var keyword = String($('#menuTableSearch').val() || '').trim().toLowerCase();
+        if (!keyword) return menuFlatRows;
+        return menuFlatRows.filter(function(row) {
+            return [row.name, row.name_en, row.name_zh_hans, row.permission, row.path, row.component]
+                .some(function(value) {
+                    return String(value || '').toLowerCase().indexOf(keyword) > -1;
+                });
+        });
+    }
+
+    function renderMenuTable(rows) {
+        LayuiUI.table({
+            elem: '#menuTable',
+            toolbar: '#toolbarTpl',
+            defaultToolbar: [],
+            data: rows,
+            page: false,
+            height: 'full-190',
+            even: true,
+            cols: [[
+                {field: 'name', title: t('menu.name'), minWidth: 200, templet: function(d) {
+                    var indent = '';
+                    for (var i = 0; i < d.level; i++) {
+                        indent += '&nbsp;&nbsp;&nbsp;&nbsp;';
+                    }
+                    var icon = d.icon ? '<i class="layui-icon ' + escapeHtml(d.icon) + ' icon-preview"></i>' : '';
+                    return indent + icon + escapeHtml(d.name);
+                }},
+                {field: 'icon', title: t('menu.icon'), width: 80, align: 'center', templet: function(d) {
+                    return d.icon ? '<i class="layui-icon ' + escapeHtml(d.icon) + '" style="font-size:20px;"></i>' : '';
+                }},
+                {field: 'menu_type', title: t('menu.type'), width: 90, align: 'center', templet: function(d) {
+                    var color = menuTypeColor[d.menu_type] || '#999';
+                    return '<span style="color:' + color + ';font-weight:bold;">' + (menuTypeMap[d.menu_type] || t('common.unknown')) + '</span>';
+                }},
+                {field: 'sort', title: t('menu.sort'), width: 80, align: 'center'},
+                {field: 'visible', title: t('menu.visible'), width: 80, align: 'center', templet: function(d) {
+                    return d.visible
+                        ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
+                        : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
+                }},
+                {field: 'status', title: t('menu.status'), width: 80, align: 'center', templet: function(d) {
+                    return d.status
+                        ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
+                        : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
+                }},
+                {field: 'backend_visible', title: t('menu.backendVisible') || '后台可见', width: 100, align: 'center', templet: function(d) {
+                    return d.backend_visible
+                        ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
+                        : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
+                }},
+                {field: 'frontend_visible', title: t('menu.frontendVisible') || '前台可见', width: 100, align: 'center', templet: function(d) {
+                    return d.frontend_visible
+                        ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
+                        : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
+                }},
+                {field: 'permission', title: t('menu.permission'), width: 160},
+                {title: t('common.operation'), width: 320, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+            ]]
         });
     }
 
@@ -365,55 +491,20 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         getApi('/admin/api/rbac/menus/tree/', function(res) {
             if (res.code === 200) {
                 var treeData = enrichTree(res.data || [], 0);
-                var flatData = flattenTree(treeData);
-
-                table.render({
-                    elem: '#menuTable',
-                    toolbar: '#toolbarTpl',
-                    defaultToolbar: [],
-                    data: flatData,
-                    page: false,
-                    even: true,
-                    cols: [[
-                        {field: 'name', title: t('menu.name'), minWidth: 200, templet: function(d) {
-                            var indent = '';
-                            for (var i = 0; i < d.level; i++) {
-                                indent += '&nbsp;&nbsp;&nbsp;&nbsp;';
-                            }
-                            var icon = d.icon ? '<i class="layui-icon ' + escapeHtml(d.icon) + ' icon-preview"></i>' : '';
-                            return indent + icon + escapeHtml(d.name);
-                        }},
-                        {field: 'icon', title: t('menu.icon'), width: 80, align: 'center', templet: function(d) {
-                            return d.icon ? '<i class="layui-icon ' + d.icon + '" style="font-size:20px;"></i>' : '';
-                        }},
-                        {field: 'menu_type', title: t('menu.type'), width: 90, align: 'center', templet: function(d) {
-                            var color = menuTypeColor[d.menu_type] || '#999';
-                            return '<span style="color:' + color + ';font-weight:bold;">' + (menuTypeMap[d.menu_type] || t('common.unknown')) + '</span>';
-                        }},
-                        {field: 'sort', title: t('menu.sort'), width: 80, align: 'center'},
-                        {field: 'visible', title: t('menu.visible'), width: 80, align: 'center', templet: function(d) {
-                            return d.visible
-                                ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
-                        }},
-                        {field: 'status', title: t('menu.status'), width: 80, align: 'center', templet: function(d) {
-                            return d.status
-                                ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
-                        }},
-                        {field: 'backend_visible', title: t('menu.backendVisible') || '后台可见', width: 100, align: 'center', templet: function(d) {
-                            return d.backend_visible
-                                ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
-                        }},
-                        {field: 'frontend_visible', title: t('menu.frontendVisible') || '前台可见', width: 100, align: 'center', templet: function(d) {
-                            return d.frontend_visible
-                                ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
-                        }},
-                        {field: 'permission', title: t('menu.permission'), width: 160},
-                        {title: t('common.operation'), width: 320, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
-                    ]]
+                menuFlatRows = flattenTree(treeData);
+                renderMenuTable(filteredMenuRows());
+                $('#menuTableSearch').off('input.menuTable').on('input.menuTable', function() {
+                    renderMenuTable(filteredMenuRows());
+                });
+                $('#menuTableSearchBtn').off('click.menuTable').on('click.menuTable', function() {
+                    renderMenuTable(filteredMenuRows());
+                });
+                $('#menuTableResetBtn').off('click.menuTable').on('click.menuTable', function() {
+                    $('#menuTableSearch').val('');
+                    renderMenuTable(menuFlatRows);
+                });
+                $('#menuTableSearch').off('keydown.menuTable').on('keydown.menuTable', function(event) {
+                    if (event.key === 'Enter') { event.preventDefault(); renderMenuTable(filteredMenuRows()); }
                 });
             }
         });
@@ -428,10 +519,11 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             if (res.code !== 200) return;
             var treeData = enrichTree(res.data || [], 0);
 
-            var layerIndex = layer.open({
+            var layerIndex = LayuiUI.dialog({
                 type: 1,
                 title: title,
-                area: ['600px', '580px'],
+                area: ['600px', 'auto'],
+                maxHeight: '80vh',
                 content: renderTpl('menuFormTpl'),
                 success: function(layero, index) {
                     var excludeId = isEdit ? menuData.id : null;
@@ -457,7 +549,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                             frontend_visible: menuData.frontend_visible !== undefined ? menuData.frontend_visible : true
                         });
                         if (menuData.icon) {
-                            layero.find('#iconPreview').html('<i class="layui-icon ' + menuData.icon + '"></i> ' + menuData.icon);
+                            layero.find('#iconPreview').html('<i class="layui-icon ' + escapeHtml(menuData.icon) + '"></i> ').append(document.createTextNode(menuData.icon));
                         }
                         
                         // 初始化联动状态：如果 visible=false，禁用前后端可见性开关
@@ -475,17 +567,14 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     form.render(null, 'menuForm');
 
                     // ===== 联动逻辑：visible 总开关控制 =====
-                    form.off('switch(visibleSwitch)').on('switch(visibleSwitch)', function(data) {
-                        var isVisible = data.elem.checked;
+                    layero.off('change.menuVisible', 'input[name="visible"]').on('change.menuVisible', 'input[name="visible"]', function() {
+                        var isVisible = !!this.checked;
                         var $layero = $(layero);
-                        
                         if (!isVisible) {
-                            // visible=false 时，自动关闭 backend_visible 和 frontend_visible 并禁用
                             $layero.find('input[name="backend_visible"]').prop('checked', false).prop('disabled', true);
                             $layero.find('input[name="frontend_visible"]').prop('checked', false).prop('disabled', true);
                             $layero.find('.visibility-fields').css('opacity', '0.5');
                         } else {
-                            // visible=true 时，恢复 backend_visible 和 frontend_visible 的控制
                             $layero.find('input[name="backend_visible"]').prop('checked', true).prop('disabled', false);
                             $layero.find('input[name="frontend_visible"]').prop('checked', true).prop('disabled', false);
                             $layero.find('.visibility-fields').css('opacity', '1');
@@ -496,7 +585,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     layero.find('input[name="icon"]').on('input', function() {
                         var val = $(this).val();
                         if (val) {
-                            layero.find('#iconPreview').html('<i class="layui-icon ' + val + '"></i> ' + val);
+                            layero.find('#iconPreview').html('<i class="layui-icon ' + escapeHtml(val) + '"></i> ').append(document.createTextNode(val));
                         } else {
                             layero.find('#iconPreview').html('');
                         }
@@ -507,8 +596,8 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     });
 
                     // 菜单类型切换
-                    form.off('radio(menu_type)').on('radio(menu_type)', function(data) {
-                        toggleMenuFields(layero, data.value);
+                    layero.off('change.menuType', 'input[name="menu_type"]').on('change.menuType', 'input[name="menu_type"]', function() {
+                        toggleMenuFields(layero, this.value);
                     });
 
                     var currentType = isEdit ? String(menuData.menu_type) : '2';
@@ -544,31 +633,29 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
 
             if (id) {
                 putApi('/admin/api/rbac/menus/' + id + '/', submitData, function(res) {
-                    // 恢复按钮状态
-                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
-                    
-                    if (res.code === 200) {
-                        layer.msg(t('common.updateSuccess'), {icon: 1});
-                        layer.closeAll();
-                        loadMenuTree();
-                        loadTable();
-                    } else {
+                    if (res.code !== 200) {
+                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                         layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
                     }
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
+                    layer.msg(t('common.updateSuccess'), {icon: 1});
+                    layer.closeAll();
+                    loadMenuTree();
+                    loadTable();
                 });
             } else {
                 postApi('/admin/api/rbac/menus/create/', submitData, function(res) {
-                    // 恢复按钮状态
-                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
-                    
-                    if (res.code === 200) {
-                        layer.msg(t('common.addSuccess'), {icon: 1});
-                        layer.closeAll();
-                        loadMenuTree();
-                        loadTable();
-                    } else {
+                    if (res.code !== 200) {
+                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                         layer.msg(res.msg || t('common.fail'), {icon: 2});
+                        return;
                     }
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
+                    layer.msg(t('common.addSuccess'), {icon: 1});
+                    layer.closeAll();
+                    loadMenuTree();
+                    loadTable();
                 });
             }
             return false;
@@ -688,10 +775,10 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             'layui-icon-test','layui-icon-service','layui-icon-templeate-1'
         ];
 
-        var iconLayerIndex = layer.open({
+        var iconLayerIndex = LayuiUI.dialog({
             type: 1,
             title: t('menu.iconPicker.title'),
-            area: ['580px', '560px'],
+            area: ['580px', 'auto'],
             content: renderTpl('iconPickerTpl'),
             success: function(layero, index) {
                 function renderIcons(keyword) {
@@ -714,7 +801,7 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
                     layero.find('.icon-item').on('click', function() {
                         var icon = $(this).data('icon');
                         formLayero.find('input[name="icon"]').val(icon);
-                        formLayero.find('#iconPreview').html('<i class="layui-icon ' + icon + '"></i> ' + icon);
+                        formLayero.find('#iconPreview').html('<i class="layui-icon ' + escapeHtml(icon) + '"></i> ').append(document.createTextNode(icon));
                         layer.close(iconLayerIndex);
                     });
                 }
@@ -765,9 +852,11 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         }
     });
 
-    // 初始化
-    loadMenuTree();
-    loadTable();
+    // 初始化：等待用户信息就绪后再渲染依赖权限的树与工具栏
+    LayuiUI.ensureCurrentUser(function() {
+        loadMenuTree();
+        loadTable();
+    });
 });
 </script>
 </body>

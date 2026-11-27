@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
-django-layuix RBAC Models
-Required RBAC engine - add 'django_layuix.rbac' to INSTALLED_APPS to enable
-"""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : models.py
+# -----------------------------
+"""django-layuix RBAC 模型。必需 RBAC 引擎，将 'django_layuix.rbac' 加入 INSTALLED_APPS 后启用。"""
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Menu(models.Model):
@@ -19,7 +22,17 @@ class Menu(models.Model):
     component = models.CharField(max_length=200, blank=True, default='', verbose_name='组件路径')
     menu_type = models.IntegerField(choices=((1, '目录'), (2, '菜单'), (3, '按钮')), default=2, verbose_name='类型')
     permission = models.CharField(max_length=100, blank=True, default='', verbose_name='权限标识')
+    catalog_key = models.CharField(
+        max_length=200, null=True, blank=True, unique=True,
+        editable=False, verbose_name='权限目录唯一键',
+    )
     plugin_key = models.CharField(max_length=100, blank=True, default='', verbose_name='所属插件')
+    permission_source = models.CharField(
+        max_length=20,
+        choices=(('builtin', '内置'), ('business', '业务')),
+        default='business',
+        verbose_name='权限来源',
+    )
     sort = models.IntegerField(default=0, verbose_name='排序')
     visible = models.BooleanField(default=True, verbose_name='是否显示')
     status = models.BooleanField(default=True, verbose_name='状态')
@@ -46,6 +59,17 @@ class Menu(models.Model):
         }
         return lang_map.get(lang_code, self.name)
 
+    def save(self, *args, **kwargs):
+        if self.plugin_key == 'permission_catalog' and self.permission:
+            self.catalog_key = 'permission_catalog:%s' % self.permission
+            self.permission_source = 'builtin'
+        else:
+            self.catalog_key = None
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None:
+            kwargs['update_fields'] = set(update_fields) | {'catalog_key', 'permission_source'}
+        super().save(*args, **kwargs)
+
 
 class Role(models.Model):
     """角色模型"""
@@ -58,6 +82,14 @@ class Role(models.Model):
         'self', symmetrical=False, blank=True,
         related_name='child_roles', verbose_name='继承角色'
     )
+    # 1.4.1 兼容字段：旧版单父继承契约。新代码优先读取 parent_roles。
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='children', verbose_name='上级角色（兼容）'
+    )
+    # 1.4.1 数据权限：默认空白/0，不影响未配置的现有角色。
+    scope_node = models.CharField(max_length=100, blank=True, default='', verbose_name='数据作用域节点')
+    scope_depth = models.PositiveIntegerField(default=0, verbose_name='作用域向下层数')
     # RBAC2: 角色级人数上限，0/None 表示不限
     max_users = models.PositiveIntegerField(null=True, blank=True, verbose_name='人数上限')
     is_system = models.BooleanField(default=False, verbose_name='系统内置')
@@ -101,6 +133,15 @@ class RoleMutex(models.Model):
         return self.name
 
 
+class SoDConstraint(RoleMutex):
+    """1.4.1 静态职责分离约束的兼容代理。"""
+
+    class Meta:
+        proxy = True
+        verbose_name = 'SSD 互斥约束'
+        verbose_name_plural = verbose_name
+
+
 class RolePrerequisite(models.Model):
     """RBAC2 前置角色：拥有 role 必须先拥有 prerequisite"""
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='required_by', verbose_name='角色')
@@ -118,8 +159,88 @@ class RolePrerequisite(models.Model):
         return f'{self.role} <- {self.prerequisite}'
 
 
+class ScopeNode(models.Model):
+    """1.4.2 数据范围层使用的组织节点。"""
+    code = models.CharField(max_length=100, unique=True, verbose_name='节点编码')
+    name = models.CharField(max_length=100, verbose_name='节点名称')
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='child_nodes', verbose_name='上级节点'
+    )
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_scope_node'
+        verbose_name = '组织节点'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class AbacPolicy(models.Model):
+    """1.4.2 行级/字段级表达式策略。无策略时不生效。"""
+    EFFECT_CHOICES = (('allow', '允许'), ('deny', '拒绝'))
+    name = models.CharField(max_length=100, verbose_name='策略名称')
+    resource = models.CharField(max_length=150, verbose_name='资源标识')
+    action = models.CharField(max_length=50, default='view', verbose_name='动作')
+    field = models.CharField(max_length=100, blank=True, default='', verbose_name='字段（空表示行级）')
+    effect = models.CharField(max_length=10, choices=EFFECT_CHOICES, default='allow', verbose_name='效果')
+    expression = models.TextField(verbose_name='表达式')
+    priority = models.IntegerField(default=100, verbose_name='优先级（越小越高）')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_abac_policy'
+        verbose_name = 'ABAC 策略'
+        verbose_name_plural = verbose_name
+        ordering = ['priority', 'id']
+
+    def __str__(self):
+        return self.name
+
+
+class AuthToken(models.Model):
+    """签名访问令牌的持久化状态。"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='auth_tokens', verbose_name='用户',
+    )
+    jti = models.CharField(max_length=64, unique=True, verbose_name='Token ID')
+    token_type = models.CharField(max_length=20, default='access', verbose_name='Token 类型')
+    status = models.PositiveSmallIntegerField(default=1, verbose_name='状态')
+    issued_at = models.DateTimeField(verbose_name='签发时间')
+    expires_at = models.DateTimeField(verbose_name='过期时间')
+    revoked_at = models.DateTimeField(null=True, blank=True, verbose_name='撤销时间')
+    revoke_reason = models.CharField(max_length=64, blank=True, default='', verbose_name='撤销原因')
+    client_ip = models.CharField(max_length=64, blank=True, default='', verbose_name='客户端 IP')
+    user_agent = models.CharField(max_length=255, blank=True, default='', verbose_name='User Agent')
+    last_used_at = models.DateTimeField(null=True, blank=True, verbose_name='最后使用时间')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_auth_token'
+        verbose_name = '访问令牌'
+        verbose_name_plural = '访问令牌'
+        ordering = ['-issued_at']
+        indexes = [
+            models.Index(fields=['user', 'status', 'expires_at'], name='idx_auth_token_user_status_exp'),
+            models.Index(fields=['expires_at'], name='idx_auth_token_expires_at'),
+        ]
+
+    def __str__(self):
+        return '%s (%s)' % (self.jti[:12], self.user_id)
+
+
 class PluginRegistry(models.Model):
-    """Registered django-layuix plugin metadata (persisted across restarts)."""
+    """已注册的 django-layuix 插件元数据（重启后保留）。"""
     key = models.CharField(max_length=100, unique=True, verbose_name='插件标识')
     name = models.CharField(max_length=100, verbose_name='插件名称')
     version = models.CharField(max_length=30, default='1.0.0', verbose_name='版本')
@@ -130,6 +251,7 @@ class PluginRegistry(models.Model):
     dependencies = models.TextField(blank=True, default='', verbose_name='依赖声明')
     source = models.CharField(max_length=20, default='app', verbose_name='来源')
     validation_error = models.TextField(blank=True, default='', verbose_name='校验错误')
+    desired_active = models.BooleanField(default=True, verbose_name='用户期望启用')
     is_active = models.BooleanField(default=True, verbose_name='是否启用')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
@@ -150,13 +272,24 @@ class UserProfile(AbstractUser):
     avatar = models.ImageField(upload_to='avatar/%Y/%m/', blank=True, null=True, verbose_name='头像')
     nickname = models.CharField(max_length=50, blank=True, default='', verbose_name='昵称')
     roles = models.ManyToManyField(Role, blank=True, related_name='users', verbose_name='角色')
+    department = models.ForeignKey(
+        'Department', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='users', verbose_name='部门',
+    )
+    position = models.ForeignKey(
+        'Position', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='users', verbose_name='主岗',
+    )
+    positions = models.ManyToManyField(
+        'Position', blank=True, related_name='multi_users', verbose_name='兼任岗位',
+    )
     
     # 主题配置 - 深色/浅色双模式
     THEME_CHOICES = [
-        ('默认深色', '默认深色'),
         ('默认浅色', '默认浅色'),
+        ('默认深色', '默认深色'),
     ]
-    theme = models.CharField(max_length=20, default='默认深色', choices=THEME_CHOICES, verbose_name='主题')
+    theme = models.CharField(max_length=20, default='默认浅色', choices=THEME_CHOICES, verbose_name='主题')
     language = models.CharField(max_length=10, default='zh-hans', choices=(('zh-hans', '简体中文'), ('en', 'English')), verbose_name='语言')
     is_tester = models.BooleanField(default=False, verbose_name='是否测试人员')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
@@ -179,19 +312,26 @@ class UserProfile(AbstractUser):
 
     def has_perm(self, perm, obj=None):
         from .engine import get_effective_permissions, is_full_access
+        from .permission_registry import is_registered_permission
+
+        if not perm or not is_registered_permission(perm):
+            return False
         if is_full_access(self):
             return True
         if perm in get_effective_permissions(self):
             return True
-        return super().has_perm(perm, obj)
+        return False
 
     def has_module_perms(self, app_label):
         from .engine import get_effective_permissions, is_full_access
+        from .permission_registry import is_registered_permission
+
+        effective = [p for p in get_effective_permissions(self) if is_registered_permission(p)]
         if is_full_access(self):
-            return True
-        if any(p.startswith(app_label) for p in get_effective_permissions(self)):
-            return True
-        return super().has_module_perms(app_label)
+            return any(is_registered_permission(p) for p in effective) or any(
+                p.startswith(str(app_label)) for p in effective
+            )
+        return any(p.startswith(str(app_label)) for p in effective)
 
 
 class OperationLog(models.Model):
@@ -250,3 +390,215 @@ class SystemConfig(models.Model):
 
     def __str__(self):
         return self.key
+
+
+class Dictionary(models.Model):
+    """数据字典：一组命名的可复用选项值。"""
+    code = models.CharField(max_length=64, unique=True, verbose_name='字典编码')
+    name = models.CharField(max_length=100, verbose_name='字典名称')
+    description = models.CharField(max_length=200, blank=True, default='', verbose_name='描述')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    is_system = models.BooleanField(default=False, verbose_name='系统内置')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_dictionary'
+        verbose_name = '数据字典'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class DictionaryItem(models.Model):
+    """数据字典中的单个可选项。"""
+    dictionary = models.ForeignKey(
+        Dictionary, related_name='items', on_delete=models.CASCADE,
+        verbose_name='所属字典',
+    )
+    label = models.CharField(max_length=100, verbose_name='显示名称')
+    value = models.CharField(max_length=100, verbose_name='数据值')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    is_default = models.BooleanField(default=False, verbose_name='默认项')
+    css_class = models.CharField(max_length=50, blank=True, default='', verbose_name='样式类')
+    remark = models.CharField(max_length=200, blank=True, default='', verbose_name='备注')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_dictionary_item'
+        verbose_name = '字典项'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+        unique_together = [('dictionary', 'value')]
+
+    def __str__(self):
+        return '%s = %s' % (self.label, self.value)
+
+
+class Department(models.Model):
+    """树形部门或组织单元。"""
+    TYPE_CHOICES = [
+        (1, '公司'),
+        (2, '子公司'),
+        (3, '部门'),
+        (4, '小组'),
+    ]
+    name = models.CharField(max_length=150, verbose_name='部门名称')
+    code = models.CharField(max_length=64, unique=True, verbose_name='部门编码')
+    type = models.IntegerField(choices=TYPE_CHOICES, default=3, verbose_name='部门类型')
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, related_name='children',
+        on_delete=models.CASCADE, verbose_name='上级部门',
+    )
+    leader = models.CharField(max_length=50, blank=True, default='', verbose_name='负责人')
+    phone = models.CharField(max_length=30, blank=True, default='', verbose_name='联系电话')
+    email = models.EmailField(blank=True, default='', verbose_name='邮箱')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    note = models.CharField(max_length=255, blank=True, default='', verbose_name='备注')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_department'
+        verbose_name = '部门'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class Position(models.Model):
+    """岗位。"""
+    name = models.CharField(max_length=150, verbose_name='岗位名称')
+    code = models.CharField(max_length=64, unique=True, verbose_name='岗位编码')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    note = models.CharField(max_length=255, blank=True, default='', verbose_name='备注')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_position'
+        verbose_name = '岗位'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class PositionAssignment(models.Model):
+    """岗位任职历史，包括主岗变更。"""
+
+    user = models.ForeignKey(
+        'UserProfile', on_delete=models.CASCADE,
+        related_name='position_assignments', verbose_name='用户',
+    )
+    position = models.ForeignKey(
+        Position, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='assignments', verbose_name='岗位',
+    )
+    position_name = models.CharField(max_length=150, blank=True, default='', verbose_name='岗位快照')
+    is_primary = models.BooleanField(default=False, verbose_name='是否主岗')
+    start_date = models.DateField(default=timezone.localdate, verbose_name='生效日期')
+    end_date = models.DateField(null=True, blank=True, verbose_name='结束日期')
+    change_reason = models.CharField(max_length=255, blank=True, default='', verbose_name='变更原因')
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+', verbose_name='操作人',
+    )
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_position_assignment'
+        verbose_name = '岗位任职记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-start_date', '-id']
+        indexes = [
+            models.Index(fields=['user', 'end_date'], name='idx_pos_assign_user_end'),
+            models.Index(fields=['position', 'end_date'], name='idx_pos_assign_pos_end'),
+        ]
+
+    def __str__(self):
+        return '%s - %s' % (self.user_id, self.position_name or self.position_id)
+
+
+class Region(models.Model):
+    """行政区划树。"""
+    LEVEL_CHOICES = [
+        (1, '省份'),
+        (2, '城市'),
+        (3, '县区'),
+        (4, '街道'),
+        (5, '村/社区'),
+    ]
+    name = models.CharField(max_length=150, verbose_name='地区名称')
+    code = models.CharField(max_length=20, unique=True, verbose_name='行政编码')
+    area_code = models.CharField(max_length=20, blank=True, default='', verbose_name='区号')
+    zip_code = models.CharField(max_length=20, blank=True, default='', verbose_name='邮编')
+    pinyin = models.CharField(max_length=150, blank=True, default='', verbose_name='拼音')
+    level = models.IntegerField(choices=LEVEL_CHOICES, default=1, verbose_name='层级')
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, related_name='children',
+        on_delete=models.CASCADE, verbose_name='上级地区',
+    )
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    note = models.CharField(max_length=255, blank=True, default='', verbose_name='备注')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_region'
+        verbose_name = '地区'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+        indexes = [
+            models.Index(fields=['level', 'sort'], name='idx_region_level_sort'),
+        ]
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+class MemberLevel(models.Model):
+    """会员等级或客户层级。"""
+    name = models.CharField(max_length=150, verbose_name='等级名称')
+    code = models.CharField(max_length=64, unique=True, verbose_name='等级编码')
+    min_points = models.IntegerField(default=0, verbose_name='最低积分')
+    discount = models.DecimalField(
+        max_digits=5, decimal_places=2, default=100, verbose_name='折扣比例',
+    )
+    icon = models.CharField(max_length=50, blank=True, default='', verbose_name='图标')
+    sort = models.IntegerField(default=0, verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='状态')
+    description = models.CharField(max_length=255, blank=True, default='', verbose_name='说明')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'sys_member_level'
+        verbose_name = '会员等级'
+        verbose_name_plural = verbose_name
+        ordering = ['sort', 'id']
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.code)
+
+
+def _invalidate_permission_registry_cache(**kwargs):
+    from .permission_registry import clear_permission_registry_cache
+    clear_permission_registry_cache()
+
+
+from django.db.models.signals import post_delete, post_save
+post_save.connect(_invalidate_permission_registry_cache, sender=Menu, dispatch_uid='layuix_menu_save_permission_cache')
+post_delete.connect(_invalidate_permission_registry_cache, sender=Menu, dispatch_uid='layuix_menu_delete_permission_cache')

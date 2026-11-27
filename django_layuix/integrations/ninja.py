@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Optional Django Ninja adapter. Import is safe to skip when Ninja is absent."""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : ninja.py
+# -----------------------------
+"""可选的 Django Ninja 适配器。未安装 Ninja 时跳过导入是安全的。"""
 import inspect
 from functools import wraps
 
@@ -15,9 +20,18 @@ from django_layuix.rbac.permissions import has_permission, resolve_api_user
 
 
 class LayuiNinjaAuth(HttpBearer):
-    """Ninja auth class backed by the generic django-layuix authenticator registry."""
+    """基于通用 django-layuix 认证注册表的 Ninja 认证类。"""
 
     def authenticate(self, request, token):
+        if token:
+            from django_layuix.rbac.token_auth import verify_token
+
+            result = verify_token(token)
+            user = result.get('user') if result.get('valid') else None
+            if user is not None and getattr(user, 'is_authenticated', False):
+                request.user = user
+                return user
+            return None
         user = resolve_api_user(request)
         if user is not None and getattr(user, 'is_authenticated', False):
             return user
@@ -25,7 +39,7 @@ class LayuiNinjaAuth(HttpBearer):
 
 
 def ninja_permission_required(permission_code):
-    """Enforce a layuix permission code on a Ninja operation."""
+    """对 Ninja 操作强制校验 layuix 权限码。"""
     def decorator(func):
         if inspect.iscoroutinefunction(func):
             @wraps(func)

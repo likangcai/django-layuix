@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-django-layuix RBAC module
-"""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : __init__.py
+# -----------------------------
+"""django-layuix RBAC 模块。"""
 
 from django_layuix.rbac.menu_registry import (
     register_menus, 

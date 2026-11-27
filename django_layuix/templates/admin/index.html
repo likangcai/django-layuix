@@ -8,7 +8,7 @@
     <title>{% system_name %}</title>
     <script>
         (function() {
-            var theme = localStorage.getItem('theme') || 'dark';
+            var theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme-mode', theme === 'dark' ? 'dark' : 'light');
         })();
     </script>
@@ -129,8 +129,8 @@
                     </div>
                 </div>
                 <div class="layui-form-item" style="display:flex;justify-content:flex-end;margin-top:10px;">
-                    <button type="button" class="layui-btn layui-btn-normal" id="submitPasswordBtn"
-                            style="width: 160px; border-radius: 6px;">
+                    <button type="button" class="layui-btn layui-btn-normal w-160" id="submitPasswordBtn"
+                            style="border-radius:6px">
                         <span>确认修改</span>
                     </button>
                 </div>
@@ -171,8 +171,8 @@
                     </div>
                 </div>
                 <div class="layui-form-item" style="display:flex;justify-content:flex-end;margin-top:20px;">
-                    <button type="button" class="layui-btn layui-btn-normal" id="submitProfileBtn"
-                            style="width: 160px; border-radius: 6px;">
+                    <button type="button" class="layui-btn layui-btn-normal w-160" id="submitProfileBtn"
+                            style="border-radius:6px">
                         <span>保存修改</span>
                     </button>
                 </div>
@@ -191,11 +191,12 @@
         admin_login_url: '{% url "admin:login" %}',
         home_quick_links: {{ layui_config.home_quick_links|default:"[]"|safe }},
         home_stats_cards: {{ layui_config.home_stats_cards|default:"[]"|safe }},
+        form_filter_disabled: '{{ layui_config.form_filter_disabled|default:"false"|escapejs }}',
     };
 
     // ==================== Global Variables ====================
     var currentUser = null;
-    var currentTheme = 'dark';
+    var currentTheme = 'light';
     var tabs = {};
     var activeTabUrl = '';
     var sidebarCollapsed = false;
@@ -243,6 +244,16 @@
             });
         }
 
+        window.addEventListener('message', function(event) {
+            var data = event.data;
+            if (!data || data.type !== 'languageChange' || !data.lang) return;
+            if (I18N.currentLang === data.lang) return;
+            I18N.setLang(data.lang);
+            updateLangUI(data.lang);
+            window.LANG = data.lang;
+            if (window.currentUser) window.currentUser.language = data.lang;
+        });
+
         // Language switch
         $(document).on('click', '#langBtn', function() {
             var current = I18N.getLang();
@@ -252,6 +263,7 @@
                     I18N.setLang(next);
                     updateLangUI(next);
                     window.LANG = next;
+                    if (window.currentUser) window.currentUser.language = next;
                     $('iframe[id^="iframe_"]').each(function() {
                         try {
                             this.contentWindow.postMessage({ type: 'languageChange', lang: next }, '*');
@@ -268,7 +280,7 @@
             if (res.code === 200) {
                 currentUser = res.data;
                 window.currentUser = currentUser;
-                var rawTheme = res.data.theme || 'dark';
+                var rawTheme = res.data.theme || 'light';
                 var themeAliasMap = {'默认深色': 'dark', '默认浅色': 'light'};
                 currentTheme = themeAliasMap[rawTheme] || rawTheme;
                 renderMenu(res.data.menus);
@@ -292,7 +304,7 @@
                             $('.logo-icon i').attr('class', 'layui-icon ' + config.logo_icon);
                         }
                         if (config.logo_url) {
-                            $('.logo-icon').html('<img src="' + config.logo_url + '" style="width:32px;height:32px;border-radius:6px;">');
+                            $('.logo-icon').html('<img src="' + config.logo_url + '" style="height:32px;border-radius:6px" class="w-32">');
                         }
                         if (config.frontend_url) {
                             $('#frontendBtn').show().attr('data-url', config.frontend_url);
@@ -352,9 +364,14 @@
             } else if (window.LANG === 'zh-hans' && menu.name_zh_hans) {
                 name = menu.name_zh_hans;
             }
+            var groupId = 'menu-group-' + menu.id;
             var html = '<div class="menu-group has-children" data-menu-id="' + menu.id + '">';
-            html += '<div class="menu-group-title"><i class="layui-icon ' + escapeAttr(icon) + ' menu-dir-icon"></i><i class="menu-arrow"></i><span>' + escapeHtml(name) + '</span></div>';
-            html += '<div class="sub-menu open">';
+            html += '<div class="menu-group-title" role="button" tabindex="0" aria-expanded="true" aria-controls="' + groupId + '">';
+            html += '<i class="layui-icon ' + escapeAttr(icon) + ' menu-dir-icon"></i>';
+            html += '<span class="menu-group-name">' + escapeHtml(name) + '</span>';
+            html += '<span class="menu-arrow" aria-hidden="true"></span>';
+            html += '</div>';
+            html += '<div class="sub-menu open" id="' + groupId + '">';
             children.forEach(function(child) {
                 // 检查子菜单的可见性
                 if (child.visible === false) return;
@@ -373,12 +390,23 @@
         var menuPathMap = {
             '/permission/menu': '/static/layui/pages/menu.html',
             '/permission/role': '/static/layui/pages/role.html',
+            '/permission/catalog': '/static/layui/pages/permission.html',
             '/permission/user': '/static/layui/pages/user.html',
             '/system/rbac-constraints': '/static/layui/pages/constraints.html',
+            '/permission/abac': '/static/layui/pages/abac.html',
+            '/permission/data-scope': '/static/layui/pages/scope.html',
+            '/system/scope-nodes': '/static/layui/pages/scope.html',
+            '/permission-demo/orders': '/static/permission_demo/pages/order.html',
+            '/static/permission_demo/pages/order.html': '/static/permission_demo/pages/order.html',
             '/profile': '/static/layui/pages/profile.html',
             '/system/log': '/static/layui/pages/log.html',
             '/system/info': '/static/layui/pages/dashboard.html',
             '/system/config': '/static/layui/pages/config.html',
+            '/data/dictionary': '/static/layui/pages/dict.html',
+            '/data/department': '/static/layui/pages/dept.html',
+            '/data/position': '/static/layui/pages/position.html',
+            '/data/region': '/static/layui/pages/region.html',
+            '/data/member-level': '/static/layui/pages/member-level.html',
             '/ops/server': '/static/layui/pages/server.html',
             '/ops/ai-config': '/static/layui/pages/ai-config.html',
         };
@@ -418,19 +446,25 @@
         });
 
         // Menu group collapse/expand
+        function toggleMenuGroup($title) {
+            var $subMenu = $title.siblings('.sub-menu');
+            var expanded = $title.attr('aria-expanded') === 'true';
+            $title.toggleClass('collapsed', expanded);
+            $title.attr('aria-expanded', expanded ? 'false' : 'true');
+            $subMenu.toggleClass('open', !expanded);
+        }
+
         $(document).off('click.menuGroup').on('click.menuGroup', '.menu-group-title', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            var $title = $(this);
-            var $subMenu = $title.siblings('.sub-menu');
-            var isCollapsed = $title.hasClass('collapsed');
-            if (isCollapsed) {
-                $title.removeClass('collapsed');
-                $subMenu.addClass('open');
-            } else {
-                $title.addClass('collapsed');
-                $subMenu.removeClass('open');
-            }
+            toggleMenuGroup($(this));
+        });
+
+        $(document).off('keydown.menuGroup').on('keydown.menuGroup', '.menu-group-title', function(e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            e.stopPropagation();
+            toggleMenuGroup($(this));
         });
 
         // ==================== Tab Management ====================
@@ -505,7 +539,7 @@
                 '<div class="dropdown-item" data-action="close-others" style="padding: 8px 16px;">' + t('common.closeOthers') + '</div>' +
                 '<div class="dropdown-item" data-action="close-all" style="padding: 8px 16px;">' + t('common.closeAll') + '</div>' +
                 '</div>';
-            layer.open({
+            LayuiUI.dialog({
                 type: 1, title: false, closeBtn: 0, shade: 0, area: ['140px', 'auto'],
                 content: menuHtml, offset: [e.clientY + 'px', e.clientX + 'px'],
                 success: function(layero, menuIndex) {
@@ -627,7 +661,7 @@
             e.stopPropagation();
             $('#userDropdown').removeClass('show');
             if (!currentUser) return;
-            layer.open({
+            LayuiUI.dialog({
                 type: 1, title: t('header.personalCenter'), area: ['480px', 'auto'],
                 content: renderTpl('profileTpl'),
                 success: function(layero) {
@@ -663,7 +697,7 @@
         $('#changePasswordBtn').on('click', function(e) {
             e.stopPropagation();
             $('#userDropdown').removeClass('show');
-            layer.open({
+            LayuiUI.dialog({
                 type: 1, title: t('header.changePassword'), area: ['480px', 'auto'],
                 content: renderTpl('changePasswordTpl'),
                 success: function(layero) {

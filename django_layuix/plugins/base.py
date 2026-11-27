@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Base class for third-party django-layuix plugins."""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : base.py
+# -----------------------------
+"""第三方 django-layuix 插件基类。"""
 from django.apps import AppConfig
 
 
 class PluginConfig(AppConfig):
-    """Django AppConfig with plugin metadata, validation and lifecycle hooks."""
+    """带插件元数据、校验和生命周期钩子的 Django AppConfig。"""
 
     plugin_key = None
     plugin_name = None
@@ -37,21 +42,32 @@ class PluginConfig(AppConfig):
 
     def ready(self):
         super().ready()
-        from django_layuix.rbac.plugins import register_plugin, register_plugin_class
+        from django.db.models.signals import post_migrate
+
+        from django_layuix.rbac.plugins import register_plugin_class
+
+        metadata = self.get_plugin_metadata()
+        key = metadata.pop('key')
+        register_plugin_class(key, self.__class__)
+        post_migrate.connect(
+            self._register_plugin_after_migrate,
+            sender=self,
+            dispatch_uid='django_layuix.plugin.%s' % key,
+        )
+
+    def _register_plugin_after_migrate(self, sender, **kwargs):
+        from django_layuix.rbac.plugins import register_plugin, register_plugin_menus
 
         metadata = self.get_plugin_metadata()
         key = metadata.pop('key')
         metadata.pop('min_layuix_version', None)
-        register_plugin_class(key, self.__class__)
         metadata['validation_errors'] = self.validate_plugin()
         registered = register_plugin(key=key, source=self.source, **metadata)
-
         if registered.get('is_active'):
-            from django_layuix.rbac.plugins import register_plugin_menus
             register_plugin_menus(key, self)
 
     def on_enable(self):
-        """Called when the plugin becomes active. Override in subclasses."""
+        """插件启用时调用，子类可覆盖。"""
 
     def on_disable(self):
-        """Called when the plugin is deactivated. Override in subclasses."""
+        """插件停用时调用，子类可覆盖。"""

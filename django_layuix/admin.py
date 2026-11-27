@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : admin.py
+# -----------------------------
 """
 自定义 Django Admin Site
 用于传递 LAYUI_CONFIG 到模板上下文
@@ -49,7 +55,7 @@ class LayuiAdminSite(AdminSite):
         context = super().each_context(request)
         
         # 从 settings 获取 LAYUI_CONFIG 作为默认值
-        layui_config = getattr(settings, 'LAYUI_CONFIG', {})
+        layui_config = dict(getattr(settings, 'LAYUI_CONFIG', {}))
         
         # 从数据库读取系统配置，优先级高于 settings.py
         try:

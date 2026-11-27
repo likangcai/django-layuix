@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : init_menu.py
+# -----------------------------
 """
 初始化默认菜单数据
 用法:
@@ -7,9 +12,13 @@
   python manage.py init_menu --fix-icons # 修复数据库中可能存在的无效 Layui 图标
 
 """
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from django_layuix.rbac.models import Menu, Role, SystemConfig
+from django_layuix.rbac.defaults import get_default_configs
+from django_layuix.rbac.models import (
+    Dictionary, DictionaryItem, Menu, Role, SystemConfig,
+)
 
 
 class Command(BaseCommand):
@@ -51,19 +60,38 @@ class Command(BaseCommand):
         if rbac_menu_exists and not force:
             self.stdout.write(self.style.WARNING('rbac 菜单数据已存在，跳过菜单初始化。'))
             self._ensure_rbac3_menu()
+            self._ensure_142_menus()
         else:
             if force and rbac_menu_exists:
                 self.stdout.write(self.style.WARNING('使用 --force 模式，将更新现有 rbac 菜单数据（保留角色权限关联）'))
             self._init_menus(force)
-            
+
+        self._ensure_data_menus()
+        self._ensure_permission_menu()
+
         # 无论菜单是否已存在，都继续执行角色和配置的初始化
         # 这确保了即使其他 app 抢跑了菜单注册，角色和配置也能正确创建
+        from django_layuix.rbac.permission_registry import register_page_permissions
+        created_permissions = register_page_permissions()
+        if created_permissions:
+            self.stdout.write(self.style.SUCCESS('  注册权限目录 %s 项' % len(created_permissions)))
+
         self._init_roles(force)
         self._init_default_configs(force)
+        self._init_default_dictionaries()
+        from django_layuix.rbac.region_seed import seed_regions_if_empty
+
+        seeded = seed_regions_if_empty(
+            include_villages=getattr(settings, 'LAYUI_RBAC_SEED_VILLAGES', False),
+        )
+        if seeded:
+            self.stdout.write(self.style.SUCCESS(
+                '  初始化地区数据 %s 条' % seeded['total']
+            ))
         self.stdout.write(self.style.SUCCESS('\n初始化完成！'))
 
     def _ensure_rbac3_menu(self):
-        """Add the constraint-management menu to installations created before RBAC3."""
+        """为 RBAC3 之前创建的安装补齐约束管理菜单。"""
         parent = Menu.objects.filter(name='权限管理').first()
         if not parent:
             return
@@ -89,10 +117,172 @@ class Command(BaseCommand):
                 admin_role.menus.add(menu)
             self.stdout.write(self.style.SUCCESS('  创建菜单: 约束管理 (RBAC3)'))
 
+    def _migrate_scope_menu(self):
+        """Move legacy 组织节点 menu to 权限管理 → 数据范围."""
+        parent = Menu.objects.filter(name='权限管理').first()
+        if not parent:
+            return
+        legacy = list(Menu.objects.filter(name__in=['组织节点', '数据范围']).order_by('id'))
+        if not legacy:
+            return
+        menu = legacy[0]
+        menu.name = '数据范围'
+        menu.name_en = 'Data Scope'
+        menu.name_zh_hans = '数据范围'
+        menu.icon = 'layui-icon-tree'
+        menu.path = '/permission/data-scope'
+        menu.parent = parent
+        menu.sort = 6
+        menu.save()
+        for duplicate in legacy[1:]:
+            duplicate.delete()
+
+    def _ensure_142_menus(self):
+        """为 1.4.2 之前创建的安装补齐 ABAC 策略和数据范围菜单。"""
+        specs = [
+            ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 7, '权限管理'),
+            ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 8, '权限管理'),
+        ]
+        self._migrate_scope_menu()
+        for name, name_en, name_zh, icon, path, sort, parent_name in specs:
+            parent = Menu.objects.filter(name=parent_name).first()
+            if not parent:
+                continue
+            menu, created = Menu.objects.get_or_create(
+                name=name,
+                defaults={
+                    'name_en': name_en, 'name_zh_hans': name_zh, 'icon': icon,
+                    'path': path, 'menu_type': 2, 'sort': sort, 'parent': parent,
+                    'status': True, 'visible': True,
+                    'backend_visible': True, 'frontend_visible': True,
+                },
+            )
+            updated = []
+            if menu.sort != sort:
+                menu.sort = sort
+                updated.append('sort')
+            if menu.path != path:
+                menu.path = path
+                updated.append('path')
+            if updated:
+                menu.save(update_fields=updated)
+            if created:
+                admin_role = Role.objects.filter(code='admin').first()
+                if admin_role:
+                    admin_role.menus.add(menu)
+
+    def _ensure_data_menus(self):
+        """为已有安装补齐数据管理菜单。"""
+        group, group_created = Menu.objects.get_or_create(
+            name='数据管理',
+            defaults={
+                'name_en': 'Data', 'name_zh_hans': '数据管理',
+                'icon': 'layui-icon-table', 'path': '', 'menu_type': 1,
+                'sort': 4, 'parent': None, 'status': True, 'visible': True,
+                'backend_visible': True, 'frontend_visible': True,
+            },
+        )
+        permission_group, _ = Menu.objects.get_or_create(
+            name='权限管理',
+            defaults={
+                'name_en': 'Permission', 'name_zh_hans': '权限管理',
+                'icon': 'layui-icon-auz', 'path': '', 'menu_type': 1,
+                'sort': 1, 'parent': None, 'status': True, 'visible': True,
+                'backend_visible': True, 'frontend_visible': True,
+            },
+        )
+        specs = [
+            ('字典管理', 'Dictionary', '字典管理', 'layui-icon-read',
+             '/data/dictionary', 'dict:view', 1, group),
+            ('部门管理', 'Departments', '部门管理', 'layui-icon-group',
+             '/data/department', 'dept:view', 4, permission_group),
+            ('岗位管理', 'Positions', '岗位管理', 'layui-icon-user',
+             '/data/position', 'position:view', 5, permission_group),
+            ('地区管理', 'Regions', '地区管理', 'layui-icon-location',
+             '/data/region', 'region:view', 4, group),
+            ('会员等级', 'Member Levels', '会员等级', 'layui-icon-diamond',
+             '/data/member-level', 'member_level:view', 5, group),
+        ]
+        admin_role = Role.objects.filter(code='admin').first()
+        created_any = False
+        for name, name_en, name_zh, icon, path, permission, sort, target_group in specs:
+            menu, created = Menu.objects.get_or_create(
+                name=name,
+                defaults={
+                    'name_en': name_en, 'name_zh_hans': name_zh,
+                    'icon': icon, 'path': path, 'permission': permission,
+                    'menu_type': 2, 'sort': sort, 'parent': target_group,
+                    'status': True, 'visible': True,
+                    'backend_visible': True, 'frontend_visible': True,
+                },
+            )
+            updated_fields = []
+            if menu.permission != permission:
+                menu.permission = permission
+                updated_fields.append('permission')
+            if menu.parent_id != target_group.pk:
+                menu.parent = target_group
+                updated_fields.append('parent')
+            if menu.sort != sort:
+                menu.sort = sort
+                updated_fields.append('sort')
+            if menu.path != path:
+                menu.path = path
+                updated_fields.append('path')
+            if updated_fields:
+                menu.save(update_fields=updated_fields)
+            if created and admin_role:
+                admin_role.menus.add(menu)
+            created_any = created_any or created
+        if admin_role:
+            admin_role.menus.add(group)
+            admin_role.menus.add(permission_group)
+        if created_any or group_created:
+            self.stdout.write(self.style.SUCCESS('  创建菜单: 数据管理 / 部门 / 岗位 / 地区 / 会员等级'))
+
+    def _ensure_permission_menu(self):
+        parent = Menu.objects.filter(name='权限管理').first()
+        if not parent:
+            return
+        menu, created = Menu.objects.get_or_create(
+            name='权限总览',
+            defaults={
+                'name_en': 'Permission Catalog',
+                'name_zh_hans': '权限总览',
+                'icon': 'layui-icon-vercode',
+                'path': '/permission/catalog',
+                'permission': 'permission:view',
+                'menu_type': 2,
+                'sort': 9,
+                'parent': parent,
+                'status': True,
+                'visible': True,
+                'backend_visible': True,
+                'frontend_visible': True,
+            },
+        )
+        updated = []
+        if menu.sort != 9:
+            menu.sort = 9
+            updated.append('sort')
+        if menu.parent_id != parent.pk:
+            menu.parent = parent
+            updated.append('parent')
+        if menu.path != '/permission/catalog':
+            menu.path = '/permission/catalog'
+            updated.append('path')
+        if updated:
+            menu.save(update_fields=updated)
+        if created:
+            admin_role = Role.objects.filter(code='admin').first()
+            if admin_role:
+                admin_role.menus.add(menu)
+            self.stdout.write(self.style.SUCCESS('  创建菜单: 权限目录'))
+
     def _init_menus(self, force=False):
         """初始化菜单数据"""
         # 创建菜单
-        # (name, name_en, name_zh_hans, icon, path, menu_type, sort, parent_name_or_None)
+        # （名称、英文名、中文名、图标、路径、菜单类型、排序、上级名称或空）
         # menu_type: 1=目录, 2=菜单
         menus_data = [
             # ---- 仪表盘 ----
@@ -100,21 +290,27 @@ class Command(BaseCommand):
 
             # ---- 权限管理 ----
             ('权限管理', 'Permission', '权限管理', 'layui-icon-auz', '', 1, 1, None),
-            ('菜单管理', 'Menu', '菜单管理', 'layui-icon-menu-fill', '/permission/menu', 2, 1, '权限管理'),
+            ('用户管理', 'User', '用户管理', 'layui-icon-username', '/permission/user', 2, 1, '权限管理'),
             ('角色管理', 'Role', '角色管理', 'layui-icon-group', '/permission/role', 2, 2, '权限管理'),
-            ('用户管理', 'User', '用户管理', 'layui-icon-username', '/permission/user', 2, 3, '权限管理'),
-            ('约束管理', 'Constraints', '约束管理', 'layui-icon-auz', '/system/rbac-constraints', 2, 4, '权限管理'),
+            ('菜单管理', 'Menu', '菜单管理', 'layui-icon-menu-fill', '/permission/menu', 2, 3, '权限管理'),
+            ('约束管理', 'Constraints', '约束管理', 'layui-icon-auz', '/system/rbac-constraints', 2, 6, '权限管理'),
+            ('ABAC 策略', 'ABAC Policies', 'ABAC 策略', 'layui-icon-auz', '/permission/abac', 2, 7, '权限管理'),
 
             # ---- 系统管理 ----
             ('系统管理', 'System', '系统管理', 'layui-icon-set', '', 1, 2, None),
             ('个人中心', 'Profile', '个人中心', 'layui-icon-user', '/static/layui/pages/profile.html', 2, 1, '系统管理'),
             ('操作日志', 'Log', '操作日志', 'layui-icon-log', '/system/log', 2, 2, '系统管理'),
             ('系统配置', 'Config', '系统配置', 'layui-icon-set-sm', '/system/config', 2, 3, '系统管理'),
+            ('数据范围', 'Data Scope', '数据范围', 'layui-icon-tree', '/permission/data-scope', 2, 8, '权限管理'),
 
             # ---- 运维管理 ----
             ('运维管理', 'Operations', '运维管理', 'layui-icon-console', '', 1, 3, None),
             ('服务器管理', 'Server', '服务器管理', 'layui-icon-console', '/ops/server', 2, 1, '运维管理'),
             ('AI 配置', 'AI Config', 'AI 配置', 'layui-icon-light', '/ops/ai-config', 2, 2, '运维管理'),
+
+            # ---- 数据管理 ----
+            ('数据管理', 'Data', '数据管理', 'layui-icon-table', '', 1, 4, None),
+            ('字典管理', 'Dictionary', '字典管理', 'layui-icon-read', '/data/dictionary', 2, 1, '数据管理'),
         ]
 
         created = {}
@@ -169,12 +365,18 @@ class Command(BaseCommand):
                         menu.frontend_visible = True
                         updated = True
                 else:
-                    # 非 --force 模式：只更新名称字段
+                    # 非 --force 模式：更新名称、排序和父级，保持侧栏结构与种子一致
                     if menu.name_en != name_en:
                         menu.name_en = name_en
                         updated = True
                     if menu.name_zh_hans != name_zh_hans:
                         menu.name_zh_hans = name_zh_hans
+                        updated = True
+                    if menu.sort != sort:
+                        menu.sort = sort
+                        updated = True
+                    if parent and menu.parent_id != parent.id:
+                        menu.parent = parent
                         updated = True
                 if updated:
                     menu.save()
@@ -188,8 +390,15 @@ class Command(BaseCommand):
             elif not updated:
                 self.stdout.write(f'  菜单已存在: {name}')
 
+        from django_layuix.rbac.menu_permissions import MENU_VIEW_PERMISSIONS
+        for menu_name, permission in MENU_VIEW_PERMISSIONS.items():
+            menu = Menu.objects.filter(name=menu_name).first()
+            if menu and menu.permission != permission:
+                menu.permission = permission
+                menu.save(update_fields=['permission'])
+
         # 创建按钮级权限（menu_type=3）
-        # (name, name_en, name_zh_hans, parent_menu, permission, sort)
+        # （名称、英文名、中文名、上级菜单、权限码、排序）
         buttons_data = [
             # 菜单管理下：新增菜单、编辑菜单、删除菜单
             ('新增菜单', 'Add Menu', '新增菜单', created['菜单管理'], 'menu:add', 1),
@@ -212,13 +421,15 @@ class Command(BaseCommand):
             ('新增配置', 'Add Config', '新增配置', created['系统配置'], 'config:add', 1),
             ('编辑配置', 'Edit Config', '编辑配置', created['系统配置'], 'config:edit', 2),
             ('删除配置', 'Delete Config', '删除配置', created['系统配置'], 'config:delete', 3),
-            # 服务器管理下：新增、编辑、删除、查看日志、终端
+            # 服务器管理下：查看、新增、编辑、删除、查看日志、终端
+            ('查看服务器', 'View Servers', '查看服务器', created['服务器管理'], 'server:view', 0),
             ('新增服务器', 'Add Server', '新增服务器', created['服务器管理'], 'server:add', 1),
             ('编辑服务器', 'Edit Server', '编辑服务器', created['服务器管理'], 'server:edit', 2),
             ('删除服务器', 'Delete Server', '删除服务器', created['服务器管理'], 'server:delete', 3),
             ('查看日志', 'View Log', '查看日志', created['服务器管理'], 'server:view_log', 4),
             ('终端连接', 'Terminal', '终端连接', created['服务器管理'], 'server:terminal', 5),
-            # AI 配置下：新增、编辑、删除、测试连接、设默认
+            # AI 配置下：查看、新增、编辑、删除、测试连接、设默认
+            ('查看 AI 配置', 'View AI Config', '查看 AI 配置', created['AI 配置'], 'ai_config:view', 0),
             ('新增 AI 配置', 'Add AI Config', '新增 AI 配置', created['AI 配置'], 'ai_config:add', 1),
             ('编辑 AI 配置', 'Edit AI Config', '编辑 AI 配置', created['AI 配置'], 'ai_config:edit', 2),
             ('删除 AI 配置', 'Delete AI Config', '删除 AI 配置', created['AI 配置'], 'ai_config:delete', 3),
@@ -464,21 +675,8 @@ class Command(BaseCommand):
         """初始化默认系统配置项"""
         self.stdout.write(self.style.MIGRATE_HEADING('\n  初始化系统配置:'))
         configs = [
-            ('system_name', 'Django Layuix Admin', '系统名称，显示在浏览器标题栏和侧边栏', 'string', 1),
-            ('system_version', '1.4.0', '系统版本号', 'string', 2),
-            ('system_description', '', '系统描述信息（显示在管理后台底部）', 'text', 3),
-            ('logo_icon', 'layui-icon-code-circle', 'Logo图标（layui图标类名）', 'string', 4),
-            ('logo_url', '', 'Logo图片URL（设置后替换图标，支持本地上传）', 'image', 5),
-            ('favicon_url', '', '浏览器标签页图标URL（支持ICO/PNG/SVG，支持本地上传）', 'image', 6),
-            ('copyright', '', '版权信息（显示在登录页和管理后台底部）', 'string', 7),
-            ('frontend_url', '', '前端页面地址（顶部"查看站点"按钮跳转地址）', 'url', 8),
-            ('webssh_url', '/webssh/', 'WebSSH 服务地址（用于服务器终端功能，默认 /webssh/）', 'url', 9),
-            ('login_bg_type', 'gradient', '登录页背景类型：gradient(渐变)/color(纯色)/image(图片)', 'string', 10),
-            ('login_bg_value', 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)', '登录页背景渐变/颜色值（当type为gradient或color时生效）', 'color', 11),
-            ('login_bg_image', '', '登录页背景图片URL（当type为image时生效，支持本地上传）', 'image', 12),
-            # 以下配置不会在 ready() 中提前创建，只在 init_menu 中创建
-            ('home_stats_cards', '[{"title":"系统用户","icon":"layui-icon-user","color":"#1E9FFF","api_field":"user_count"},{"title":"系统角色","icon":"layui-icon-template-1","color":"#5FB878","api_field":"role_count"},{"title":"菜单数量","icon":"layui-icon-app","color":"#FFB800","api_field":"menu_count"},{"title":"操作日志","icon":"layui-icon-log","color":"#FF5722","api_field":"log_count"}]', '首页统计卡片配置（JSON 格式）', 'json', 13),
-            ('home_quick_links', '[{"name":"Django官网","icon":"layui-icon-website","url":"https://www.djangoproject.com/"},{"name":"Layui文档","icon":"layui-icon-template","url":"https://www.layui.dev/"},{"name":"GitHub","icon":"layui-icon-github","url":"https://github.com/likangcai/django-layuix"},{"name":"Gitee","icon":"layui-icon-gitee","url":"https://gitee.com/yingzi_shadow/django-layuix"}]', '首页快速链接配置（JSON 格式）', 'json', 14),
+            (cfg['key'], cfg['value'], cfg['description'], cfg['config_type'], cfg['sort'])
+            for cfg in get_default_configs()
         ]
         created_count = 0
         updated_count = 0
@@ -486,6 +684,10 @@ class Command(BaseCommand):
         for key, value, desc, config_type, sort in configs:
             try:
                 cfg = SystemConfig.objects.get(key=key)
+                if key == 'system_version' and cfg.value != value:
+                    cfg.value = value
+                    cfg.save(update_fields=['value'])
+                    self.stdout.write(self.style.SUCCESS(f'  同步配置: {key} -> {value}'))
                 if force:
                     # --force 模式：更新为默认值
                     cfg.value = value
@@ -517,6 +719,46 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'  成功创建 {created_count} 个系统配置。'))
         elif skipped_count > 0:
             self.stdout.write(self.style.WARNING(f'  提示：{skipped_count} 个系统配置已存在，未作修改。如需重置为默认值，请使用 --force 参数。'))
+
+    def _init_default_dictionaries(self):
+        """写入可复用字典种子，不覆盖后续修改。"""
+        defaults = [
+            ('sys_common_status', '通用状态', '启用与停用状态', [
+                ('启用', '1', True), ('停用', '0', False),
+            ]),
+            ('sys_user_gender', '用户性别', '用户资料性别选项', [
+                ('男', '1', True), ('女', '2', False), ('保密', '0', False),
+            ]),
+            ('sys_notice_type', '通知类型', '站内通知分类', [
+                ('通知', '1', True), ('公告', '2', False),
+            ]),
+        ]
+        created = 0
+        for code, name, description, options in defaults:
+            dictionary, is_new = Dictionary.objects.get_or_create(
+                code=code,
+                defaults={
+                    'name': name,
+                    'description': description,
+                    'is_system': True,
+                    'status': True,
+                },
+            )
+            if is_new:
+                created += 1
+            for index, (label, value, is_default) in enumerate(options):
+                DictionaryItem.objects.get_or_create(
+                    dictionary=dictionary,
+                    value=value,
+                    defaults={
+                        'label': label,
+                        'sort': index + 1,
+                        'status': True,
+                        'is_default': is_default,
+                    },
+                )
+        if created:
+            self.stdout.write(self.style.SUCCESS('  初始化内置字典 %s 项' % created))
 
     def _fix_icons(self):
         """修复数据库中无效的 Layui 图标（原 fix_icons 命令功能）"""

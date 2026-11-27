@@ -4,16 +4,18 @@
 
 ## 1. 结论
 
-已提发布流程：推送 `v*` Tag 后自动运行测试、构建 `sdist`/`wheel` 并发布到 PyPI，不再需要本地手动 `twine upload`。
+【事实】推送 `v*` Tag 后自动运行测试、构建 `sdist`/`wheel` 并发布到 PyPI，不再需要本地手动 `twine upload`。
+【判断】普通分支提交不会触发发布；`workflow_dispatch` 仅测试与构建，不发布。
+【本期不做】本地手动 `twine upload`；正常发布由 Tag 流程完成，发布前会校验 Tag、`pyproject.toml` 与包内 `__version__` 三者一致。
 
 工作流文件：`.github/workflows/release.yml`
 
 ## 2. 触发方式
 
 ```bash
-# 先确认 pyproject.toml 的 version，例如 1.4.0
-git tag v1.4.0
-git push origin v1.4.0
+# 先确认 pyproject.toml 的 version，例如 1.9.0
+git tag v1.9.0
+git push origin v1.9.0
 ```
 
 Tag 版本必须与 `pyproject.toml` 的 `[project].version` 完全一致，否则构建任务会失败。
@@ -44,7 +46,7 @@ Tag 版本必须与 `pyproject.toml` 的 `[project].version` 完全一致，否�
 
 | 阶段 | 内容 | 失败处理 |
 |---|---|---|
-| test | Python 3.10–3.13 安装依赖、Django check、22 项 RBAC 测试 | 修复代码后重推 Tag |
+| test | Python 3.10–3.13 安装依赖、Django check、`manage.py test django_layuix.rbac`（数量以 CI 输出为准） | 修复代码后重推 Tag |
 | build | 校验 Tag 与版本号、构建 sdist/wheel、`twine check` | 修正版本号或打包配置 |
 | publish | 下载构建产物并发布到 PyPI | 检查 Token/OIDC 配置后重跑 job |
 

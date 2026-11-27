@@ -547,7 +547,8 @@ t('user.greeting', [username]);
 
 1. **Django 模板翻译**
    - `login.html`、`base.html` 使用 `{% load i18n %}` 与 `{% trans %}`。
-   - `django_layuix/locale/zh_Hans/LC_MESSAGES/django.mo` 已编译，覆盖登录、用户名、密码、主题切换、退出等文案。
+   - `django_layuix/locale/zh_Hans/LC_MESSAGES/django.po` 已补齐后台模板 msgid（保存、删除、错误页、历史、摘要等），`django.mo` 已同步编译。
+   - Python API 的中文文案目前仍以字面量返回，尚未进入 `django.po`；后续若需英文化，应先用 `gettext_lazy` 包裹并重新提取。
 
 2. **前端 i18n key 覆盖**
    - 扫描所有 HTML/JS 中的 `t('key')` 与 `data-i18n="key"`。
@@ -578,5 +579,5 @@ python manage.py test django_layuix.rbac
 ---
 
 **最后更新**: 2026-11-23
-**版本**: v1.4.0+
+**版本**: v1.4.2+
 **维护者**: django-layuix 团队

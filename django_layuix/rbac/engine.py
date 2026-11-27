@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-RBAC3 permission engine.
-
-Single source of truth for:
-  - RBAC1 role inheritance expansion
-  - RBAC2 constraints (SSD / DSD / prerequisites / cardinality)
-  - session-scoped active roles
-"""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : engine.py
+# -----------------------------
+"""RBAC3 权限引擎，统一处理：RBAC1 角色继承展开、RBAC2 约束（SSD / DSD / 前置角色 / 基数）以及会话级激活角色。"""
+import logging
 from collections import deque
 
 from django.conf import settings
-from django.core.cache import cache
+
 
 ACTIVE_ROLES_SESSION_KEY = 'layui_active_roles'
 MAX_ROLES_CONFIG_KEY = 'rbac_max_roles_per_user'
 PREREQ_STRATEGY_KEY = 'rbac_prerequisite_strategy'
 DSD_STRATEGY_KEY = 'rbac_dsd_strategy'
 
+logger = logging.getLogger(__name__)
+
 
 class RbacConstraintError(Exception):
-    """Raised when a role assignment or activation violates RBAC2 constraints."""
+    """当角色分配或激活违反 RBAC2 约束时抛出。"""
 
     def __init__(self, message, code='constraint_violation'):
         super().__init__(message)
@@ -43,26 +44,29 @@ def _as_int_set(values):
 
 
 def get_assigned_role_ids(user):
-    """IDs of active roles directly assigned to the user."""
+    """直接分配给用户的启用角色 ID。"""
     if not getattr(user, 'is_authenticated', False):
         return set()
     try:
         return set(user.roles.filter(status=True).values_list('id', flat=True))
     except (AttributeError, ValueError):
-        # Unsaved user instance or custom user model without roles
+        # 未保存的用户实例或没有 roles 字段的自定义用户模型
         return set()
 
 
 def expand_role_ids(role_ids):
-    """RBAC1: expand role IDs to include all inherited (parent) roles."""
+    """RBAC1：展开角色 ID，包含所有继承的父角色。"""
     Role, *_ = _models()
     result = _as_int_set(role_ids)
     queue = deque(result)
     while queue:
         role_id = queue.popleft()
-        parent_ids = Role.objects.filter(
-            pk=role_id, parent_roles__status=True
-        ).values_list('parent_roles__id', flat=True)
+        role = Role.objects.filter(pk=role_id).prefetch_related('parent_roles').first()
+        if not role:
+            continue
+        parent_ids = {item.id for item in role.parent_roles.all() if item.status}
+        if role.parent_id:
+            parent_ids.add(role.parent_id)
         for parent_id in parent_ids:
             if parent_id and parent_id not in result:
                 result.add(parent_id)
@@ -71,13 +75,14 @@ def expand_role_ids(role_ids):
 
 
 def expand_child_ids(role_ids):
-    """Reverse traversal used for inheritance-cycle detection."""
+    """用于检测继承环的反向遍历。"""
     Role, *_ = _models()
     result = _as_int_set(role_ids)
     queue = deque(result)
     while queue:
         role_id = queue.popleft()
-        child_ids = Role.objects.filter(pk=role_id).values_list('child_roles__id', flat=True)
+        child_ids = set(Role.objects.filter(pk=role_id).values_list('child_roles__id', flat=True))
+        child_ids.update(Role.objects.filter(parent_id=role_id).values_list('id', flat=True))
         for child_id in child_ids:
             if child_id and child_id not in result:
                 result.add(child_id)
@@ -86,7 +91,7 @@ def expand_child_ids(role_ids):
 
 
 def _get_config(key, default, settings_name=None):
-    """Read a strategy value: database config first, settings second, default last."""
+    """读取策略值：优先数据库配置，其次 settings，最后使用默认值。"""
     _, _, SystemConfig, _, _ = _models()
     obj = SystemConfig.objects.filter(key=key).first()
     raw = obj.value if obj else getattr(settings, settings_name or key.upper(), default)
@@ -100,19 +105,13 @@ def _active_mutex_groups(kind):
     ).prefetch_related('roles', 'permissions'))
 
 
-def _active_cache_key(user_id):
-    return 'rbac_active_roles_%s' % user_id
-
-
 def get_active_role_ids(user):
-    """Roles effective in the current session (DSD-safe by default)."""
+    """当前会话中生效的角色（默认满足 DSD 约束）。"""
     assigned = get_assigned_role_ids(user)
     if not assigned:
         return set()
 
     raw = getattr(user, '_layui_active_role_ids', None)
-    if raw is None and getattr(user, 'id', None):
-        raw = cache.get(_active_cache_key(user.id))
     if raw is not None:
         selected = _as_int_set(raw) & assigned
         if selected:
@@ -122,10 +121,10 @@ def get_active_role_ids(user):
         DSD_STRATEGY_KEY, 'greedy', 'LAYUI_RBAC_DSD_STRATEGY'
     )).lower()
     if strategy == 'explicit':
-        # Explicit mode never auto-activates a conflicting set; user must choose.
+        # explicit 模式不会自动激活冲突角色集，必须由用户选择。
         return {min(assigned)}
 
-    # Greedy mode: keep roles in stable order, skip DSD conflicts.
+    # greedy 模式：保持角色稳定顺序，跳过 DSD 冲突。
     groups = _active_mutex_groups('dsd')
     selected = set()
     for role_id in sorted(assigned):
@@ -140,18 +139,15 @@ def store_active_roles(request, role_ids):
     ids = sorted(_as_int_set(role_ids))
     request.session[ACTIVE_ROLES_SESSION_KEY] = ids
     user = getattr(request, 'user', None)
-    if user is not None and getattr(user, 'id', None):
-        cache.set(
-            _active_cache_key(user.id), ids,
-            timeout=getattr(settings, 'TOKEN_EXPIRE_SECONDS', 24 * 60 * 60),
-        )
+    if user is not None:
+        user._layui_active_role_ids = ids
 
 
 def clear_active_roles(request):
     request.session.pop(ACTIVE_ROLES_SESSION_KEY, None)
     user = getattr(request, 'user', None)
-    if user is not None and getattr(user, 'id', None):
-        cache.delete(_active_cache_key(user.id))
+    if user is not None and hasattr(user, '_layui_active_role_ids'):
+        delattr(user, '_layui_active_role_ids')
 
 
 def get_effective_role_ids(user):
@@ -159,43 +155,58 @@ def get_effective_role_ids(user):
 
 
 def is_full_access(user):
-    """Superuser, built-in admin account, or holder of the admin role."""
+    """超级用户、内置管理员账号或持有 admin 角色的用户。"""
     Role, *_ = _models()
     if not getattr(user, 'is_authenticated', False):
         return False
-    if getattr(user, 'is_superuser', False) or getattr(user, 'username', '') == 'admin':
+    if getattr(user, 'is_superuser', False):
         return True
     return Role.objects.filter(
         id__in=get_effective_role_ids(user), code='admin', status=True
     ).exists()
 
 
+def _disabled_plugin_keys():
+    """生效状态为停用的插件键。"""
+    from .models import PluginRegistry
+
+    try:
+        return set(PluginRegistry.objects.filter(
+            is_active=False
+        ).exclude(key='permission_catalog').values_list('key', flat=True))
+    except Exception:
+        logger.exception('Failed to read disabled plugin keys')
+        return set()
+
+
 def get_effective_permissions(user):
-    """Permission strings granted by effective roles (inheritance included)."""
+    """由生效角色授予的权限码（包含继承权限）。"""
     _, Menu, *_ = _models()
+    disabled = _disabled_plugin_keys()
     if is_full_access(user):
         return set(Menu.objects.filter(
             status=True, permission__gt=''
-        ).values_list('permission', flat=True))
+        ).exclude(plugin_key__in=disabled).values_list('permission', flat=True))
     return set(Menu.objects.filter(
         status=True, permission__gt='', roles__id__in=get_effective_role_ids(user)
-    ).values_list('permission', flat=True).distinct())
+    ).exclude(plugin_key__in=disabled).values_list('permission', flat=True).distinct())
 
 
 def visible_menu_queryset(user, scope='backend'):
-    """Menu queryset for sidebar / frontend menus, respecting effective roles."""
+    """用于侧栏或前端菜单的 QuerySet，遵循角色和插件状态。"""
     _, Menu, *_ = _models()
     visibility_field = 'frontend_visible' if scope == 'frontend' else 'backend_visible'
     filters = {'status': True, 'visible': True, visibility_field: True}
+    disabled = _disabled_plugin_keys()
     if is_full_access(user):
-        return Menu.objects.filter(**filters)
+        return Menu.objects.filter(**filters).exclude(plugin_key__in=disabled)
     return Menu.objects.filter(
         **filters, roles__id__in=get_effective_role_ids(user)
-    ).distinct()
+    ).exclude(plugin_key__in=disabled).distinct()
 
 
 def get_max_roles_per_user():
-    """Global role-count limit; 0 means unlimited."""
+    """全局角色数量上限；0 表示不限制。"""
     _, _, SystemConfig, _, _ = _models()
     config = SystemConfig.objects.filter(key=MAX_ROLES_CONFIG_KEY).first()
     raw = config.value if config else getattr(settings, 'LAYUI_RBAC_MAX_ROLES_PER_USER', 0)
@@ -215,7 +226,7 @@ def require_roles(role_ids):
 
 
 def _prerequisite_closure(role_id, limit=20):
-    """All roles transitively required by role_id."""
+    """role_id 传递依赖的全部角色。"""
     _, _, _, _, RolePrerequisite = _models()
     result = set()
     frontier = {int(role_id)}
@@ -231,7 +242,7 @@ def _prerequisite_closure(role_id, limit=20):
 
 
 def apply_prerequisites(role_ids):
-    """Apply prerequisite strategy: auto_grant (default) or reject."""
+    """应用前置角色策略：auto_grant（默认）或 reject。"""
     Role, _, _, _, RolePrerequisite = _models()
     result = _as_int_set(role_ids)
     strategy = str(_get_config(
@@ -260,7 +271,7 @@ def apply_prerequisites(role_ids):
 
 
 def check_conflicts(effective_role_ids, kind):
-    """Reject when two roles of one active mutex group are effective."""
+    """同一启用互斥组中的两个角色同时生效时拒绝。"""
     Role, *_ = _models()
     for group in _active_mutex_groups(kind):
         overlap = effective_role_ids & {r.id for r in group.roles.all()}
@@ -274,8 +285,24 @@ def check_conflicts(effective_role_ids, kind):
             )
 
 
+def validate_assignable_menus(menu_ids):
+    """只有启用、可见且所属插件未停用的菜单才能分配给角色。"""
+    from .models import Menu
+
+    ids = _as_int_set(menu_ids)
+    if not ids:
+        return []
+    disabled = _disabled_plugin_keys()
+    menus = list(Menu.objects.filter(id__in=ids, status=True, visible=True).exclude(
+        plugin_key__in=disabled
+    ))
+    if len(menus) != len(ids):
+        raise RbacConstraintError('包含未注册、已停用或不可见的菜单', 'invalid_menu')
+    return menus
+
+
 def effective_permission_codes_for_roles(role_ids):
-    """Permission codes granted by a role set after inheritance expansion."""
+    """角色集在继承展开后授予的权限码。"""
     _, Menu, *_ = _models()
     return set(Menu.objects.filter(
         status=True, permission__gt='',
@@ -284,7 +311,7 @@ def effective_permission_codes_for_roles(role_ids):
 
 
 def check_permission_conflicts(permission_codes, kind):
-    """RBAC4: reject when two permissions in one mutex group are effective."""
+    """RBAC4：同一互斥组中的两个权限同时生效时拒绝。"""
     for group in _active_mutex_groups(kind):
         codes = set(group.permissions.filter(
             status=True, permission__gt=''
@@ -301,8 +328,103 @@ def check_permission_conflicts(permission_codes, kind):
             )
 
 
+def effective_permissions_for_role(role_id):
+    """返回角色自身及继承的权限，并附带来源角色。"""
+    Role, Menu, *_ = _models()
+    role = Role.objects.filter(pk=role_id).first()
+    if not role:
+        return None
+
+    own = list(Menu.objects.filter(
+        status=True, permission__gt='', roles=role
+    ).values('id', 'name', 'permission').distinct())
+
+    ancestor_ids = expand_role_ids([role_id]) - {int(role_id)}
+    inherited = []
+    if ancestor_ids:
+        ancestors = Role.objects.filter(id__in=ancestor_ids).order_by('id').prefetch_related('menus')
+        for ancestor in ancestors:
+            for menu in ancestor.menus.filter(status=True, permission__gt=''):
+                inherited.append({
+                    'id': menu.id,
+                    'name': menu.name,
+                    'permission': menu.permission,
+                    'source_role_id': ancestor.id,
+                    'source_role_name': ancestor.name,
+                })
+
+    return {
+        'role_id': role.id,
+        'role_name': role.name,
+        'own': own,
+        'inherited': inherited,
+        'all_permissions': sorted({
+            item['permission'] for item in own + inherited if item.get('permission')
+        }),
+    }
+
+
+def check_sod_conflict(user, new_role_ids, audit=True):
+    """1.4.1 兼容的 SSD 校验，返回结构化冲突详情。"""
+    Role, *_ = _models()
+    candidate_ids = get_assigned_role_ids(user) | _as_int_set(new_role_ids)
+    conflicts = []
+
+    effective_ids = expand_role_ids(candidate_ids)
+    for group in _active_mutex_groups('ssd'):
+        overlap = effective_ids & {r.id for r in group.roles.all()}
+        if len(overlap) > 1:
+            conflicts.append({
+                'type': 'role',
+                'constraint_id': group.id,
+                'constraint_name': group.name,
+                'roles': [
+                    {'id': r.id, 'name': r.name}
+                    for r in Role.objects.filter(id__in=overlap).order_by('id')
+                ],
+            })
+
+    permission_codes = effective_permission_codes_for_roles(candidate_ids)
+    for group in _active_mutex_groups('ssd'):
+        codes = set(group.permissions.filter(
+            status=True, permission__gt=''
+        ).values_list('permission', flat=True))
+        overlap = permission_codes & codes
+        if len(overlap) > 1:
+            conflicts.append({
+                'type': 'permission',
+                'constraint_id': group.id,
+                'constraint_name': group.name,
+                'permissions': sorted(overlap),
+            })
+
+    result = {
+        'allowed': not bool(conflicts),
+        'exempt': False,
+        'conflicts': conflicts,
+    }
+    if conflicts and is_full_access(user):
+        result['allowed'] = True
+        result['exempt'] = True
+        if not audit:
+            return result
+        try:
+            from .models import OperationLog
+            OperationLog.objects.create(
+                user=user if getattr(user, 'pk', None) else None,
+                module='RBAC',
+                action='SoD 约束豁免：%s' % '；'.join(
+                    item['constraint_name'] for item in conflicts
+                ),
+                status=1,
+            )
+        except Exception:
+            logger.warning('Failed to record SoD exemption audit for user %s', getattr(user, 'pk', None))
+    return result
+
+
 def validate_assignment(user, role_ids, exclude_user_pk=None):
-    """Validate a new role set and return the final IDs (with prerequisites)."""
+    """校验新角色集并返回最终角色 ID（包含前置角色）。"""
     Role, *_ = _models()
     final_ids = apply_prerequisites(role_ids)
     roles = require_roles(final_ids)
@@ -332,7 +454,7 @@ def validate_assignment(user, role_ids, exclude_user_pk=None):
 
 
 def validate_active_roles(user, role_ids):
-    """Validate roles selected for the current session (DSD)."""
+    """校验当前会话选择的角色（DSD）。"""
     selected = _as_int_set(role_ids)
     assigned = get_assigned_role_ids(user)
     if not selected or not selected <= assigned:
@@ -345,7 +467,7 @@ def validate_active_roles(user, role_ids):
 
 
 def validate_role_parents(role_id, parent_ids):
-    """RBAC1: reject self-inheritance and inheritance cycles."""
+    """RBAC1：拒绝自我继承和继承环。"""
     parents = _as_int_set(parent_ids)
     require_roles(parents)
     if role_id and int(role_id) in parents:
@@ -356,7 +478,7 @@ def validate_role_parents(role_id, parent_ids):
 
 
 def validate_prerequisite(role_id, prerequisite_id):
-    """RBAC2: reject self-reference and prerequisite cycles."""
+    """RBAC2：拒绝自引用和前置角色环。"""
     role_id = int(role_id)
     prerequisite_id = int(prerequisite_id)
     require_roles([role_id, prerequisite_id])

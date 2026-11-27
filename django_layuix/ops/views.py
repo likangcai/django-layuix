@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-Ops API Views - Server CRUD, SSH test, log viewing, command execution
-"""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : views.py
+# -----------------------------
+"""运维 API 视图：服务器 CRUD、SSH 测试、日志查看和命令执行。"""
 import re
 import shlex
 import json
-from functools import wraps
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils.timezone import localtime
+
+from django_layuix.rbac.permissions import (
+    api_login_required, api_permission_required, has_permission, resolve_api_user,
+)
+from django_layuix.rbac.serializers import field_whitelisted
 
 
 def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
@@ -19,18 +26,8 @@ def fmt_time(dt, format_str='%Y-%m-%d %H:%M:%S'):
     return localtime(dt).strftime(format_str)
 
 
-def api_login_required(view_func):
-    """Login required decorator for API views"""
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'code': 401, 'msg': '未登录'}, status=401)
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
-
 def get_request_body(request):
-    """Get parsed request body"""
+    """获取解析后的请求体。"""
     try:
         if request.content_type == 'application/json':
             return json.loads(request.body)
@@ -47,12 +44,14 @@ def error_response(msg='error', code=400):
     return JsonResponse({'code': code, 'msg': msg}, status=code)
 
 
-# ==================== Server CRUD ====================
+# ==================== 服务器 CRUD ====================
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:view')
+@field_whitelisted('ops.Server')
 def server_list(request):
-    """Get server list"""
+    """获取服务器列表。"""
     from .models import Server
     try:
         page = max(1, int(request.GET.get('page', 1)))
@@ -82,8 +81,9 @@ def server_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:add')
 def server_create(request):
-    """Create server"""
+    """创建服务器。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -105,8 +105,9 @@ def server_create(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:edit')
 def server_update(request, pk):
-    """Update server"""
+    """更新服务器。"""
     if request.method != 'PUT':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -124,7 +125,7 @@ def server_update(request, pk):
                 setattr(server, field, body[field] is True or body[field] == 'on')
             else:
                 setattr(server, field, body[field])
-    # Sensitive fields: only update if explicitly provided and non-empty
+    # 敏感字段：仅在显式提供且非空时更新
     for field in ['password', 'private_key']:
         if field in body and body[field]:
             setattr(server, field, body[field])
@@ -134,8 +135,10 @@ def server_update(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:view')
+@field_whitelisted('ops.Server')
 def server_detail(request, pk):
-    """Get server detail (with password/private_key for edit form)"""
+    """获取服务器详情；绝不返回凭据字段。"""
     from .models import Server
     try:
         server = Server.objects.get(pk=pk)
@@ -158,8 +161,9 @@ def server_detail(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:delete')
 def server_delete(request, pk):
-    """Delete server"""
+    """删除服务器。"""
     if request.method != 'DELETE':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -171,12 +175,13 @@ def server_delete(request, pk):
         return error_response('服务器不存在', 404)
 
 
-# ==================== SSH Operations ====================
+# ==================== SSH 操作 ====================
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:terminal')
 def server_test(request, pk):
-    """Test SSH connection"""
+    """测试 SSH 连接。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -270,8 +275,9 @@ def server_test(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:view_log')
 def server_log(request, pk):
-    """View remote server log file"""
+    """查看远程服务器日志文件。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -284,13 +290,13 @@ def server_log(request, pk):
     log_path = body.get('log_path', '/var/log/syslog').strip()
     lines = int(body.get('lines', 100))
 
-    # Security: validate log path
+    # 安全校验：验证日志路径
     if re.search(r'[;&|`$]', log_path):
         return error_response('日志路径包含非法字符', 400)
 
     try:
         client = server.get_ssh_client()
-        # Use tail command with line count
+        # 使用 tail 命令并按行数截取
         safe_path = shlex.quote(log_path)
         stdin, stdout, stderr = client.exec_command(f'tail -n {lines} {safe_path}')
         output = stdout.read().decode('utf-8', errors='replace')
@@ -306,8 +312,9 @@ def server_log(request, pk):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('server:terminal')
 def server_exec(request, pk):
-    """Execute command on remote server"""
+    """在远程服务器执行命令。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     from .models import Server
@@ -322,7 +329,7 @@ def server_exec(request, pk):
     if not command:
         return error_response('命令不能为空', 400)
 
-    # Dangerous command blacklist
+    # 危险命令黑名单
     dangerous_patterns = [
         r'rm\s+-rf\s+/', r'dd\s+if=', r'mkfs\.', r'shutdown',
         r'reboot', r'chmod\s+777\s+/', r'>\s*/etc/', r'curl.*\|.*bash',
@@ -349,13 +356,13 @@ def server_exec(request, pk):
         return error_response(f'命令执行失败: {str(e)}', 500)
 
 
-# ==================== AI Config (Multi-model list) ====================
+# ==================== AI 配置（多模型列表） ====================
 
 import uuid as _uuid
 
 
 def _mask_key(api_key):
-    """Mask API key for display"""
+    """对 API Key 脱敏后展示。"""
     if not api_key:
         return ''
     if len(api_key) > 12:
@@ -364,7 +371,7 @@ def _mask_key(api_key):
 
 
 def _load_ai_configs():
-    """Load AI configs from database only."""
+    """仅从数据库加载 AI 配置。"""
     from .models import AIModelConfig
     
     configs = []
@@ -388,7 +395,7 @@ def _load_ai_configs():
 
 
 def _save_ai_configs(configs):
-    """Save AI configs to database only."""
+    """仅将 AI 配置保存到数据库。"""
     from .models import AIModelConfig
     
     try:
@@ -443,7 +450,7 @@ def _get_default_ai_config():
     except Exception:
         pass
     
-    # settings.py fallback
+    # settings.py 回退逻辑
     return {
         'api_key': getattr(settings, 'LAYUI_AI_API_KEY', ''),
         'base_url': getattr(settings, 'LAYUI_AI_BASE_URL', ''),
@@ -456,12 +463,13 @@ def _get_ai_settings():
     return _get_default_ai_config()
 
 
-# ---------- API Views ----------
+# ---------- API 视图 ----------
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:view')
 def ai_config_list(request):
-    """List all AI model configs (api_key masked), with optional keyword search"""
+    """列出全部 AI 模型配置（api_key 已脱敏），支持关键词搜索。"""
     # 支持搜索：keyword 参数
     keyword = request.GET.get('keyword', '').strip().lower()
     
@@ -521,8 +529,9 @@ def ai_config_list(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:view')
 def ai_config_get(request):
-    """Get single AI config by id, or default config if no id given (legacy)"""
+    """按 ID 获取单个 AI 配置；未传 ID 时返回默认配置（兼容旧版）。"""
     config_id = request.GET.get('id', '')
     configs = _load_ai_configs()
     if config_id:
@@ -553,15 +562,15 @@ def ai_config_get(request):
 @csrf_exempt
 @api_login_required
 def ai_config_save(request):
-    """Create or update AI config.
-    POST body: {id?, name, provider, api_key, base_url, model, is_default?}
-    If id is provided -> update; else -> create new.
-    """
+    """创建或更新 AI 配置。POST 请求体：{id?, name, provider, api_key, base_url, model, is_default?}；传 id 表示更新，否则创建。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
 
     body = get_request_body(request)
-    config_id = body.get('id', '').strip()
+    config_id = str(body.get('id') or '').strip()
+    required_code = 'ai_config:edit' if config_id else 'ai_config:add'
+    if not has_permission(request.user, required_code, request):
+        return error_response('无权限', 403)
     name = body.get('name', '').strip()
     provider = body.get('provider', 'custom').strip()
     api_key = body.get('api_key', '').strip()
@@ -575,7 +584,7 @@ def ai_config_save(request):
     configs = _load_ai_configs()
 
     if config_id:
-        # Update existing
+        # 更新已有记录
         found = False
         for c in configs:
             if c.get('id') == config_id:
@@ -599,7 +608,7 @@ def ai_config_save(request):
         _save_ai_configs(configs)
         return success_response(msg='配置更新成功')
     else:
-        # Create new
+        # 创建新记录
         if not api_key or '****' in api_key:
             return error_response('API Key 不能为空', 400)
         new_id = str(_uuid.uuid4())[:8]
@@ -625,8 +634,9 @@ def ai_config_save(request):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:delete')
 def ai_config_delete(request, config_id):
-    """Delete AI config by id"""
+    """按 ID 删除 AI 配置。"""
     if request.method != 'DELETE':
         return error_response('Method not allowed', 405)
     configs = _load_ai_configs()
@@ -642,8 +652,9 @@ def ai_config_delete(request, config_id):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:set_default')
 def ai_config_set_default(request, config_id):
-    """Set a config as default (active) for AI analysis"""
+    """将某个配置设为 AI 分析默认（启用）配置。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
     configs = _load_ai_configs()
@@ -662,10 +673,9 @@ def ai_config_set_default(request, config_id):
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:test')
 def ai_config_test(request):
-    """Test AI config by sending a simple request.
-    POST body: {id?} - test specific config by id, or default if no id.
-    """
+    """通过简单请求测试 AI 配置。POST 请求体：{id?}；传 id 测试指定配置，否则测试默认配置。"""
     import logging
     logger = logging.getLogger(__name__)
 
@@ -710,7 +720,7 @@ def ai_config_test(request):
     logger.info(f'[AI Config Test] Config ID: {config_id or "default"}')
     logger.info(f'[AI Config Test] Base URL: "{config.get("base_url", "")}" (length: {len(config.get("base_url", ""))})')
     logger.info(f'[AI Config Test] Model: "{config.get("model", "")}" (length: {len(config.get("model", ""))})')
-    logger.info(f'[AI Config Test] API Key: "{config.get("api_key", "")[:20]}..." (length: {len(config.get("api_key", ""))})')
+    logger.info(f'[AI Config Test] API Key length: {len(config.get("api_key", ""))}')
 
     if not config.get('api_key'):
         return error_response('未配置 API Key，请在配置中填写有效的 API 密钥', 400)
@@ -746,7 +756,7 @@ def ai_config_test(request):
                 f'Base URL: "{config.get("base_url") or "(使用默认)"}"\n'
                 f'Model: "{config["model"]}"\n'
                 f'Model 长度: {len(config["model"])} 字符\n'
-                f'API Key 前20位: {config.get("api_key", "")[:20]}...\n\n'
+                f'API Key 长度: {len(config.get("api_key", ""))} 字符\n\n'
                 f'=== 可能的原因 ===\n'
                 f'1. 模型名称拼写错误（当前值：{config["model"]}）\n'
                 f'2. 模型名称包含不可见字符（如空格、换行符等）\n'
@@ -773,12 +783,13 @@ def ai_config_test(request):
             return error_response(f'连接测试失败: {error_msg}', 500)
 
 
-# ==================== AI Analysis ====================
+# ==================== AI 分析 ====================
 
 @csrf_exempt
 @api_login_required
+@api_permission_required('ai_config:test')
 def ai_analyze_log(request):
-    """AI analyze server log content"""
+    """使用 AI 分析服务器日志内容。"""
     if request.method != 'POST':
         return error_response('Method not allowed', 405)
 
@@ -790,11 +801,11 @@ def ai_analyze_log(request):
     if not log_content:
         return error_response('日志内容不能为空', 400)
 
-    # Limit log content length
+    # 限制日志内容长度
     if len(log_content) > 50000:
         log_content = log_content[-50000:]
 
-    # Get AI config (dynamic JSON file > settings.py)
+    # 获取 AI 配置（动态 JSON 文件优先于 settings.py）
     config = _get_ai_settings()
     if not config.get('api_key'):
         return JsonResponse({'code': 401, 'msg': '未配置 AI 模型', 'data': {'need_config': True}}, status=200)

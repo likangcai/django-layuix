@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: django-layuix 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-01-01 00:00+0000\n"
-"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"POT-Creation-Date: 2026-11-27 00:00+0000\n"
+"PO-Revision-Date: 2026-11-27 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Chinese (Simplified)\n"
 "Language: zh_Hans\n"
@@ -122,3 +122,105 @@ msgstr "确定"
 #: templates/admin/pagination.html
 msgid "条/页"
 msgstr "条/页"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Save and continue editing"
+msgstr "保存并继续编辑"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Toggle color theme"
+msgstr "切换主题"
+
+msgid "Model name"
+msgstr "模型名称"
+
+msgid "Actions"
+msgstr "操作"
+
+msgid "No permission."
+msgstr "无权限。"
+
+msgid "Home"
+msgstr "首页"
+
+msgid "Add"
+msgstr "新增"
+
+msgid "Change"
+msgstr "修改"
+
+msgid "Server error"
+msgstr "服务器错误"
+
+msgid "Server error. Please contact the administrator."
+msgstr "服务器错误，请联系管理员。"
+
+msgid "Back to home"
+msgstr "返回首页"
+
+msgid "Page not found"
+msgstr "页面未找到"
+
+msgid "The page you requested was not found."
+msgstr "请求的页面不存在。"
+
+msgid "Summary"
+msgstr "摘要"
+
+msgid "Delete multiple objects"
+msgstr "删除多个对象"
+
+msgid "Confirm deletion"
+msgstr "确认删除"
+
+msgid "Yes, I am sure"
+msgstr "是，我确认"
+
+msgid "History"
+msgstr "历史"
+
+msgid "View on site"
+msgstr "在站点查看"
+
+msgid "Change history"
+msgstr "变更历史"
+
+msgid "Date/time"
+msgstr "日期/时间"
+
+msgid "User"
+msgstr "用户"
+
+msgid "Action"
+msgstr "操作"
+
+msgid "This object does not have a change history."
+msgstr "该对象没有变更历史。"
+
+msgid "Invalid setup"
+msgstr "配置无效"
+
+msgid "Welcome"
+msgstr "欢迎"
+
+msgid "Welcome to the admin site."
+msgstr "欢迎使用后台管理站点。"
+
+msgid "By %(filter_title)s"
+msgstr "按 %(filter_title)s"
+
+msgid "Add %(name)s"
+msgstr "新增 %(name)s"
+
+msgid "Select all %(total_count)s %(module_name)s"
+msgstr "全选 %(total_count)s 个 %(module_name)s"
+
+msgid "共 %(total)s 条"
+msgstr "共 %(total)s 条"

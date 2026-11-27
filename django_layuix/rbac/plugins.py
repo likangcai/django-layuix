@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Third-party plugin registry: discovery, validation, persistence and hooks."""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : plugins.py
+# -----------------------------
+"""第三方插件注册表：发现、校验、持久化和钩子。"""
 import importlib
 import logging
 import os
 import re
 
 from django.conf import settings
+from django.db import IntegrityError, transaction
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +22,7 @@ _PLUGIN_CLASSES = {}
 _FIELDS = (
     'key', 'name', 'version', 'description',
     'api_prefix', 'menu_path', 'app_label',
-    'dependencies', 'source', 'validation_error', 'is_active',
+    'dependencies', 'source', 'validation_error', 'desired_active', 'is_active',
 )
 
 _SPEC_RE = re.compile(r'^([A-Za-z0-9_.-]+)\s*(>=|==|<=|>|<)?\s*([0-9][0-9A-Za-z.\-]*)?$')
@@ -25,6 +31,12 @@ _SPEC_RE = re.compile(r'^([A-Za-z0-9_.-]+)\s*(>=|==|<=|>|<)?\s*([0-9][0-9A-Za-z.
 def _db():
     from .models import PluginRegistry
     return PluginRegistry.objects
+
+
+def _supports_desired_active():
+    """避免迁移执行前查询不存在的字段。"""
+    from .models import PluginRegistry
+    return any(field.name == 'desired_active' for field in PluginRegistry._meta.get_fields())
 
 
 def _version_tuple(value):
@@ -80,7 +92,7 @@ def _as_lines(value):
 
 
 def validate_plugin_metadata(metadata):
-    """Return a list of human-readable validation errors."""
+    """返回可读性良好的校验错误列表。"""
     errors = []
     minimum = metadata.get('min_layuix_version')
     if minimum and not _satisfies('django-layuix>=%s' % minimum):
@@ -133,25 +145,43 @@ def _was_active(key):
         return False
 
 
+RESERVED_PLUGIN_KEYS = {'permission_catalog'}
+
+
 def register_plugin(key, name, version='1.0.0', description='',
                     api_prefix='', menu_path='', app_label='',
                     dependencies=(), is_active=True, source='app',
                     validation_error='', validation_errors=None):
-    """Register or update plugin metadata. Safe to call from AppConfig.ready()."""
+    """注册或更新插件元数据。可从 AppConfig.ready() 安全调用。"""
     errors = list(validation_errors or [])
+    if key in RESERVED_PLUGIN_KEYS:
+        errors.append('插件键 %s 为系统保留键' % key)
+        return {
+            'key': key, 'name': name, 'version': version,
+            'description': description, 'api_prefix': api_prefix,
+            'menu_path': menu_path, 'app_label': app_label,
+            'dependencies': _as_lines(dependencies), 'source': source,
+            'validation_error': '\n'.join(errors), 'desired_active': False,
+            'is_active': False,
+        }
     if validation_error:
         errors.append(validation_error)
     error_text = '\n'.join(errors)
 
     existing = None
+    db_error = False
     try:
         existing = _db().filter(key=key).first()
     except Exception:
-        pass
+        logger.exception('Failed to read plugin metadata for %s', key)
+        db_error = True
     previous_active = bool(getattr(existing, 'is_active', False))
-
-    # A persisted deactivation must survive restarts; validation failures always disable.
-    desired_active = (previous_active if existing else bool(is_active)) and not errors
+    desired_active = (
+        bool(getattr(existing, 'desired_active', True)) if existing else bool(is_active)
+    )
+    # 没有持久化状态时默认拒绝：不得仅凭声明将插件报告为启用，也不得
+    # 仅凭声明触发生命周期钩子。
+    effective_active = desired_active and not errors and not db_error
 
     data = {
         'key': key,
@@ -164,56 +194,108 @@ def register_plugin(key, name, version='1.0.0', description='',
         'dependencies': _as_lines(dependencies),
         'source': source,
         'validation_error': error_text,
-        'is_active': desired_active,
+        'desired_active': desired_active,
+        'is_active': effective_active,
     }
-    _PLUGINS[key] = data
+    if db_error:
+        return data
 
+    persisted_fields = [f for f in _FIELDS if f != 'key']
+    if not _supports_desired_active():
+        persisted_fields = [f for f in persisted_fields if f != 'desired_active']
     try:
-        obj, _ = _db().update_or_create(
-            key=key,
-            defaults={field: data[field] for field in _FIELDS if field != 'key'},
-        )
+        obj = None
+        for attempt in range(2):
+            try:
+                with transaction.atomic():
+                    obj, _ = _db().update_or_create(
+                        key=key,
+                        defaults={field: data[field] for field in persisted_fields},
+                    )
+                break
+            except IntegrityError:
+                if attempt == 1:
+                    raise
         data['id'] = obj.id
     except Exception:
         logger.exception('Failed to persist plugin metadata for %s', key)
+        return data
 
-    if desired_active and not previous_active:
+    _PLUGINS[key] = data
+    if effective_active and not previous_active:
         _call_hook(key, 'on_enable')
-    elif previous_active and not desired_active:
+    elif previous_active and not effective_active:
         _call_hook(key, 'on_disable')
     return data
 
 
 def unregister_plugin(key):
-    data = _PLUGINS.pop(key, None)
-    if data and data.get('is_active', True):
-        _call_hook(key, 'on_disable')
+    if key in RESERVED_PLUGIN_KEYS:
+        logger.warning('Refused to unregister reserved plugin key %s', key)
+        return False
+    data = _PLUGINS.get(key)
+    was_active = bool(data and data.get('is_active')) or _was_active(key)
     try:
-        _db().filter(key=key).delete()
+        deleted, _ = _db().filter(key=key).delete()
     except Exception:
-        pass
+        logger.exception('Failed to delete plugin record for %s', key)
+        return False
+    if not deleted:
+        return False
+
+    try:
+        from .menu_registry import unregister_plugin_menus
+        unregister_plugin_menus(key)
+    except Exception:
+        logger.exception('Failed to clean plugin menus for %s', key)
+
+    _PLUGINS.pop(key, None)
+    if was_active:
+        _call_hook(key, 'on_disable')
+    return True
 
 
 def set_plugin_active(key, active):
-    """Enable/disable a plugin and invoke its lifecycle hook on transition."""
-    previous = _was_active(key)
-    if previous == bool(active):
-        return False
+    """先持久化用户意图，仅在状态切换成功后调用生命周期钩子。"""
+    active = bool(active)
+    supports_desired = _supports_desired_active()
     try:
-        record = _db().filter(key=key).first()
-        if active and record and record.validation_error:
-            return False
-        _db().filter(key=key).update(is_active=bool(active))
+        with transaction.atomic():
+            record = _db().select_for_update().filter(key=key).first()
+            if record is None:
+                return False
+            desired = bool(getattr(record, 'desired_active', True)) if supports_desired else True
+            if active and record.validation_error:
+                if supports_desired:
+                    _db().filter(key=key).update(desired_active=True)
+                if key in _PLUGINS:
+                    _PLUGINS[key]['desired_active'] = True
+                return False
+            previous = bool(record.is_active)
+            if previous == active and desired == active:
+                return False
+            values = {'is_active': active}
+            if supports_desired:
+                values['desired_active'] = active
+            updated = _db().filter(key=key).update(**values)
+            if not updated:
+                return False
     except Exception:
         logger.exception('Failed to update active state for plugin %s', key)
+        return False
+
     if key in _PLUGINS:
-        _PLUGINS[key]['is_active'] = bool(active)
+        _PLUGINS[key]['is_active'] = active
+        _PLUGINS[key]['desired_active'] = active
     _call_hook(key, 'on_enable' if active else 'on_disable')
     return True
 
 
 def register_plugin_menus(key, plugin_instance):
-    """Register menus and buttons declared by a PluginConfig."""
+    """注册 PluginConfig 声明的菜单和按钮。"""
+    if key in RESERVED_PLUGIN_KEYS:
+        logger.warning('Refused to register menus for reserved plugin key %s', key)
+        return
     menus = list(getattr(plugin_instance, 'plugin_menus', ()) or ())
     buttons = list(getattr(plugin_instance, 'plugin_buttons', ()) or ())
     if not menus and not buttons:
@@ -226,7 +308,7 @@ def register_plugin_menus(key, plugin_instance):
 
 
 def discover_entry_point_plugins():
-    """Discover plugins published by installed third-party packages."""
+    """发现已安装第三方包发布的插件。"""
     from importlib.metadata import entry_points
 
     try:
@@ -263,7 +345,7 @@ def discover_entry_point_plugins():
 
 
 def list_plugins():
-    """Merge persisted records with the in-process registry."""
+    """将持久化记录与进程内注册表合并。"""
     merged = {}
     persisted_keys = set()
     try:

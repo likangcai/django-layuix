@@ -1,5 +1,15 @@
 # Django-Layuix AJAX Admin 使用指南
 
+## 结论（TL;DR）
+【事实】`LayuiAjaxAdmin` 为 Django Admin 增加 AJAX 批量操作与异步交互能力。
+【判断】增强功能默认不改变原生 Admin 的读写语义，适合逐步接入。
+【本期不做】自动改写所有第三方 ModelAdmin。
+【待确认】是否补充批量操作的进度反馈。
+【待确认】是否提供前端确认模板的定制 API。
+【待确认】是否补充异步任务队列集成示例。
+
+---
+
 ## 概述
 
 `LayuiAjaxAdmin` 是实现的AJAX功能增强类,为你的Django Admin添加强大的异步操作能力。

@@ -1,14 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - 页面未找到 - 软件测试管理后台</title>
+    <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130i">
     <script>
         (function() {
-            var themeMode = localStorage.getItem('theme') || 'dark';
+            var themeMode = localStorage.getItem('theme') || 'light';
             if (themeMode !== 'dark' && themeMode !== 'light') themeMode = 'dark';
             document.documentElement.setAttribute('data-theme-mode', themeMode);
         })();
@@ -79,7 +80,7 @@
         </a>
     </div>
     <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js"></script>
+    <script src="/static/layui/js/common.js?v=20261130i"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
     inheritTheme();

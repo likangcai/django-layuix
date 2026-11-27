@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : apps.py
+# -----------------------------
 from django.apps import AppConfig
 from django.contrib import admin
 
@@ -48,7 +54,16 @@ class DjangoLayuiConfig(AppConfig):
         except ImportError:
             pass
 
-        # 发现通过 entry_points 安装的第三方插件
+        # 第三方插件在迁移完成后注册，避免启动阶段访问数据库
+        from django.db.models.signals import post_migrate
+
+        post_migrate.connect(
+            self._discover_plugins,
+            sender=self,
+            dispatch_uid='django_layuix.discover_entry_point_plugins',
+        )
+
+    def _discover_plugins(self, sender, **kwargs):
         from .rbac.plugins import discover_entry_point_plugins
         try:
             discover_entry_point_plugins()

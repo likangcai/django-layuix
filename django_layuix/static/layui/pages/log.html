@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -6,14 +6,15 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <title>操作日志 - 软件测试管理后台</title>
+    <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130i">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'light';
                 }
             } catch(e) {}
             document.documentElement.setAttribute('data-theme-mode', themeMode);
@@ -66,13 +67,13 @@
                 <div class="layui-form-item">
                     <div class="layui-inline">
                         <label class="layui-form-label" data-i18n="log.search.user">操作用户</label>
-                        <div class="layui-input-inline" style="width: 180px;">
+                        <div class="layui-input-inline w-180">
                             <input type="text" name="username" placeholder="{{ t('log.search.username') }}" class="layui-input" autocomplete="off">
                         </div>
                     </div>
                     <div class="layui-inline">
                         <label class="layui-form-label" data-i18n="log.search.module">操作模块</label>
-                        <div class="layui-input-inline" style="width: 180px;">
+                        <div class="layui-input-inline w-180">
                             <select name="module" lay-filter="module" id="moduleSelect">
                                 <option value="">{{ t('log.allModules') || '全部模块' }}</option>
                                 <option value="菜单">{{ t('menu.title') || '菜单管理' }}</option>
@@ -88,7 +89,7 @@
                     </div>
                     <div class="layui-inline">
                         <label class="layui-form-label" data-i18n="log.search.status">操作状态</label>
-                        <div class="layui-input-inline" style="width: 180px;">
+                        <div class="layui-input-inline w-180">
                             <select name="status" lay-filter="status">
                                 <option value="">{{ t('log.allStatus') }}</option>
                                 <option value="1">{{ t('log.status.success') }}</option>
@@ -98,11 +99,11 @@
                     </div>
                     <div class="layui-inline">
                         <label class="layui-form-label" data-i18n="log.search.timeRange">时间范围</label>
-                        <div class="layui-input-inline" style="width: 220px;">
+                        <div class="layui-input-inline w-220">
                             <input type="text" name="dateRange" id="dateRange" placeholder="{{ t('log.selectTime') }}" class="layui-input" readonly autocomplete="off">
                         </div>
                     </div>
-                    <div class="layui-inline" style="margin-right:0;">
+                    <div class="layui-inline search-btns" style="margin-right:0;">
                         <button type="button" class="layui-btn layui-btn-sm" id="btnSearch" lay-submit lay-filter="searchLog">
                             <i class="layui-icon layui-icon-search"></i> {{ t('common.search') }}
                         </button>
@@ -126,7 +127,7 @@
     </script>
 
     <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js"></script>
+    <script src="/static/layui/js/common.js?v=20261130i"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
     inheritTheme();
@@ -266,11 +267,50 @@
             'ai_config': t('ai.title') || 'AI配置',
             'set-language': '语言切换',
             'set-default': '默认设置',
+            'departments': t('data.department') || '部门管理',
+            'positions': t('data.position') || '岗位管理',
+            'regions': t('data.region') || '地区管理',
+            'member-levels': t('data.memberLevel') || '会员等级',
+            'dictionaries': t('dict.title') || '数据字典',
+            'dictionary-items': t('dict.title') || '数据字典',
+            'permission-catalog': t('permission.title') || '权限目录',
+            'scope-nodes': t('scope.title') || '数据范围',
+            'abac-policies': 'ABAC策略',
+            'constraints': t('constraint.title') || '约束管理',
+            'sod-constraints': t('constraint.title') || '约束管理',
+            'plugins': '插件管理',
+            'active-roles': t('role.title') || '角色管理',
+            'data-batch-delete': t('data.batchDelete') || '批量删除',
+            'data-batch-status': '批量状态',
+            'position-assignments': (t('user.position') || '岗位') + '分配',
+            'token': '令牌',
         };
+
+        // 从日志接口自动补全操作模块选项；value 保持数据库原始模块名，确保筛选条件可命中
+        function loadModuleOptions() {
+            getApi('/admin/api/rbac/logs/modules/', function(res) {
+                if (res.code !== 200) return;
+                var select = $('#moduleSelect');
+                var existing = {};
+                select.find('option').each(function() { existing[$(this).val()] = true; });
+                var rows = (res.data && res.data.list) || [];
+                var added = false;
+                rows.forEach(function(row) {
+                    var value = row.value || row;
+                    if (!value || existing[value]) return;
+                    $('<option>').val(value).text(moduleMap[value] || row.label || value).appendTo(select);
+                    existing[value] = true;
+                    added = true;
+                });
+                if (added) form.render('select');
+            });
+        }
+
+        loadModuleOptions();
 
         // 渲染表格
         function renderTable(params) {
-            table.render({
+            LayuiUI.table({
                 elem: '#logTable',
                 url: '/admin/api/rbac/logs/',
                 method: 'get',
@@ -403,7 +443,7 @@
                     '</style>' +
                     '<div class="log-detail-wrap">' + rowsHtml + '</div>';
 
-                layer.open({
+                LayuiUI.dialog({
                     type: 1,
                     title: t('common.view') + ' ' + t('log.title'),
                     area: ['520px', 'auto'],

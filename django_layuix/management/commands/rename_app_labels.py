@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""One-off helper for upgrading databases created before the django-layuix rename."""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : rename_app_labels.py
+# -----------------------------
+"""用于升级 django-layuix 重命名前创建数据库的一次性辅助脚本。"""
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 from django.db import connection

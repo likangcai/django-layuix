@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-django-layuix Ops Models
-Server management for SSH connections
-AI model configuration for intelligent log analysis
-"""
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : models.py
+# -----------------------------
+"""django-layuix 运维模型，包含 SSH 服务器管理和用于智能日志分析的 AI 模型配置。"""
 from django.db import models
 
 
@@ -42,7 +43,7 @@ class Server(models.Model):
             if self.auth_type == 'key' and self.private_key:
                 import io
                 key_file = io.StringIO(self.private_key)
-                # Try different key types
+                # 尝试不同的键类型
                 pkey = None
                 for key_cls in [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]:
                     try:

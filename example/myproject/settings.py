@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : settings.py
+# -----------------------------
 """
 Django settings for example project using django-layuix
 展示 django-layuix 完整功能的示例配置
@@ -30,6 +36,7 @@ INSTALLED_APPS = [
     'django_layuix.rbac',      # RBAC 扩展（用户/角色/菜单/操作日志/系统配置）
     'django_layuix.ops',       # 运维管理扩展（服务器管理/AI日志分析），可选
     'store.apps.StoreConfig',  # 演示应用：商品管理（必须在 admin 之前，确保在 django_layuix ready() 前导入 admin.py）
+    'permission_demo.apps.PermissionDemoConfig',  # 可复制的权限示例应用
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -90,6 +97,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # 开发环境：让 example 使用主项目的静态文件（指向 django_layuix/static）
 STATICFILES_DIRS = [
     BASE_DIR.parent / 'django_layuix' / 'static',
+    BASE_DIR / 'store' / 'static',
+    BASE_DIR / 'permission_demo' / 'static',
 ]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -107,7 +116,7 @@ AUTH_USER_MODEL = 'django_layuix_rbac.UserProfile'
 # ============================================================
 LAYUI_CONFIG = {
     'system_name': 'Layui Admin 演示',
-    'system_version': '1.4.0',
+    'system_version': '1.9.0',
     'system_description': 'django-layuix 功能演示项目',
     'logo_icon': 'layui-icon-code-circle',
     # 使用自定义图片
@@ -153,15 +162,38 @@ LAYUI_CONFIG = {
 # ============================================================
 # LAYUI_AI_API_KEY = 'sk-xxx'
 # LAYUI_AI_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/'   # 智谱AI 示例
-# LAYUI_AI_MODEL = 'glm-4-flash'
+# LAYUI_AI_MODEL = 'gpt-4o-mini'   # 代码默认值；可改为 glm-4-flash 等兼容模型
 
 # ============================================================
-# ⑦ 多实例部署：共享缓存（可选，Token 场景 DSD 激活角色需要）
-#    单实例可不配置，默认使用本地内存缓存
+# ⑦ Token / 多实例缓存
+#    Token 状态写入 sys_auth_token，并缓存到 Django cache。
+#    多实例部署请配置 Redis 作为共享缓存；单实例可用默认 LocMemCache。
 # ============================================================
+TOKEN_EXPIRE_SECONDS = 24 * 60 * 60
+LAYUI_JWT_ISSUER = 'django-layuix'
+LAYUIX_ALLOW_LEGACY_TOKEN = True
+LAYUIX_TOKEN_CACHE_PREFIX = 'layuix:auth:'
+# 后台 API 写请求必须使用 Authorization: Bearer 或 X-Token，登录/注册除外
+LAYUIX_REQUIRE_TOKEN_FOR_WRITES = True
+LAYUI_RBAC_ALLOW_UNREGISTERED_PERMISSIONS = False
+
+# 默认不初始化 61 万条村/社区数据；需要完整数据时设为 True 或执行
+# python manage.py load_regions --include-villages
+LAYUI_RBAC_SEED_VILLAGES = False
+
 # CACHES = {
 #     'default': {
 #         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
 #         'LOCATION': 'redis://127.0.0.1:6379/1',
 #     }
+# }
+
+# ============================================================
+# ⑧ 数据权限（1.4.2 可选，不配置时行为与旧版本一致）
+#    取消下面注释并配合角色 scope_node/scope_depth 即可启用层级展开
+# ============================================================
+# LAYUIX_SCOPE_HIERARCHY = ['global', 'region', 'team']
+# LAYUIX_SCOPE_TREE = {
+#     'global': ['east_region', 'west_region'],
+#     'east_region': ['east_team_a', 'east_team_b'],
 # }

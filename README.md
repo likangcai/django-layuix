@@ -7,9 +7,17 @@
 - 🌗 现代化 Layui 后台管理界面（深色/浅色主题切换）
 - 🌐 **完整国际化支持**（中文/英文），前端 JS + 后端 Django i18n 双层翻译，菜单多语言字段
 - 🔐 RBAC3 权限管理（菜单管理、角色管理、用户管理、按钮级权限控制、角色继承、SSD/DSD 约束、前置角色与人数限制）
+- 🛡️ 写接口强制 Token（后台 API 写操作默认要求显式 Bearer Token，登录/注册除外）
 - 📊 Dashboard 仪表盘（CPU/内存折线图、磁盘饼图、网络监控）
 - 📝 操作日志（自动记录用户操作，支持自定义路径前缀，可记录前端 API）
 - ⚙️ 系统配置（键值对配置，数据库动态管理，实时生效）
+- 🧩 数据管理（字典、部门、岗位、地区、会员等级；统一树/表格布局、CSV/Excel 导入导出与批量操作）
+- 🗺️ 完整地区数据（657848 条省/市/县/街道/村社区，支持官方数据与街道、村庄独立更新脚本）
+- 👥 用户多岗位（主岗 + 兼任岗位多选，任职有效期、主岗变更历史与结束任职）
+- 🔐 权限总览（322 项页面/按钮权限、授权角色数、启停控制、业务按钮集中管理与目录唯一键）
+- 🧾 角色授权（数据范围并入授权弹窗、行内状态切换、批量删除与系统角色保护）
+- 🪟 长表单弹窗（自适应高度、吸底按钮、滚动提示，显示不全问题已收敛）
+- 🚀 启动无查库告警（菜单、插件与默认配置改到迁移后初始化）
 - 🖼️ 图片上传（Logo、Favicon 等配置项支持本地上传）
 - 🌐 Favicon 自定义（支持 ICO/PNG/SVG 格式）
 - 👤 个人中心（修改资料、更换头像、修改密码）
@@ -102,6 +110,8 @@ urlpatterns = [
 > - [ ] 已运行 `python manage.py init_menu`
 > - [ ] 重启服务器并清除浏览器缓存 (Ctrl+F5)
 
+> 💡 想直接体验角色继承、SSD、数据范围、ABAC 与前端 SDK，请先阅读：[新增功能快速上手示例](docs/NEW_FEATURES_QUICKSTART.md)。
+
 #### Step 3: 初始化数据库
 
 运行迁移命令创建数据表，然后初始化默认数据：
@@ -116,6 +126,12 @@ python manage.py init_menu
 
 # 需要同步创建测试数据的也可以执行以下命令
 python manage.py init_data
+
+# 演示应用（商品分类/商品/订单）需要单独初始化示例数据
+python manage.py init_demo_data
+
+# 一键初始化全部权限示例（继承/SSD/Scope/组织节点/ABAC/demo app）
+python manage.py init_permission_demo
 ```
 
 `init_menu` 命令会自动创建：
@@ -123,10 +139,10 @@ python manage.py init_data
 | 数据类型 | 创建内容 | 说明 |
 |---------|---------|------|
 | **默认菜单** | 权限管理、系统管理 | 包含子菜单：菜单/角色/用户、个人中心/操作日志/系统配置 |
-| **按钮权限** | 15 个权限项 | 每个菜单下的增删改查按钮级权限 |
+| **按钮权限** | 25 个权限项 | 菜单/角色/用户/配置/服务器/AI 的按钮级权限 |
 | **管理员角色** | `管理员` | 绑定所有菜单和按钮权限 |
 | **注册角色** | `注册用户` | 仅个人中心权限（前端注册用户默认绑定） |
-| **系统配置** | 8 个配置项 | system_name, logo_icon, logo_url, favicon_url 等 |
+| **系统配置** | 17 个配置项 | 系统信息、Logo、登录背景、首页卡片/链接、WebSSH、RBAC 策略等 |
 
 #### Step 4: 创建管理员账号
 
@@ -163,7 +179,7 @@ python manage.py runserver
 LAYUI_CONFIG = {
     # 系统信息
     'system_name': 'Django Layuix Admin',
-    'system_version': '1.4.0',         # 系统版本号（显示在侧边栏）
+    'system_version': '1.9.0',         # 系统版本号（显示在侧边栏）
     'system_description': '',          # 系统描述（显示在登录页）
 
     # Logo
@@ -181,30 +197,42 @@ LAYUI_CONFIG = {
 
     # 前端项目
     'frontend_url': '',                # 前端项目 URL（顶部"查看站点"按钮）
+    'webssh_url': '/webssh/',          # WebSSH 服务地址（服务器终端功能）
 
     # 版权信息
     'copyright': '',
-    
-    # 首页自定义快速链接
+
+    # 首页自定义快速链接（与 init_menu 落库默认值一致）
     'home_quick_links': [
-        {'name': '个人中心', 'icon': 'layui-icon-user', 'url': '/static/layui/pages/profile.html'},
-        {'name': '修改密码', 'icon': 'layui-icon-password', 'url': 'javascript:openChangePassword();'},
-        {'name': '操作日志', 'icon': 'layui-icon-log', 'url': '/static/layui/pages/log.html'},
-        {'name': '系统配置', 'icon': 'layui-icon-set', 'url': '/static/layui/pages/config.html'},
-        # 外部链接示例
-        # {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
-        # {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
-        # {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
-        # {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django-layuix'}
-        # {'name': '自定义页面', 'icon': 'layui-icon-app', 'url': '/custom-page/'},
+        {'name': 'Django官网', 'icon': 'layui-icon-website', 'url': 'https://www.djangoproject.com/'},
+        {'name': 'Layui文档', 'icon': 'layui-icon-template', 'url': 'https://www.layui.dev/'},
+        {'name': 'GitHub', 'icon': 'layui-icon-github', 'url': 'https://github.com/likangcai/django-layuix'},
+        {'name': 'Gitee', 'icon': 'layui-icon-gitee', 'url': 'https://gitee.com/yingzi_shadow/django-layuix'},
     ],
+
+    # 首页统计卡片（与 init_menu 落库默认值一致）
+    'home_stats_cards': [
+        {'title': '系统用户', 'icon': 'layui-icon-user', 'color': '#1E9FFF', 'api_field': 'user_count'},
+        {'title': '系统角色', 'icon': 'layui-icon-template-1', 'color': '#5FB878', 'api_field': 'role_count'},
+        {'title': '菜单数量', 'icon': 'layui-icon-app', 'color': '#FFB800', 'api_field': 'menu_count'},
+        {'title': '操作日志', 'icon': 'layui-icon-log', 'color': '#FF5722', 'api_field': 'log_count'},
+    ],
+
+    # Layui 2.13.9+：是否从表单提交取值中排除 disabled 字段
+    # 默认 false，保持项目历史行为
+    'form_filter_disabled': False,
 }
 
 # 可选：自定义 Layui CDN
-LAYUI_CDN = 'https://cdn.jsdelivr.net/npm/layui@2.13.7/dist/'
+LAYUI_CDN = 'https://cdn.jsdelivr.net/npm/layui@2.13.9/dist/'
 
 # 可选：自定义 Layui 版本
-LAYUI_VERSION = '2.13.7'
+LAYUI_VERSION = '2.13.9'
+
+# RBAC 策略（可被 SystemConfig 中同名键覆盖）
+LAYUI_RBAC_MAX_ROLES_PER_USER = 0          # 每用户最多角色数，0 不限
+LAYUI_RBAC_PREREQ_STRATEGY = 'auto_grant'  # auto_grant / reject
+LAYUI_RBAC_DSD_STRATEGY = 'greedy'         # greedy / explicit
 ```
 
 #### 4.2 操作日志配置（可选）
@@ -235,7 +263,7 @@ OPERATION_LOG = {
 
 **业务逻辑说明：**
 
-1. **默认值**：代码中定义的初始值（在 `init_menu` 命令中设置）
+1. **默认值**：`django_layuix/rbac/defaults.py` 中定义的初始值，由 `apps.py` 与 `init_menu` 共同引用
 2. **settings.py 配置**：开发者在项目中自定义的默认值
 3. **数据库配置**：通过后台界面动态修改的值（**最高优先级**）
 
@@ -269,12 +297,52 @@ value: '[{"name":"仪表盘","icon":"layui-icon-home","url":"/static/layui/pages
 | 配置键 | 说明 | 默认值 |
 |--------|------|--------|
 | `system_name` | 系统名称（标题栏 + 侧边栏） | Django Layuix Admin |
-| `system_version` | 版本号 | 1.4.0 |
+| `system_version` | 版本号 | 包版本（当前 1.9.0） |
+| `system_description` | 系统描述 | （空） |
 | `logo_icon` | 侧边栏 Logo 图标类名 | layui-icon-code-circle |
 | `logo_url` | 侧边栏 Logo 图片 URL | （空） |
 | `favicon_url` | 浏览器标签页图标 URL | （空） |
-| `frontend_url` | "查看站点"按钮跳转地址 | （空） |
 | `copyright` | 版权信息 | （空） |
+| `frontend_url` | "查看站点"按钮跳转地址 | （空） |
+| `webssh_url` | WebSSH 服务地址 | `/webssh/` |
+| `login_bg_type` | 登录背景类型 | gradient |
+| `login_bg_value` | 登录背景渐变/颜色值 | 深色渐变 |
+| `login_bg_image` | 登录背景图片 URL | （空） |
+| `home_stats_cards` | 首页统计卡片（JSON） | 用户/角色/菜单/日志 4 项 |
+| `home_quick_links` | 首页快捷链接（JSON） | Django/Layui/GitHub/Gitee 4 项 |
+| `rbac_max_roles_per_user` | 每用户最多角色数 | 0（不限） |
+| `rbac_prerequisite_strategy` | 前置角色策略 | auto_grant |
+| `rbac_dsd_strategy` | DSD 激活策略 | greedy |
+
+独立的 settings 变量（不写入 `sys_config`）：
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `LAYUI_CDN` | Layui 静态资源路径 | `/static/layui/lib/` |
+| `LAYUI_VERSION` | Layui 版本 | 2.13.9 |
+| `LAYUI_LANGUAGES` | 语言列表 | 简体中文 / English |
+| `LAYUI_CONFIG.form_filter_disabled` | 表单取值是否排除 disabled 字段 | False |
+| `LAYUI_RBAC_MAX_ROLES_PER_USER` | 每用户最多角色数（无 DB 配置时生效） | 0 |
+| `LAYUI_RBAC_PREREQ_STRATEGY` | 前置角色策略（无 DB 配置时生效） | auto_grant |
+| `LAYUI_RBAC_DSD_STRATEGY` | DSD 激活策略（无 DB 配置时生效） | greedy |
+| `LAYUI_RBAC_AUTHENTICATORS` | 自定义认证器导入路径 | `[]` |
+| `LAYUI_RBAC_ALLOW_UNREGISTERED_PERMISSIONS` | 是否允许未注册权限码（不推荐） | False |
+| `LAYUI_ALLOW_REGISTRATION` | 是否开放匿名注册接口 | False |
+| `LAYUIX_DISABLE_API_ORIGIN_GUARD` | 禁用管理 API 跨站来源防护（不推荐） | False |
+| `LAYUIX_API_ALLOWED_ORIGINS` | 管理 API 允许的来源主机白名单 | 未设置（使用 `ALLOWED_HOSTS`） |
+| `LAYUIX_API_PREFIXES` | 应用来源防护的管理 API 路径前缀 | `['/admin/api/']` |
+| `TOKEN_EXPIRE_SECONDS` | Token 有效期（秒） | 86400 |
+| `LAYUI_JWT_ISSUER` | JWT `iss` 声明 | `django-layuix` |
+| `LAYUIX_ALLOW_LEGACY_TOKEN` | 是否兼容升级前两段式 Token | True |
+| `LAYUIX_TOKEN_CACHE_PREFIX` | Token 状态缓存键前缀 | `layuix:auth:` |
+| `LAYUI_ALLOW_QUERY_TOKEN` | 是否允许普通 API 通过 `?token=` 传 Token（不推荐） | False |
+| `LAYUIX_SCOPE_HIERARCHY` | 数据作用域层级 | `[]` |
+| `LAYUIX_SCOPE_TREE` | 数据作用域节点树 | `{}` |
+| `OPERATION_LOG` | 操作日志前缀/忽略/排除规则 | 见 4.2 节 |
+| `LAYUI_AI_*` | AI 日志分析配置 | 见 4.6 节 |
+| `DJANGO_LAYUIX_THEMES` | 自定义主题定义 | 内置主题 |
+
+ABAC 策略、组织节点、插件状态和前端 SDK 权限数据分别持久化在各自数据库表中，不属于 `sys_config` 项。
 
 支持的配置类型：字符串、整数、布尔、JSON、URL、图片、颜色、文本。
 
@@ -795,17 +863,52 @@ django_layuix/templates/admin/change_form.html → 模型编辑页
 ```bash
 python manage.py rename_app_labels
 python manage.py migrate
+python manage.py init_menu
 python manage.py collectstatic --noinput
 ```
 
 该命令会同步更新 `django_migrations.app` 与 `django_content_type.app_label`，不会修改业务数据表。
 
+## 数据权限（1.4.2+，可选）
+
+业务模型只需声明 `SCOPE_FIELD` 并继承 `ScopedModelMixin`，即可按用户角色的 `scope_node/scope_depth` 过滤数据：
+
+```python
+from django.db import models
+from django_layuix.rbac.scopes import ScopedModelMixin
+
+
+class Order(ScopedModelMixin, models.Model):
+    SCOPE_FIELD = 'owner'
+    owner = models.CharField(max_length=100)
+    title = models.CharField(max_length=100)
+```
+
+```python
+orders = Order.objects.for_user(request.user)
+```
+
+未配置 `scope_node` 或未声明 `SCOPE_FIELD` 时，`for_user()` 返回原始查询集，行为与旧版本一致。
+
+可选层级配置：
+
+```python
+LAYUIX_SCOPE_HIERARCHY = ['global', 'region', 'team']
+LAYUIX_SCOPE_TREE = {
+    'east_region': ['east_team_a', 'east_team_b'],
+}
+```
+
+详细说明见 [权限升级说明](docs/PERMISSION_UPGRADE_1_4_1.md)。
+
 ## 管理命令
 
 | 命令 | 说明 |
 |------|------|
-| `python manage.py init_menu` | 初始化默认菜单、角色和系统配置 |
+| `python manage.py init_menu` | 初始化默认菜单、角色和系统配置，并自动同步系统版本号 |
 | `python manage.py init_data` | 快速初始化：创建超级管理员、内置角色、完整菜单树（含运维管理） |
+| `python manage.py init_demo_data` | 初始化演示应用的分类/商品/订单示例数据 |
+| `python manage.py init_permission_demo` | 一键初始化角色继承、SSD、Scope、组织节点、ABAC 与 demo app 示例数据 |
 | `python manage.py rename_app_labels` | 升级旧库：把 `django_layui_rbac/ops` 应用标签迁移为 `django_layuix_rbac/ops` |
 
 ### init_data 命令详解
@@ -893,7 +996,7 @@ django-layuix 支持中英文双语，分两层实现：
 
 ### 深色/浅色模式切换
 
-> **版本**: 1.0.3+ | **更新**: 2026-05-07
+> **版本**: 1.4.2+ | **更新**: 2026-11-24
 
 django-layuix 内置深色/浅色双模式切换功能：
 
@@ -920,8 +1023,9 @@ django-layuix 内置深色/浅色双模式切换功能：
 ## 环境要求
 
 - **Python**：3.8–3.13（CI 实际验证 3.10–3.13；3.8/3.9 已通过语法与 API 审计）
-- **Django**：3.2–6.0，需按 Python 版本选择兼容组合
+- **Django**：4.2–6.0，需按 Python 版本选择兼容组合
 - 推荐组合：Python 3.12 + Django 5.2/6.0；旧环境建议 Python 3.8/3.9 + Django 4.2 LTS
+- 核心依赖：`Django>=4.2`、`psutil>=5.9.0`、`Pillow>=9.0.0`（头像 `ImageField` 需要）
 
 完整矩阵与兼容处理见 [COMPATIBILITY.md](docs/COMPATIBILITY.md)。
 
@@ -958,13 +1062,19 @@ django-layuix 内置深色/浅色双模式切换功能：
 
 ## 四、详细文档索引
 
-更多详细使用指南和最佳实践，请参考 `docs/` 目录下的文档：
+更多详细使用指南和最佳实践，请参考 `docs/` 目录下的文档。当前有效文档与历史归档说明见 [文档索引](docs/DOCS_INDEX.md)。
 
 ### 核心功能
 - [首页自定义快速链接配置](docs/HOME_QUICK_LINKS_GUIDE.md) - 仪表盘的快速入口配置
 - [菜单扩展指南](docs/MENU_EXTENSION_GUIDE.md) - 如何添加自定义应用菜单
 - [权限系统使用指南](docs/PERMISSION_SYSTEM_GUIDE.md) - RBAC 权限管理、字段说明、实战示例
 - [RBAC3 权限体系使用指南](docs/RBAC3_GUIDE.md) - 角色继承、SSD/DSD 约束、前置角色与后端强制鉴权
+- [新增功能快速上手示例](docs/NEW_FEATURES_QUICKSTART.md) - 角色继承、SSD、Scope、组织节点、ABAC、SDK 的最小可运行示例
+- [权限示例应用](example/permission_demo/README.md) - 可复制的业务模型、API、菜单与 Layui 页面示例
+- [权限系统升级说明](docs/PERMISSION_UPGRADE_1_4_1.md) - SoD 兼容契约、数据权限 Scope、ABAC 与组织节点
+- [前端权限 SDK 使用指南](docs/FRONTEND_SDK_GUIDE.md) - Vue/React 适配器、统一权限端点与 ABAC 调用
+- [ABAC 表达式权限使用指南](docs/ABAC_GUIDE.md) - 策略语法、行级/字段级过滤与调试示例
+- [前端组件与设计 Token 规范](docs/FRONTEND_COMPONENT_GUIDE.md) - 按钮、查询区、列表分页与弹窗统一规范
 - [纯跨域 Token 认证指南](docs/TOKEN_AUTH_GUIDE.md) - Bearer Token 接入与分离前端对接
 - [认证与权限桥接指南](docs/INTEGRATION_GUIDE.md) - 通用认证桥接、DRF 适配器与 TestHub 对接
 - [插件化扩展契约](docs/PLUGIN_GUIDE.md) - 插件注册、菜单与 API 扩展
@@ -985,7 +1095,7 @@ django-layuix 内置深色/浅色双模式切换功能：
 
 ## 🆘 常见问题与故障排查
 
-本章节汇总了用户在使用 django-layuix 时遇到的**高频问题**及解决方案。如果您遇到的问题未在此列出，请 [提交 Issue](https://github.com/likangcai/django-layuix/issues)。
+本章节汇总了用户在使用 django-layuix 时遇到的**高频问题**及解决方案。如果您遇到的问题未在此列出，请通过 [GitHub Issues](https://github.com/likangcai/django-layuix/issues) 或 [Gitee Issues](https://gitee.com/yingzi_shadow/django-layuix/issues) 提交。
 
 ---
 
@@ -1236,10 +1346,12 @@ python manage.py init_menu
 # ✅ 创建角色: 注册用户 (仅个人中心权限)
 # ✅ 创建系统配置: system_name, logo_icon, ...
 
-# 默认管理员账号
+# 默认管理员账号（仅 init_data 首次创建时生效）
 # 用户名: admin
 # 密码: admin123
 ```
+
+> 如果已有数据库修改过 admin 密码，可用 `python manage.py changepassword admin` 重置；运行 `example/test_api.py` 时可通过 `DEMO_ADMIN_USERNAME` / `DEMO_ADMIN_PASSWORD` 环境变量指定凭据。
 
 **如果 init_menu 命令不存在**:
 ```bash
@@ -1359,7 +1471,7 @@ python manage.py runserver
 如果以上方法都无法解决您的问题：
 
 1. **查看详细文档**: `docs/` 目录下的各专题指南
-2. **搜索已知 Issues**: [GitHub Issues](https://github.com/likangcai/django-layuix/issues)
+2. **搜索已知 Issues**: [GitHub Issues](https://github.com/likangcai/django-layuix/issues) / [Gitee Issues](https://gitee.com/yingzi_shadow/django-layuix/issues)
 3. **提交新 Issue**: 请包含以下信息：
    - Django 版本 (`python -c "import django; print(django.VERSION)"`)
    - django-layuix 版本 (`pip show django-layuix`)

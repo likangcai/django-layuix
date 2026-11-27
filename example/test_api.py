@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : test_api.py
+# -----------------------------
 """测试 store API"""
 import django, os, sys
 
@@ -14,18 +20,22 @@ print(f"Users count: {User.objects.count()}")
 for u in User.objects.all():
     print(f"  User: {u.username}, superuser={u.is_superuser}")
 
-# Try login with Client
+# 使用 Client 尝试登录。本地数据库账号不同可通过 DEMO_ADMIN_USERNAME / DEMO_ADMIN_PASSWORD 覆盖
+# 覆盖本地数据库使用的不同凭据。
+username = os.getenv('DEMO_ADMIN_USERNAME', 'admin')
+password = os.getenv('DEMO_ADMIN_PASSWORD', 'admin123')
+
 c = Client()
-resp = c.post('/admin/api/rbac/login/', json.dumps({'username': 'admin', 'password': 'admin'}),
+resp = c.post('/admin/api/rbac/login/', json.dumps({'username': username, 'password': password}),
               content_type='application/json')
-print(f"Login admin/admin: {resp.status_code} {resp.json()}")
+print(f"Login {username}/***: {resp.status_code} {resp.json()}")
 
 # If that doesn't work, try direct
 if resp.status_code != 200:
-    resp2 = c.post('/admin/login/', {'username': 'admin', 'password': 'admin', 'csrfmiddlewaretoken': ''})
+    resp2 = c.post('/admin/login/', {'username': username, 'password': password, 'csrfmiddlewaretoken': ''})
     print(f"Django login: {resp2.status_code}")
 
-# Test categories API
+# 测试分类 API
 resp3 = c.get('/admin/api/store/categories/')
 print(f"Categories API: {resp3.status_code}")
 if resp3.status_code == 200:

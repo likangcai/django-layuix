@@ -1,7 +1,15 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : layui_tags.py
+# -----------------------------
 from django import template
 from django.conf import settings
 
 from datetime import datetime
+
+import django_layuix
 
 register = template.Library()
 
@@ -25,104 +33,104 @@ def _get_db_config(key, default=''):
 
 @register.simple_tag
 def layui_config(key, default=''):
-    """Get configuration value: database first, settings second, default last."""
+    """获取配置值：优先数据库，其次 settings，最后使用默认值。"""
     return _get_db_config(key, default)
 
 
 @register.simple_tag
 def layui_version():
-    """Return layui version"""
-    return getattr(settings, 'LAYUI_VERSION', '2.13.5')
+    """返回 Layui 版本。"""
+    return getattr(settings, 'LAYUI_VERSION', '2.13.9')
 
 
 @register.simple_tag
 def layui_cdn():
-    """Return layui resource URL (defaults to local bundled files)"""
+    """返回 Layui 资源地址（默认使用本地内置文件）。"""
     return getattr(settings, 'LAYUI_CDN', '/static/layui/lib/')
 
 
 @register.simple_tag
 def system_name():
-    """Return system name from config (database first, settings fallback)"""
+    """从配置返回系统名称（优先数据库，settings 回退）。"""
     return _get_db_config('system_name', 'Django Layuix Admin')
 
 
 @register.simple_tag
 def static_version():
-    """Return static resource version string for cache busting"""
+    """返回用于缓存刷新的静态资源版本号。"""
     return _STATIC_VERSION
 
 
 @register.simple_tag
 def system_version():
-    """Return system version"""
-    return _get_db_config('system_version', '1.4.0')
+    """返回系统版本。"""
+    return _get_db_config('system_version', django_layuix.__version__)
 
 
 @register.simple_tag
 def system_description():
-    """Return system description"""
+    """返回系统描述。"""
     return _get_db_config('system_description', '')
 
 
 @register.simple_tag
 def frontend_url():
-    """Return frontend URL"""
+    """返回前端站点地址。"""
     return _get_db_config('frontend_url', '')
 
 
 @register.simple_tag
 def logo_url():
-    """Return logo URL"""
+    """返回 Logo 地址。"""
     return _get_db_config('logo_url', '')
 
 
 @register.simple_tag
 def logo_icon():
-    """Return logo icon class"""
+    """返回 Logo 图标类名。"""
     return _get_db_config('logo_icon', 'layui-icon-code-circle')
 
 
 @register.simple_tag
 def favicon_url():
-    """Return favicon URL"""
+    """返回 Favicon 地址。"""
     return _get_db_config('favicon_url', '')
 
 
 @register.simple_tag
 def login_bg_type():
-    """Return login background type"""
+    """返回登录背景类型。"""
     return _get_db_config('login_bg_type', 'gradient')
 
 
 @register.simple_tag
 def login_bg_value():
-    """Return login background value"""
+    """返回登录背景值。"""
     return _get_db_config('login_bg_value', 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)')
 
 
 @register.simple_tag
 def login_bg_image():
-    """Return login background image URL"""
+    """返回登录背景图片地址。"""
     return _get_db_config('login_bg_image', '')
 
 
 @register.simple_tag
 def copyright_text():
-    """Return copyright text"""
+    """返回版权文本。"""
     return _get_db_config('copyright', '')
 
 
 @register.simple_tag
 def supported_languages():
-    """Return supported languages"""
+    """返回支持的语言。"""
     return getattr(settings, 'LAYUI_LANGUAGES',
                    [('zh-hans', '简体中文'), ('en', 'English')])
 
 
 @register.simple_tag
 def webssh_url():
-    """Return webssh service URL"""
+    """返回 WebSSH 服务地址。"""
     # 优先从数据库读取（系统配置）
     try:
         from django_layuix.rbac.models import SystemConfig

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : middleware.py
+# -----------------------------
 """
 OperationLogMiddleware - 自动记录 API 操作日志
 支持通过 Django settings 配置需要记录的路径前缀
@@ -6,8 +11,10 @@ OperationLogMiddleware - 自动记录 API 操作日志
 import json
 import logging
 import re
+from urllib.parse import urlsplit
 
 from django.conf import settings
+from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +56,23 @@ MODULE_NAME_MAP = {
     'profile': '个人中心',
     'set-language': '语言切换',
     'set-default': '默认设置',
+    'departments': '部门',
+    'positions': '岗位',
+    'regions': '地区',
+    'member-levels': '会员等级',
+    'dictionaries': '数据字典',
+    'dictionary-items': '数据字典',
+    'permission-catalog': '权限目录',
+    'scope-nodes': '数据范围',
+    'abac-policies': 'ABAC策略',
+    'constraints': '约束管理',
+    'sod-constraints': '约束管理',
+    'plugins': '插件管理',
+    'active-roles': '角色管理',
+    'data-batch-delete': '批量删除',
+    'data-batch-status': '批量状态',
+    'position-assignments': '岗位分配',
+    'token': '令牌',
 }
 
 
@@ -234,6 +258,114 @@ class OperationLogMiddleware:
             )
         except Exception as e:
             logger.warning(f'Failed to record operation log: {e}')
+
+
+class ApiOriginGuardMiddleware:
+    """拒绝使用会话 Cookie 的跨源浏览器写请求访问后台 API。许多 API 为 Bearer Token 客户端设置了 ``csrf_exempt``；本中间件通过检查 Origin/Referer 补齐会话认证下的不安全请求防护，令牌认证请求不受影响。"""
+
+    SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS', 'TRACE')
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if (
+            request.method in self.SAFE_METHODS
+            or not self._is_api_path(request.path)
+            or getattr(settings, 'LAYUIX_DISABLE_API_ORIGIN_GUARD', False)
+        ):
+            return self.get_response(request)
+
+        public_write = self._is_public_api_path(request.path)
+        session_recovery = self._is_session_recovery_path(request.path)
+        if getattr(settings, 'LAYUIX_REQUIRE_TOKEN_FOR_WRITES', True) and not public_write and not session_recovery:
+            if not self._has_header_token(request):
+                return JsonResponse({'code': 401, 'msg': 'Token required for write operations'}, status=401)
+            if not self._is_valid_token_request(request):
+                return JsonResponse({'code': 401, 'msg': 'Invalid token'}, status=401)
+
+        if self._is_valid_token_request(request):
+            return self.get_response(request)
+
+        source = request.META.get('HTTP_ORIGIN') or request.META.get('HTTP_REFERER')
+        if not source:
+            if self._is_public_api_path(request.path):
+                return self.get_response(request)
+            return JsonResponse({'code': 403, 'msg': 'Origin or Referer is required'}, status=403)
+
+        try:
+            source_host = (urlsplit(source).netloc or '').lower()
+        except ValueError:
+            source_host = ''
+        if not source_host or not self._host_allowed(source_host, request):
+            return JsonResponse({'code': 403, 'msg': 'Cross-origin request blocked'}, status=403)
+        return self.get_response(request)
+
+    def _is_api_path(self, path):
+        prefixes = getattr(settings, 'LAYUIX_API_PREFIXES', ['/admin/api/'])
+        return any(str(prefix) and path.startswith(str(prefix)) for prefix in prefixes or [])
+
+    def _is_public_api_path(self, path):
+        public_paths = getattr(settings, 'LAYUIX_PUBLIC_API_PATHS', None)
+        if public_paths is None:
+            prefixes = getattr(settings, 'LAYUIX_API_PREFIXES', ['/admin/api/'])
+            public_paths = [
+                str(prefix).rstrip('/') + '/rbac/login/'
+                for prefix in prefixes
+            ] + [
+                str(prefix).rstrip('/') + '/rbac/register/'
+                for prefix in prefixes
+            ]
+        return any(str(item) and path == str(item) for item in public_paths or [])
+
+    def _is_session_recovery_path(self, path):
+        """会话恢复相关写接口：允许无 Token，但仍受同源 Origin/Referer 校验。"""
+        prefixes = getattr(settings, 'LAYUIX_API_PREFIXES', ['/admin/api/'])
+        suffixes = ('/rbac/token/issue/', '/rbac/logout/')
+        return any(
+            any(str(prefix).rstrip('/') + suffix == path for suffix in suffixes)
+            for prefix in prefixes or []
+        )
+
+    def _has_header_token(self, request):
+        authorization = str(request.META.get('HTTP_AUTHORIZATION') or '').strip()
+        if authorization[:7].lower() == 'bearer ' and authorization[7:].strip():
+            return True
+        return bool(str(request.META.get('HTTP_X_TOKEN') or '').strip())
+
+    def _is_valid_token_request(self, request):
+        try:
+            from .token_auth import token_authenticate
+
+            user = token_authenticate(request)
+            return bool(user and getattr(user, 'is_authenticated', False))
+        except Exception:
+            return False
+
+    def _normalize_host(self, value):
+        host = str(value or '').strip().lower()
+        if '://' in host:
+            host = urlsplit(host).netloc
+        return host.split('/')[0]
+
+    def _host_allowed(self, source_host, request):
+        hosts = {self._normalize_host(request.get_host())}
+        configured = getattr(settings, 'LAYUIX_API_ALLOWED_ORIGINS', None)
+        if configured is None:
+            configured = [
+                host for host in getattr(settings, 'ALLOWED_HOSTS', [])
+                if host and host != '*'
+            ]
+        for host in configured or []:
+            normalized = self._normalize_host(host)
+            if normalized:
+                hosts.add(normalized)
+        for host in hosts:
+            if source_host == host:
+                return True
+            if host.startswith('*.') and source_host.endswith(host[1:]):
+                return True
+        return False
 
 
 class RbacSessionMiddleware:

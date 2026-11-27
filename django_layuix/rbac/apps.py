@@ -1,5 +1,13 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : apps.py
+# -----------------------------
 import os
 from django.apps import AppConfig
+
+from .defaults import get_default_configs
 
 
 _REGISTERED = False
@@ -21,30 +29,52 @@ class RbacConfig(AppConfig):
         self._register_api_urls()
         self._register_operation_log_middleware()
         self._register_rbac_session_middleware()
+        self._register_api_origin_guard_middleware()
+        from django.db.models.signals import post_migrate
+
+        post_migrate.connect(
+            self._on_post_migrate,
+            sender=self,
+            dispatch_uid='django_layuix.rbac.ensure_default_configs',
+        )
+
+    def _on_post_migrate(self, sender, **kwargs):
         self._ensure_default_configs()
 
     def _ensure_base_app_registered(self):
-        """Ensure 'django_layuix' is in INSTALLED_APPS for templatetags and static files"""
+        """确保 INSTALLED_APPS 中包含 django_layuix，以加载模板标签和静态文件。"""
         from django.conf import settings
+
+        # 配置可能使用元组；修改前先归一化为可变列表。
+        for attr in ('INSTALLED_APPS', 'MIDDLEWARE'):
+            try:
+                current = getattr(settings, attr)
+                if not isinstance(current, list):
+                    setattr(settings, attr, list(current or []))
+            except Exception:
+                pass
 
         if 'django_layuix' not in settings.INSTALLED_APPS:
             settings.INSTALLED_APPS.insert(0, 'django_layuix')
 
-        # Set default language to Chinese if not configured
-        if not getattr(settings, 'LANGUAGE_CODE', '').startswith('zh'):
+        # Only provide a Chinese default when Django's built-in default is still in place.
+        # 已显式配置的语言（包括英文）保持不变。
+        if getattr(settings, 'LANGUAGE_CODE', 'en-us') == 'en-us':
             settings.LANGUAGE_CODE = 'zh-hans'
-            settings.USE_I18N = True
+        settings.USE_I18N = True
 
-        # Fix CSRF cookie for iframe/embedded environments
+        # 修复 iframe/嵌入环境下的 CSRF Cookie
+        # Keep Django's default cookie behavior for normal HTTP deployments.
+        # 跨域 API 客户端应使用 Bearer Token，而不是会话 Cookie。
         if getattr(settings, 'CSRF_COOKIE_SAMESITE', 'Lax') != 'None':
             settings.CSRF_COOKIE_SAMESITE = None
         if getattr(settings, 'SESSION_COOKIE_SAMESITE', 'Lax') != 'None':
             settings.SESSION_COOKIE_SAMESITE = None
 
-        # Ensure LocaleMiddleware is present for i18n support
+        # 确保已加载 LocaleMiddleware 以支持国际化
         locale_middleware = 'django.middleware.locale.LocaleMiddleware'
         if locale_middleware not in settings.MIDDLEWARE:
-            # Insert after SessionMiddleware, before CommonMiddleware
+            # 插入到 SessionMiddleware 之后、CommonMiddleware 之前
             session_idx = None
             for i, m in enumerate(settings.MIDDLEWARE):
                 if 'SessionMiddleware' in m:
@@ -55,22 +85,22 @@ class RbacConfig(AppConfig):
             else:
                 settings.MIDDLEWARE.insert(0, locale_middleware)
 
-        # Ensure CsrfViewMiddleware is after LocaleMiddleware
+        # 确保 CsrfViewMiddleware 位于 LocaleMiddleware 之后
         csrf_middleware = 'django.middleware.csrf.CsrfViewMiddleware'
         if csrf_middleware in settings.MIDDLEWARE:
             settings.MIDDLEWARE.remove(csrf_middleware)
-            # Insert after LocaleMiddleware
+            # 插入到 LocaleMiddleware 之后
             locale_idx = settings.MIDDLEWARE.index(locale_middleware) if locale_middleware in settings.MIDDLEWARE else 0
             settings.MIDDLEWARE.insert(locale_idx + 1, csrf_middleware)
 
-        # Manually register templatetags (too late for auto-discovery)
+        # 手动注册模板标签（已错过自动发现时机）
         self._register_templatetag_library('django_layuix.templatetags.layui_tags', 'layui_tags')
 
-        # Manually register static files finder (too late for auto-discovery)
+        # 手动注册静态文件查找器（已错过自动发现时机）
         self._register_static_files()
 
     def _register_templatetag_library(self, module_path, tag_name):
-        """Manually register a templatetag library"""
+        """手动注册模板标签库。"""
         try:
             from django.template.backends.django import DjangoTemplates
             from django.template.library import import_library
@@ -78,14 +108,14 @@ class RbacConfig(AppConfig):
             for engine in _engines.all():
                 if isinstance(engine, DjangoTemplates):
                     engine.engine.libraries[tag_name] = module_path
-                    # Also register in template_libraries (Django pre-loads these at init)
+                    # 同时注册到 template_libraries（Django 初始化时会预加载）
                     if hasattr(engine.engine, 'template_libraries'):
                         engine.engine.template_libraries[tag_name] = import_library(module_path)
         except Exception:
             pass
 
     def _register_static_files(self):
-        """Manually register django_layuix's static files directory"""
+        """手动注册 django_layuix 静态文件目录。"""
         try:
             import django_layuix
             base_dir = os.path.dirname(django_layuix.__file__)
@@ -93,7 +123,7 @@ class RbacConfig(AppConfig):
             if not os.path.isdir(static_dir):
                 return
 
-            # Method 1: Add to STATICFILES_DIRS
+            # 方式一：添加到 STATICFILES_DIRS
             from django.conf import settings
             staticfiles_dirs = list(getattr(settings, 'STATICFILES_DIRS', []))
             already_in_dirs = any(static_dir in d for d in staticfiles_dirs if isinstance(d, str))
@@ -101,7 +131,7 @@ class RbacConfig(AppConfig):
                 staticfiles_dirs.insert(0, static_dir)
                 settings.STATICFILES_DIRS = staticfiles_dirs
 
-            # Method 2: Patch AppDirectoriesFinder instances
+            # 方式二：修补 AppDirectoriesFinder 实例
             from django.contrib.staticfiles.finders import get_finder
             finder = get_finder('django.contrib.staticfiles.finders.AppDirectoriesFinder')
             if hasattr(finder, 'storages') and 'django_layuix' not in finder.storages:
@@ -112,7 +142,7 @@ class RbacConfig(AppConfig):
             pass
 
     def _register_template_dirs(self):
-        """Ensure django_layuix templates override Django admin templates"""
+        """确保 django_layuix 模板覆盖 Django admin 模板。"""
         from django.conf import settings
 
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -121,13 +151,13 @@ class RbacConfig(AppConfig):
         if not os.path.isdir(templates_dir):
             return
 
-        # Add to TEMPLATES DIRS setting
+        # 添加到 TEMPLATES 的 DIRS 配置
         if settings.TEMPLATES:
             dirs = list(settings.TEMPLATES[0].get('DIRS', []))
             if templates_dir not in dirs:
                 settings.TEMPLATES[0]['DIRS'] = dirs + [templates_dir]
 
-        # Patch engine.dirs to ensure filesystem loader uses our templates dir
+        # 修补 engine.dirs，确保文件系统加载器使用本项目的模板目录
         try:
             from django.template import engines
             for engine in engines.all():
@@ -139,7 +169,7 @@ class RbacConfig(AppConfig):
             pass
 
     def _register_api_urls(self):
-        """Register RBAC and Ops API URLs under Django admin"""
+        """在 Django admin 下注册 RBAC 与运维 API 路由。"""
         from django.contrib.admin import site
         from django.urls import path, include
         from . import urls as rbac_urls
@@ -163,48 +193,40 @@ class RbacConfig(AppConfig):
         site.get_urls = patched_get_urls
 
     def _register_operation_log_middleware(self):
-        """Register OperationLogMiddleware into Django MIDDLEWARE list"""
+        """将 OperationLogMiddleware 注册到 Django MIDDLEWARE 列表。"""
         from django.conf import settings
 
         middleware_path = 'django_layuix.rbac.middleware.OperationLogMiddleware'
         if middleware_path not in settings.MIDDLEWARE:
-            # Insert after the last middleware (at the end of the list)
+            # 插入到最后一个中间件之后（列表末尾）
             settings.MIDDLEWARE.append(middleware_path)
 
     def _register_rbac_session_middleware(self):
-        """Register RBAC session middleware after Django authentication."""
+        """在 Django 认证中间件之后注册 RBAC 会话中间件。"""
         from django.conf import settings
 
         middleware_path = 'django_layuix.rbac.middleware.RbacSessionMiddleware'
         if middleware_path not in settings.MIDDLEWARE:
             settings.MIDDLEWARE.append(middleware_path)
 
+    def _register_api_origin_guard_middleware(self):
+        from django.conf import settings
+
+        middleware_path = 'django_layuix.rbac.middleware.ApiOriginGuardMiddleware'
+        if middleware_path not in settings.MIDDLEWARE:
+            settings.MIDDLEWARE.insert(0, middleware_path)
+
     def _ensure_default_configs(self):
-        """Ensure default system configs exist in database"""
+        """确保数据库中存在默认系统配置。"""
         try:
             from .models import SystemConfig
-            # Check if table exists first to avoid errors during initial migrations
+            # 首次迁移时先检查表是否存在，避免报错
             from django.db import connection
             table_exists = 'sys_config' in connection.introspection.table_names()
             if not table_exists:
                 return
             
-            default_configs = [
-                {'key': 'system_name', 'value': 'Django Layuix Admin', 'description': '系统名称', 'config_type': 'string', 'sort': 1},
-                {'key': 'system_version', 'value': '1.4.0', 'description': '系统版本号', 'config_type': 'string', 'sort': 2},
-                {'key': 'system_description', 'value': '', 'description': '系统描述（显示在管理后台底部）', 'config_type': 'text', 'sort': 3},
-                {'key': 'logo_icon', 'value': 'layui-icon-code-circle', 'description': 'Logo图标（layui-icon类名）', 'config_type': 'string', 'sort': 4},
-                {'key': 'logo_url', 'value': '', 'description': 'Logo图片URL（优先于图标）', 'config_type': 'image', 'sort': 5},
-                {'key': 'favicon_url', 'value': '', 'description': '网站图标URL', 'config_type': 'image', 'sort': 6},
-                {'key': 'copyright', 'value': 'Yingzi © 2026 Django Layuix Admin', 'description': '版权信息', 'config_type': 'string', 'sort': 7},
-                {'key': 'frontend_url', 'value': '', 'description': '前端项目地址', 'config_type': 'string', 'sort': 8},
-                {'key': 'login_bg_type', 'value': 'gradient', 'description': '登录页背景类型：gradient(渐变)/color(纯色)/image(图片)', 'config_type': 'string', 'sort': 9},
-                {'key': 'login_bg_value', 'value': 'linear-gradient(135deg, #2d3a4b 0%, #1a1a2e 100%)', 'description': '登录页背景渐变/颜色值', 'config_type': 'color', 'sort': 10},
-                {'key': 'login_bg_image', 'value': '', 'description': '登录页背景图片URL（当login_bg_type为image时生效）', 'config_type': 'image', 'sort': 11},
-                {'key': 'rbac_max_roles_per_user', 'value': '0', 'description': 'RBAC2：每个用户最多可分配角色数，0表示不限', 'config_type': 'integer', 'sort': 12},
-                {'key': 'rbac_prerequisite_strategy', 'value': 'auto_grant', 'description': 'RBAC4：前置角色策略 auto_grant/reject', 'config_type': 'string', 'sort': 13},
-                {'key': 'rbac_dsd_strategy', 'value': 'greedy', 'description': 'RBAC4：DSD 激活策略 greedy/explicit', 'config_type': 'string', 'sort': 14},
-            ]
+            default_configs = get_default_configs()
             existing_keys = set(SystemConfig.objects.values_list('key', flat=True))
             for cfg in default_configs:
                 if cfg['key'] not in existing_keys:

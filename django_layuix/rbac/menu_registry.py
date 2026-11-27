@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : menu_registry.py
+# -----------------------------
+import logging
+
+logger = logging.getLogger(__name__)
+
 """
 django-layuix 菜单注册工具
 允许外部应用动态注册菜单，无需修改库源码
@@ -219,20 +228,33 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
                 # 如果父菜单在当前批次中已创建
                 parent = created.get(parent_name)
         
-        menu, is_new = Menu.objects.get_or_create(
-            name=name,
-            defaults={
-                'icon': icon,
-                'path': path,
-                'menu_type': menu_type,
-                'sort': sort,
-                'parent': parent,
-                'status': True,
-                'visible': True,
-                'plugin_key': plugin_key,
-            }
+        defaults = {
+            'icon': icon,
+            'path': path,
+            'menu_type': menu_type,
+            'sort': sort,
+            'parent': parent,
+            'status': True,
+            'visible': True,
+            'plugin_key': plugin_key,
+        }
+        menu, is_new = Menu.objects.get_or_create(name=name, defaults=defaults)
+        foreign_owned = bool(
+            plugin_key and not is_new and menu.plugin_key and menu.plugin_key != plugin_key
         )
-        if plugin_key and menu.plugin_key != plugin_key:
+        owned_by_plugin = bool(plugin_key and menu.plugin_key == plugin_key)
+        if foreign_owned:
+            logger.warning('Menu %s is owned by plugin %s; skip registration from %s',
+                           name, menu.plugin_key, plugin_key)
+        elif not is_new and (not skip_existing or owned_by_plugin):
+            changed = False
+            for field, value in defaults.items():
+                if getattr(menu, field) != value:
+                    setattr(menu, field, value)
+                    changed = True
+            if changed:
+                menu.save()
+        elif plugin_key and not menu.plugin_key:
             menu.plugin_key = plugin_key
             menu.save(update_fields=['plugin_key'])
         created[name] = menu
@@ -261,22 +283,35 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
             if not parent_menu:
                 continue
             
-            btn, is_new = Menu.objects.get_or_create(
-                name=btn_name,
-                defaults={
-                    'parent': parent_menu,
-                    'icon': '',
-                    'path': '',
-                    'component': '',
-                    'menu_type': 3,
-                    'permission': permission,
-                    'sort': sort,
-                    'status': True,
-                    'visible': True,
-                    'plugin_key': plugin_key,
-                }
+            defaults = {
+                'parent': parent_menu,
+                'icon': '',
+                'path': '',
+                'component': '',
+                'menu_type': 3,
+                'permission': permission,
+                'sort': sort,
+                'status': True,
+                'visible': True,
+                'plugin_key': plugin_key,
+            }
+            btn, is_new = Menu.objects.get_or_create(name=btn_name, defaults=defaults)
+            foreign_owned = bool(
+                plugin_key and not is_new and btn.plugin_key and btn.plugin_key != plugin_key
             )
-            if plugin_key and btn.plugin_key != plugin_key:
+            owned_by_plugin = bool(plugin_key and btn.plugin_key == plugin_key)
+            if foreign_owned:
+                logger.warning('Button %s is owned by plugin %s; skip registration from %s',
+                               btn_name, btn.plugin_key, plugin_key)
+            elif not is_new and (not skip_existing or owned_by_plugin):
+                changed = False
+                for field, value in defaults.items():
+                    if getattr(btn, field) != value:
+                        setattr(btn, field, value)
+                        changed = True
+                if changed:
+                    btn.save()
+            elif plugin_key and not btn.plugin_key:
                 btn.plugin_key = plugin_key
                 btn.save(update_fields=['plugin_key'])
 
@@ -285,6 +320,27 @@ def register_menus(menus_data, buttons_data=None, skip_existing=False, plugin_ke
                 admin_role = Role.objects.filter(code='admin').first()
                 if admin_role:
                     admin_role.menus.add(btn)
+
+
+def unregister_plugin_menus(plugin_key):
+    """删除插件声明的全部菜单和按钮。"""
+    if not plugin_key:
+        return
+    from django_layuix.rbac.models import Menu
+
+    roots = list(Menu.objects.filter(plugin_key=plugin_key))
+    ids = {menu.id for menu in roots}
+    frontier = list(roots)
+    max_depth = 32
+    for _ in range(max_depth):
+        if not frontier:
+            break
+        children = list(Menu.objects.filter(parent__in=frontier).exclude(id__in=ids))
+        if not children:
+            break
+        ids.update(child.id for child in children)
+        frontier = children
+    Menu.objects.filter(id__in=ids).delete()
 
 
 def unregister_menus(menu_names):

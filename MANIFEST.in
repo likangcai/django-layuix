@@ -4,3 +4,5 @@ include LICENSE
 recursive-include django_layuix/static *
 recursive-include django_layuix/templates *
 recursive-include django_layuix/locale *
+recursive-include django_layuix/rbac/data *.json *.gz
+recursive-include scripts *.py *.md

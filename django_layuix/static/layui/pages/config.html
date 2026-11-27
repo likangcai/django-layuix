@@ -1,17 +1,18 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>系统配置 - 软件测试管理后台</title>
+    <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130i">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
             try {
                 if (window.parent && window.parent.document) {
-                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'dark';
+                    themeMode = window.parent.document.documentElement.getAttribute('data-theme-mode') || 'light';
                 }
             } catch(e) {}
             document.documentElement.setAttribute('data-theme-mode', themeMode);
@@ -124,7 +125,7 @@
                 <!-- color类型 -->
                 <div id="valueInputColor" style="display:none;">
                     <div style="display:flex;align-items:center;gap:10px;">
-                        <input type="color" id="colorPicker" value="#1e9fff" style="width:50px;height:36px;border:1px solid var(--border-color);border-radius:4px;cursor:pointer;padding:2px;">
+                        <input type="color" id="colorPicker" value="#1e9fff" style="height:36px;border:1px solid var(--border-color);border-radius:4px;cursor:pointer;padding:2px" class="w-50">
                         <input type="text" name="value_color" placeholder="{{ t('common.inputRequired', [t('config.value')]) }}" autocomplete="off" class="layui-input" style="flex:1;">
                     </div>
                 </div>
@@ -169,14 +170,14 @@
             </div>
         </div>
         <div class="layui-form-item" style="display:flex;justify-content:flex-end;gap:8px;">
-            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="configSubmit">{{ t('common.confirm') }}</button>
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="configSubmit">{{ t('common.save') }}</button>
             <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="cancelConfigForm">{{ t('common.cancel') }}</button>
         </div>
     </form>
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js"></script>
+    <script src="/static/layui/js/common.js?v=20261130i"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -246,7 +247,7 @@ layui.use(['table', 'form', 'layer'], function(){
                 var list = Array.isArray(rawData) ? rawData : (rawData.list || []);
                 total = Array.isArray(rawData) ? list.length : (rawData.total || 0);
 
-                table.render({
+                LayuiUI.table({
                     elem: '#configTable',
                     toolbar: '#toolbarTpl',
                     defaultToolbar: [],
@@ -274,7 +275,7 @@ layui.use(['table', 'form', 'layer'], function(){
                             var type = d.config_type || 'string';
                             var val = d.value || '';
                             if (type === 'image' && val) {
-                                return '<div class="config-value-image"><span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">' + escapeHtml(val) + '</span><img src="' + escapeHtml(val) + '" class="table-image-preview" onerror="this.style.display=\'none\'" style="cursor:pointer;"></div>';
+                                return '<div class="config-value-image"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block" class="max-w-200">' + escapeHtml(val) + '</span><img src="' + escapeHtml(val) + '" class="table-image-preview" onerror="this.style.display=\'none\'" style="cursor:pointer;"></div>';
                             } else if (type === 'color' && val) {
                                 return '<div class="config-value-color"><span class="color-preview" style="background:' + escapeHtml(val) + ';"></span>' + escapeHtml(val) + '</div>';
                             } else if (type === 'boolean') {
@@ -289,7 +290,7 @@ layui.use(['table', 'form', 'layer'], function(){
                                     return '<span style="color:var(--text-secondary);font-size:12px;">' + escapeHtml(val.substring(0, 60)) + (val.length > 60 ? '...' : '') + '</span>';
                                 }
                             } else {
-                                return '<span style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">' + escapeHtml(val) + '</span>';
+                                return '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block" class="max-w-300">' + escapeHtml(val) + '</span>';
                             }
                         }},
                         {field: 'description', title: t('config.description'), width: 180, templet: function(d) {
@@ -311,66 +312,65 @@ layui.use(['table', 'form', 'layer'], function(){
     }
 
     // 切换配置值输入区域
-    function switchValueInput(type) {
-        $('#valueInputDefault, #valueInputImage, #valueInputColor, #valueInputJson, #valueInputBoolean, #valueInputText').hide();
+    function switchValueInput(type, $root) {
+        var $scope = $root || $(document);
+        $scope.find('#valueInputDefault, #valueInputImage, #valueInputColor, #valueInputJson, #valueInputBoolean, #valueInputText').hide();
         if (type === 'image') {
-            $('#valueInputImage').show();
+            $scope.find('#valueInputImage').show();
         } else if (type === 'color') {
-            $('#valueInputColor').show();
+            $scope.find('#valueInputColor').show();
         } else if (type === 'json') {
-            $('#valueInputJson').show();
+            $scope.find('#valueInputJson').show();
         } else if (type === 'boolean') {
-            $('#valueInputBoolean').show();
+            $scope.find('#valueInputBoolean').show();
         } else if (type === 'text') {
-            $('#valueInputText').show();
+            $scope.find('#valueInputText').show();
         } else {
-            $('#valueInputDefault').show();
+            $scope.find('#valueInputDefault').show();
         }
     }
 
     // 获取当前配置值
-    function getCurrentValue(type) {
+    function getCurrentValue(type, $root) {
+        var $scope = $root || $(document);
         if (type === 'image') {
-            return $('[name="value_image"]').val() || '';
+            return $scope.find('[name="value_image"]').val() || '';
         } else if (type === 'color') {
-            return $('[name="value_color"]').val() || '';
+            return $scope.find('[name="value_color"]').val() || '';
         } else if (type === 'json') {
-            return $('[name="value_json"]').val() || '';
+            return $scope.find('[name="value_json"]').val() || '';
         } else if (type === 'boolean') {
-            return $('[name="value_boolean"]').is(':checked') ? 'true' : 'false';
+            return $scope.find('[name="value_boolean"]').is(':checked') ? 'true' : 'false';
         } else if (type === 'text') {
-            return $('[name="value_text"]').val() || '';
+            return $scope.find('[name="value_text"]').val() || '';
         } else {
-            return $('[name="value"]').val() || '';
+            return $scope.find('[name="value"]').val() || '';
         }
     }
 
     // 设置配置值到对应输入框
-    function setCurrentValue(type, value) {
+    function setCurrentValue(type, value, $root) {
+        var $scope = $root || $(document);
         if (type === 'image') {
-            $('[name="value_image"]').val(value || '');
+            $scope.find('[name="value_image"]').val(value || '');
             if (value) {
-                $('#imagePreview').attr('src', value).show().css('cursor', 'pointer');
-                $('#imagePreviewHint').html('<span style="color:var(--primary-color);cursor:pointer;" class="preview-link">' + t('config.preview') + '</span>');
+                $scope.find('#imagePreview').attr('src', value).show().css('cursor', 'pointer');
+                $scope.find('#imagePreviewHint').html('<span style="color:var(--primary-color);cursor:pointer;" class="preview-link">' + t('config.preview') + '</span>');
             } else {
-                $('#imagePreview').hide();
-                $('#imagePreviewHint').text(t('config.previewHint'));
+                $scope.find('#imagePreview').hide();
+                $scope.find('#imagePreviewHint').text(t('config.previewHint'));
             }
         } else if (type === 'color') {
-            $('[name="value_color"]').val(value || '');
-            $('#colorPicker').val(value || '#1e9fff');
+            $scope.find('[name="value_color"]').val(value || '');
+            $scope.find('#colorPicker').val(value || '#1e9fff');
         } else if (type === 'json') {
-            $('[name="value_json"]').val(value || '');
+            $scope.find('[name="value_json"]').val(value || '');
         } else if (type === 'boolean') {
-            if (value === 'true' || value === true) {
-                $('[name="value_boolean"]').prop('checked', true);
-            } else {
-                $('[name="value_boolean"]').prop('checked', false);
-            }
+            $scope.find('[name="value_boolean"]').prop('checked', value === 'true' || value === true);
         } else if (type === 'text') {
-            $('[name="value_text"]').val(value || '');
+            $scope.find('[name="value_text"]').val(value || '');
         } else {
-            $('[name="value"]').val(value || '');
+            $scope.find('[name="value"]').val(value || '');
         }
     }
 
@@ -379,7 +379,7 @@ layui.use(['table', 'form', 'layer'], function(){
         var isEdit = !!editData;
         var title = isEdit ? t('config.editForm.title') : t('config.addForm.title');
 
-        var layerIndex = layer.open({
+        var layerIndex = LayuiUI.dialog({
             type: 1,
             title: title,
             area: ['580px', 'auto'],
@@ -401,17 +401,17 @@ layui.use(['table', 'form', 'layer'], function(){
 
                     // 设置配置值
                     var type = editData.config_type || 'string';
-                    switchValueInput(type);
-                    setCurrentValue(type, editData.value);
+                    switchValueInput(type, layero);
+                    setCurrentValue(type, editData.value, layero);
                 } else {
-                    switchValueInput('string');
+                    switchValueInput('string', layero);
                 }
 
                 form.render(null, formFilter);
 
-                // 类型切换事件
-                form.off('select(configType)').on('select(configType)', function(data) {
-                    switchValueInput(data.value);
+                // 类型切换事件：仅绑定当前弹窗
+                layero.off('change.configType', 'select[name="config_type"]').on('change.configType', 'select[name="config_type"]', function() {
+                    switchValueInput(this.value, layero);
                     form.render(null, formFilter);
                 });
 
@@ -471,7 +471,10 @@ layui.use(['table', 'form', 'layer'], function(){
                         data: formData,
                         processData: false,
                         contentType: false,
-                        headers: {'X-CSRFToken': getCookie('csrftoken')},
+                        headers: {
+                            'Authorization': 'Bearer ' + (typeof getToken === 'function' ? getToken() : ''),
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
                         success: function(res) {
                             layer.close(loadIndex);
                             if (res.code === 200) {
@@ -490,8 +493,8 @@ layui.use(['table', 'form', 'layer'], function(){
                 });
 
                 // 取消按钮
-                layero.find('#cancelConfigForm').on('click', function() {
-                    layer.close(layerIndex);
+                layero.find('#cancelConfigForm').off('click.configForm').on('click.configForm', function() {
+                    layer.close(index);
                 });
             }
         });
@@ -501,7 +504,7 @@ layui.use(['table', 'form', 'layer'], function(){
     form.on('submit(configSubmit)', function(data) {
         var field = data.field;
         var type = field.config_type || 'string';
-        var value = getCurrentValue(type);
+        var value = getCurrentValue(type, $(data.elem).closest('.layui-layer'));
 
         var submitData = {
             key: field.key,
@@ -519,7 +522,7 @@ layui.use(['table', 'form', 'layer'], function(){
         if (isEdit) {
             putApi('/admin/api/rbac/configs/' + field.id + '/update/', submitData, function(res) {
                 // 恢复按钮状态
-                $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                 
                 if (res.code === 200) {
                     layer.msg(t('common.updateSuccess'), {icon: 1});
@@ -543,7 +546,7 @@ layui.use(['table', 'form', 'layer'], function(){
                                     break;
                                 case 'logo_url':
                                     if (submitData.value) {
-                                        $('.logo-icon').html('<img src="' + submitData.value + '" style="width:32px;height:32px;border-radius:6px;">');
+                                        $('.logo-icon').html('<img src="' + submitData.value + '" style="height:32px;border-radius:6px" class="w-32">');
                                     } else {
                                         $('.logo-icon').html('<i class="layui-icon layui-icon-code-circle"></i>');
                                     }
@@ -571,7 +574,7 @@ layui.use(['table', 'form', 'layer'], function(){
         } else {
             postApi('/admin/api/rbac/configs/create/', submitData, function(res) {
                 // 恢复按钮状态
-                $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                 
                 if (res.code === 200) {
                     layer.msg(t('common.addSuccess'), {icon: 1});
@@ -607,7 +610,7 @@ layui.use(['table', 'form', 'layer'], function(){
                 '<div class="layui-form-item"><label class="layui-form-label">' + t('config.sort') + '</label><div class="layui-input-block"><input type="text" value="' + (data.sort || 0) + '" class="layui-input" readonly></div></div>' +
                 '<div class="layui-form-item"><label class="layui-form-label">' + t('user.createTime') + '</label><div class="layui-input-block"><input type="text" value="' + escapeHtml(data.update_time || '') + '" class="layui-input" readonly></div></div>' +
                 '</div>';
-            layer.open({
+            LayuiUI.dialog({
                 type: 1,
                 title: t('common.view') + ' ' + t('config.title') + ' - ' + data.key,
                 area: ['550px', 'auto'],
@@ -635,8 +638,8 @@ layui.use(['table', 'form', 'layer'], function(){
         }
     });
 
-    // 初始化
-    loadTable();
+    // 初始化：等待用户信息就绪后再渲染依赖权限的工具栏
+    LayuiUI.ensureCurrentUser(loadTable);
 
     // 表格图片点击放大预览（事件委托）
     $(document).on('click', '.table-image-preview', function() {

@@ -1,0 +1,379 @@
+# -*- coding: utf-8 -*-
+# -----------------------------
+# @Author    : 影子
+# @Date      : 2026-11-26 22:19
+# @FileName  : abac.py
+# -----------------------------
+"""1.4.2 无依赖 ABAC 表达式引擎。支持 and / or / not、== != > >= < <=、in / not in / contains、括号、点路径、字符串、数字和 true/false/null。表达式只能读取传入上下文中的键，不执行 eval()、属性调用、导入或任意 Python 代码。"""
+import re
+from dataclasses import dataclass
+from datetime import datetime
+
+from django.utils import timezone
+
+
+class AbacError(ValueError):
+    pass
+
+
+_TOKEN_RE = re.compile(
+    r"""
+    \s*(?:
+        (?P<string>"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')
+      | (?P<number>-?\d+(?:\.\d+)?)
+      | (?P<op>==|!=|>=|<=|>|<|\bnot\s+in\b|\bin\b|\bcontains\b|\band\b|\bor\b|\bnot\b)
+      | (?P<ident>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)
+      | (?P<punct>[(),])
+    )
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+_COMPARISONS = {'==', '!=', '>', '>=', '<', '<=', 'in', 'not in', 'contains'}
+_SENSITIVE_FIELD_TOKENS = (
+    'password', 'passwd', 'secret', 'credential', 'token', 'api_key',
+    'private_key', 'access_key', 'signature',
+)
+
+
+def _tokenize(expression):
+    tokens = []
+    pos = 0
+    while pos < len(expression):
+        match = _TOKEN_RE.match(expression, pos)
+        if not match:
+            if expression[pos].isspace():
+                pos += 1
+                continue
+            raise AbacError('无法解析表达式字符：%s' % expression[pos])
+        pos = match.end()
+        kind = match.lastgroup
+        value = match.group(kind)
+        if kind == 'op':
+            value = re.sub(r'\s+', ' ', value).lower()
+        tokens.append((kind, value))
+    tokens.append(('eof', ''))
+    return tokens
+
+
+class _Parser:
+    def __init__(self, tokens, context, validate=False):
+        self.tokens = tokens
+        self.context = context
+        self.validate = validate
+        self.index = 0
+
+    def peek(self):
+        return self.tokens[self.index]
+
+    def consume(self):
+        token = self.tokens[self.index]
+        self.index += 1
+        return token
+
+    def parse(self, skip=False):
+        value = self.parse_or(skip)
+        if self.peek()[0] != 'eof':
+            raise AbacError('表达式存在多余内容：%s' % self.peek()[1])
+        return value
+
+    def parse_or(self, skip=False):
+        value = self.parse_and(skip)
+        while self.peek() == ('op', 'or'):
+            self.consume()
+            right = self.parse_and(skip or bool(value))
+            if not skip:
+                value = value or right
+        return value
+
+    def parse_and(self, skip=False):
+        value = self.parse_not(skip)
+        while self.peek() == ('op', 'and'):
+            self.consume()
+            right = self.parse_not(skip or not value)
+            if not skip:
+                value = value and right
+        return value
+
+    def parse_not(self, skip=False):
+        if self.peek() == ('op', 'not'):
+            self.consume()
+            value = self.parse_not(skip)
+            return value if skip else not value
+        return self.parse_comparison(skip)
+
+    def parse_comparison(self, skip=False):
+        left = self.parse_primary()
+        kind, value = self.peek()
+        if kind == 'op' and value in _COMPARISONS:
+            self.consume()
+            right = self.parse_primary()
+            if skip:
+                return False
+            return _compare(left, value, right, self.context, self.validate)
+        return False if skip else bool(left)
+
+    def parse_primary(self):
+        kind, value = self.consume()
+        if kind == 'punct' and value == '(':
+            result = self.parse_or()
+            if self.consume() != ('punct', ')'):
+                raise AbacError('表达式缺少右括号')
+            return result
+        if kind == 'string':
+            quote = value[0]
+            return value[1:-1].replace(quote + '\\', quote).replace('\\\\', '\\')
+        if kind == 'number':
+            return float(value) if '.' in value else int(value)
+        if kind == 'ident':
+            lowered = value.lower()
+            if lowered == 'true':
+                return True
+            if lowered == 'false':
+                return False
+            if lowered == 'null':
+                return None
+            return ('path', value)
+        raise AbacError('表达式语法错误：%s' % value)
+
+
+def _resolve(node, context, validate=False):
+    if not (isinstance(node, tuple) and len(node) == 2 and node[0] == 'path'):
+        return node
+    parts = node[1].split('.')
+    if parts[0] not in context:
+        if validate:
+            return None
+        raise AbacError('上下文缺少字段：%s' % parts[0])
+    value = context[parts[0]]
+    for part in parts[1:]:
+        if isinstance(value, dict):
+            if part not in value:
+                if validate:
+                    return None
+                raise AbacError('上下文缺少字段：%s' % node[1])
+            value = value[part]
+        else:
+            value = getattr(value, part, None)
+    return value
+
+
+def _compare(left, operator, right, context, validate=False):
+    left = _resolve(left, context, validate)
+    right = _resolve(right, context, validate)
+    if validate:
+        return True
+    try:
+        if operator == '==':
+            return left == right
+        if operator == '!=':
+            return left != right
+        if operator == '>':
+            return left > right
+        if operator == '>=':
+            return left >= right
+        if operator == '<':
+            return left < right
+        if operator == '<=':
+            return left <= right
+        if operator == 'in':
+            if isinstance(right, str):
+                return str(left) in right
+            return left in right
+        if operator == 'not in':
+            if isinstance(right, str):
+                return str(left) not in right
+            return left not in right
+        if operator == 'contains':
+            if hasattr(right, '__contains__'):
+                return left in right
+            return str(left) in str(right)
+    except TypeError as exc:
+        raise AbacError('表达式类型不兼容：%s' % exc)
+    return False
+
+
+def validate_expression(expression):
+    """仅校验语法，不要求运行时上下文。"""
+    _Parser(_tokenize(str(expression or '')), {}, validate=True).parse()
+    return True
+
+
+def evaluate_expression(expression, context):
+    """基于普通上下文字典求值安全布尔表达式。"""
+    if not expression or not str(expression).strip():
+        return False
+    return bool(_Parser(_tokenize(str(expression)), context or {}).parse())
+
+
+def user_context(user):
+    if not user or not getattr(user, 'is_authenticated', False):
+        return {}
+    roles = getattr(user, 'roles', None)
+    role_rows = list(roles.all()) if roles is not None else []
+    context = {
+        'id': getattr(user, 'pk', None),
+        'username': getattr(user, 'username', ''),
+        'is_superuser': bool(getattr(user, 'is_superuser', False)),
+        'roles': [role.code for role in role_rows],
+        'role_names': [role.name for role in role_rows],
+        'scope_nodes': [role.scope_node for role in role_rows if getattr(role, 'scope_node', '')],
+        'department': getattr(user, 'department', ''),
+    }
+    if hasattr(user, 'permissions'):
+        from .engine import get_effective_permissions
+        context['permissions'] = list(get_effective_permissions(user))
+    else:
+        context['permissions'] = []
+    return context
+
+
+def resource_context(resource):
+    if resource is None:
+        return {}
+    if isinstance(resource, dict):
+        return dict(resource)
+    model_meta = getattr(resource, '_meta', None)
+    if model_meta is None:
+        return {'value': resource}
+    result = {}
+    for field in model_meta.concrete_fields:
+        lowered = field.name.lower()
+        if any(token in lowered for token in _SENSITIVE_FIELD_TOKENS):
+            continue
+        result[field.name] = getattr(resource, field.attname)
+    return result
+
+
+def resource_codes(resource):
+    if isinstance(resource, str):
+        return [resource]
+    model_meta = getattr(resource, '_meta', None)
+    if model_meta is None:
+        return [type(resource).__name__]
+    return [
+        '%s.%s' % (model_meta.app_label, model_meta.model_name),
+        model_meta.model_name,
+    ]
+
+
+def build_context(user, action, resource, field=None, extra_context=None):
+    context = dict(extra_context or {})
+    context.setdefault('user', user_context(user))
+    context.setdefault('resource', resource_context(resource))
+    context.setdefault('action', action)
+    context.setdefault('field', field or '')
+    now = timezone.now()
+    context.setdefault('time', {
+        'hour': now.hour,
+        'weekday': now.weekday(),
+        'date': now.date().isoformat(),
+    })
+    return context
+
+
+@dataclass
+class AbacDecision:
+    allowed: bool
+    matched: list
+    errors: list
+
+
+def _policies_for(resource, action, field):
+    from .models import AbacPolicy
+
+    codes = resource_codes(resource)
+    queryset = AbacPolicy.objects.filter(is_active=True, resource__in=codes)
+    queryset = queryset.filter(action__in=[action, '*'])
+    if field:
+        queryset = queryset.filter(field=field)
+    else:
+        queryset = queryset.filter(field='')
+    return list(queryset.order_by('priority', 'id'))
+
+
+def load_field_policies(resource, action, fields):
+    """为一次批量序列化请求预载字段策略。"""
+    from .models import AbacPolicy
+
+    fields = list(fields or [])
+    if not fields:
+        return {}
+    codes = resource_codes(resource)
+    rows = list(AbacPolicy.objects.filter(
+        is_active=True, resource__in=codes,
+        action__in=[action, '*'], field__in=fields,
+    ).order_by('priority', 'id'))
+    result = {}
+    for row in rows:
+        result.setdefault(row.field, []).append(row)
+    return result
+
+
+def evaluate_policies(user, action, resource, field=None, extra_context=None, policies=None):
+    """返回 ABAC 决策。行级策略保持向后兼容（无策略即允许）；字段级策略默认拒绝，未注册字段会被隐藏。"""
+    if getattr(user, 'is_superuser', False):
+        return AbacDecision(True, [], [])
+    if policies is None:
+        policies = _policies_for(resource, action, field)
+    if not policies:
+        return AbacDecision(not bool(field), [], [])
+
+    resource_for_context = (extra_context or {}).get('resource', resource)
+    context = build_context(user, action, resource_for_context, field, extra_context)
+    matched = []
+    errors = []
+    for policy in policies:
+        try:
+            hit = evaluate_expression(policy.expression, context)
+        except AbacError as exc:
+            errors.append({'policy_id': policy.id, 'error': str(exc)})
+            continue
+        if hit:
+            matched.append(policy)
+            if policy.effect == 'deny':
+                return AbacDecision(False, [policy.id], errors)
+    if errors:
+        return AbacDecision(False, [policy.id for policy in matched], errors)
+    return AbacDecision(True, [policy.id for policy in matched], errors)
+
+
+def filter_queryset(queryset, user, action, resource, extra_context=None, chunk_size=1000):
+    """Python 层行过滤，返回按主键约束的 QuerySet。"""
+    allowed_pks = []
+    for obj in queryset.iterator(chunk_size=max(1, int(chunk_size or 1000))):
+        context = dict(extra_context or {})
+        context.setdefault('resource', resource_context(obj))
+        if evaluate_policies(user, action, resource or obj, extra_context=context).allowed:
+            allowed_pks.append(obj.pk)
+    return queryset.filter(pk__in=allowed_pks)
+
+
+def has_field_policies(resource, action, fields):
+    """判断请求字段是否存在 ABAC 字段策略。"""
+    for field in fields or []:
+        if _policies_for(resource, action, field):
+            return True
+    return False
+
+
+def filter_fields(user, action, resource, fields, extra_context=None):
+    """返回指定资源和动作下用户可见的字段。"""
+    if getattr(user, 'is_superuser', False):
+        return list(fields or [])
+
+    visible = []
+    for field in fields or []:
+        field_policies = [
+            policy for policy in _policies_for(resource, action, field)
+            if policy.field == field
+        ]
+        if not field_policies:
+            continue
+        has_allow_whitelist = any(policy.effect == 'allow' for policy in field_policies)
+        decision = evaluate_policies(
+            user, action, resource, field, extra_context, policies=field_policies
+        )
+        if decision.allowed and has_allow_whitelist and decision.matched:
+            visible.append(field)
+    return visible
