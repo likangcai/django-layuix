@@ -136,7 +136,8 @@ def department_list(request):
     if keyword:
         queryset = queryset.filter(
             Q(name__icontains=keyword) | Q(code__icontains=keyword)
-            | Q(leader__icontains=keyword)
+            | Q(leader__icontains=keyword) | Q(phone__icontains=keyword)
+            | Q(email__icontains=keyword)
         )
     status = request.GET.get('status')
     if status not in (None, ''):

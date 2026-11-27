@@ -6,7 +6,7 @@
     <title>菜单管理 - 软件测试管理后台</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130g">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130i">
     <script>
         // 同步父页面主题
         function syncParentTheme() {
@@ -53,7 +53,14 @@
         .menu-tree-toolbar .layui-input { flex: 1; min-width: 0; height: 30px; padding: 0 8px; }
         .menu-tree-toolbar .layui-btn { margin-left: 0; padding: 0 8px; }
         .menu-tree-toolbar .layui-btn i { font-size: 14px; }
-        .menu-table-panel { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+        .menu-table-panel { flex: 1; min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+        .menu-table-search {
+            display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-bottom: 0; border-radius: 8px 8px 0 0; flex: 0 0 auto;
+        }
+        .menu-table-search .layui-input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; }
+        .menu-table-search .layui-btn { margin-left: 0; }
         .layui-form-label { width: 120px; padding: 9px 12px 9px 0; }
         .layui-input-block { margin-left: 130px; }
         .icon-preview { display: inline-block; width: 20px; text-align: center; margin-right: 5px; }
@@ -87,6 +94,11 @@
                 </div>
                 <!-- 右侧表格 -->
                 <div class="menu-table-panel">
+                    <div class="menu-table-search">
+                        <input type="text" id="menuTableSearch" class="layui-input" data-i18n-placeholder="menu.searchPlaceholder" placeholder="搜索菜单名称或权限码" autocomplete="off">
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="menuTableSearchBtn" data-i18n-title="common.search" title="搜索"><i class="layui-icon layui-icon-search"></i></button>
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="menuTableResetBtn" data-i18n-title="common.reset" title="重置"><i class="layui-icon layui-icon-refresh"></i></button>
+                    </div>
                     <table id="menuTable" lay-filter="menuTable"></table>
                 </div>
             </div>
@@ -245,7 +257,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261130g"></script>
+    <script src="/static/layui/js/common.js?v=20261130i"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -409,61 +421,90 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
         });
     }
 
+    // 右侧表格搜索：按名称、权限码、路由和组件路径过滤
+    var menuFlatRows = [];
+    function filteredMenuRows() {
+        var keyword = String($('#menuTableSearch').val() || '').trim().toLowerCase();
+        if (!keyword) return menuFlatRows;
+        return menuFlatRows.filter(function(row) {
+            return [row.name, row.name_en, row.name_zh_hans, row.permission, row.path, row.component]
+                .some(function(value) {
+                    return String(value || '').toLowerCase().indexOf(keyword) > -1;
+                });
+        });
+    }
+
+    function renderMenuTable(rows) {
+        LayuiUI.table({
+            elem: '#menuTable',
+            toolbar: '#toolbarTpl',
+            defaultToolbar: [],
+            data: rows,
+            page: false,
+            height: 'full-190',
+            even: true,
+            cols: [[
+                {field: 'name', title: t('menu.name'), minWidth: 200, templet: function(d) {
+                    var indent = '';
+                    for (var i = 0; i < d.level; i++) {
+                        indent += '&nbsp;&nbsp;&nbsp;&nbsp;';
+                    }
+                    var icon = d.icon ? '<i class="layui-icon ' + escapeHtml(d.icon) + ' icon-preview"></i>' : '';
+                    return indent + icon + escapeHtml(d.name);
+                }},
+                {field: 'icon', title: t('menu.icon'), width: 80, align: 'center', templet: function(d) {
+                    return d.icon ? '<i class="layui-icon ' + escapeHtml(d.icon) + '" style="font-size:20px;"></i>' : '';
+                }},
+                {field: 'menu_type', title: t('menu.type'), width: 90, align: 'center', templet: function(d) {
+                    var color = menuTypeColor[d.menu_type] || '#999';
+                    return '<span style="color:' + color + ';font-weight:bold;">' + (menuTypeMap[d.menu_type] || t('common.unknown')) + '</span>';
+                }},
+                {field: 'sort', title: t('menu.sort'), width: 80, align: 'center'},
+                {field: 'visible', title: t('menu.visible'), width: 80, align: 'center', templet: function(d) {
+                    return d.visible
+                        ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
+                        : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
+                }},
+                {field: 'status', title: t('menu.status'), width: 80, align: 'center', templet: function(d) {
+                    return d.status
+                        ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
+                        : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
+                }},
+                {field: 'backend_visible', title: t('menu.backendVisible') || '后台可见', width: 100, align: 'center', templet: function(d) {
+                    return d.backend_visible
+                        ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
+                        : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
+                }},
+                {field: 'frontend_visible', title: t('menu.frontendVisible') || '前台可见', width: 100, align: 'center', templet: function(d) {
+                    return d.frontend_visible
+                        ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
+                        : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
+                }},
+                {field: 'permission', title: t('menu.permission'), width: 160},
+                {title: t('common.operation'), width: 320, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
+            ]]
+        });
+    }
+
     // 加载表格
     function loadTable() {
         getApi('/admin/api/rbac/menus/tree/', function(res) {
             if (res.code === 200) {
                 var treeData = enrichTree(res.data || [], 0);
-                var flatData = flattenTree(treeData);
-
-                LayuiUI.table({
-                    elem: '#menuTable',
-                    toolbar: '#toolbarTpl',
-                    defaultToolbar: [],
-                    data: flatData,
-                    page: false,
-                    height: 'full-140',
-                    even: true,
-                    cols: [[
-                        {field: 'name', title: t('menu.name'), minWidth: 200, templet: function(d) {
-                            var indent = '';
-                            for (var i = 0; i < d.level; i++) {
-                                indent += '&nbsp;&nbsp;&nbsp;&nbsp;';
-                            }
-                            var icon = d.icon ? '<i class="layui-icon ' + escapeHtml(d.icon) + ' icon-preview"></i>' : '';
-                            return indent + icon + escapeHtml(d.name);
-                        }},
-                        {field: 'icon', title: t('menu.icon'), width: 80, align: 'center', templet: function(d) {
-                            return d.icon ? '<i class="layui-icon ' + escapeHtml(d.icon) + '" style="font-size:20px;"></i>' : '';
-                        }},
-                        {field: 'menu_type', title: t('menu.type'), width: 90, align: 'center', templet: function(d) {
-                            var color = menuTypeColor[d.menu_type] || '#999';
-                            return '<span style="color:' + color + ';font-weight:bold;">' + (menuTypeMap[d.menu_type] || t('common.unknown')) + '</span>';
-                        }},
-                        {field: 'sort', title: t('menu.sort'), width: 80, align: 'center'},
-                        {field: 'visible', title: t('menu.visible'), width: 80, align: 'center', templet: function(d) {
-                            return d.visible
-                                ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
-                        }},
-                        {field: 'status', title: t('menu.status'), width: 80, align: 'center', templet: function(d) {
-                            return d.status
-                                ? '<span class="layui-badge layui-bg-green">' + t('common.enable') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + t('common.disable') + '</span>';
-                        }},
-                        {field: 'backend_visible', title: t('menu.backendVisible') || '后台可见', width: 100, align: 'center', templet: function(d) {
-                            return d.backend_visible
-                                ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
-                        }},
-                        {field: 'frontend_visible', title: t('menu.frontendVisible') || '前台可见', width: 100, align: 'center', templet: function(d) {
-                            return d.frontend_visible
-                                ? '<span class="layui-badge layui-bg-green">' + (t('common.show') || '显示') + '</span>'
-                                : '<span class="layui-badge layui-bg-gray">' + (t('common.hide') || '隐藏') + '</span>';
-                        }},
-                        {field: 'permission', title: t('menu.permission'), width: 160},
-                        {title: t('common.operation'), width: 320, align: 'center', fixed: 'right', toolbar: '#operateTpl'}
-                    ]]
+                menuFlatRows = flattenTree(treeData);
+                renderMenuTable(filteredMenuRows());
+                $('#menuTableSearch').off('input.menuTable').on('input.menuTable', function() {
+                    renderMenuTable(filteredMenuRows());
+                });
+                $('#menuTableSearchBtn').off('click.menuTable').on('click.menuTable', function() {
+                    renderMenuTable(filteredMenuRows());
+                });
+                $('#menuTableResetBtn').off('click.menuTable').on('click.menuTable', function() {
+                    $('#menuTableSearch').val('');
+                    renderMenuTable(menuFlatRows);
+                });
+                $('#menuTableSearch').off('keydown.menuTable').on('keydown.menuTable', function(event) {
+                    if (event.key === 'Enter') { event.preventDefault(); renderMenuTable(filteredMenuRows()); }
                 });
             }
         });

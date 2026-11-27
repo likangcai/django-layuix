@@ -6,7 +6,7 @@
     <title data-i18n="data.department">部门管理</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130g">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130i">
     <link rel="stylesheet" href="/static/layui/css/data-admin.css?v=5">
     <script>
         function syncParentTheme() {
@@ -149,8 +149,8 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-<script src="/static/layui/js/common.js?v=20261130g"></script>
-<script src="/static/layui/js/i18n.js?v=20261130g"></script>
+<script src="/static/layui/js/common.js?v=20261130i"></script>
+<script src="/static/layui/js/i18n.js?v=20261130i"></script>
 <script src="/static/layui/js/data-admin.js?v=3"></script>
 <script>
 inheritTheme();
@@ -164,6 +164,7 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
     var layer = layui.layer;
 
     var allRows = [];
+    var tableRows = [];
     var selectedId = null;
 
     function can(code) { return DataAdmin.hasPerm(code); }
@@ -215,14 +216,9 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
     }
 
     function visibleRows() {
-        var keyword = $('#deptKeyword').val().trim().toLowerCase();
-        var status = $('#deptStatus').val();
         var allowed = selectedId === null ? null : DataAdmin.descendantIds(allRows, selectedId);
-        return allRows.filter(function (row) {
-            if (allowed && !allowed[String(row.id)]) return false;
-            if (status !== '' && String(row.status) !== status) return false;
-            if (!keyword) return true;
-            return DataAdmin.matches(row, keyword, ['name', 'code', 'leader', 'phone', 'email']);
+        return tableRows.filter(function (row) {
+            return !allowed || allowed[String(row.id)];
         });
     }
 
@@ -254,19 +250,43 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
         });
     }
 
-    function loadData() {
-        getApi('/admin/api/rbac/departments/', function (res) {
+    function fetchDepartments(query, callback) {
+        var params = [];
+        Object.keys(query || {}).forEach(function(key) {
+            var value = query[key];
+            if (value !== '' && value !== null && value !== undefined) {
+                params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+            }
+        });
+        getApi('/admin/api/rbac/departments/' + (params.length ? '?' + params.join('&') : ''), function(res) {
             if (res.code !== 200) {
                 layer.msg(res.msg || t('common.loadFailed'), {icon: 2});
+                callback([]);
                 return;
             }
-            allRows = (res.data && res.data.list) || [];
+            callback((res.data && res.data.list) || []);
+        });
+    }
+
+    function loadTableData() {
+        fetchDepartments({
+            keyword: $('#deptKeyword').val().trim(),
+            status: $('#deptStatus').val()
+        }, function(rows) {
+            tableRows = rows;
+            renderTable();
+        });
+    }
+
+    function loadData() {
+        fetchDepartments({}, function(rows) {
+            allRows = rows;
             if (selectedId !== null && !allRows.some(function (row) { return Number(row.id) === Number(selectedId); })) {
                 selectedId = null;
             }
             $('#deptScopeTitle').text(selectedName());
             renderTree();
-            renderTable();
+            loadTableData();
         });
     }
 
@@ -351,16 +371,17 @@ layui.use(['form', 'table', 'tree', 'layer'], function () {
         $('#deptScopeTitle').text(t('data.allNodes'));
         renderTable();
     });
-    $('#searchDeptBtn').on('click', renderTable);
+    $('#searchDeptBtn').on('click', loadTableData);
     $('#resetDeptBtn').on('click', function () {
         $('#deptKeyword').val('');
         $('#deptStatus').val('');
+        form.render('select');
         selectedId = null;
         $('#deptScopeTitle').text(t('data.allNodes'));
-        renderTable();
+        loadTableData();
     });
     $('#deptKeyword').on('keydown', function (event) {
-        if (event.key === 'Enter') { event.preventDefault(); renderTable(); }
+        if (event.key === 'Enter') { event.preventDefault(); loadTableData(); }
     });
 
     DataAdmin.loadPerms(function () {
