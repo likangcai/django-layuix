@@ -45,6 +45,22 @@
 .data-toolbar .layui-input { height: 34px; }
 .data-toolbar .data-keyword { width: auto; flex: 1 1 160px; min-width: 120px; }
 .data-toolbar .data-status { width: 110px; flex: 0 0 110px; }
+.data-toolbar select.data-status {
+    height: 34px;
+    line-height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm, 4px);
+    background: var(--bg-primary, #fff);
+    color: var(--text-primary);
+}
+.data-toolbar .layui-form-select { width: 110px; flex: 0 0 110px; }
+.data-toolbar .layui-form-select .layui-select-title input {
+    height: 34px;
+    line-height: 32px;
+    border-color: var(--border-color);
+}
+.data-toolbar .layui-form-select dl { max-height: 260px; }
 .data-toolbar .layui-btn { height: 34px; line-height: 34px; margin-left: 0; }
 .data-table-host { flex: 1; min-height: 0; }
 .data-tree-host { flex: 1; min-height: 0; overflow: auto; padding: 8px 4px; }
@@ -53,8 +69,9 @@
 .data-row-actions {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 4px;
+    padding-right: 8px;
     white-space: nowrap;
 }
 .data-row-actions .layui-btn { margin-left: 0; }

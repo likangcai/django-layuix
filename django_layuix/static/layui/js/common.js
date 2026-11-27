@@ -507,6 +507,9 @@ function openStandardDialog(options) {
                     && !$item.hasClass('menu-form-actions')
                     && !$item.hasClass('role-form-actions');
             }).addClass('layui-dialog-actions');
+            layero.find('[data-dialog-cancel]').off('click.dialogCancel').on('click.dialogCancel', function() {
+                layer.close(idx);
+            });
             if (typeof renderI18n === 'function') renderI18n();
             if (typeof originalSuccess === 'function') originalSuccess(layero, idx);
         },

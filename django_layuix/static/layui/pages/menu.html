@@ -6,7 +6,7 @@
     <title>菜单管理 - 软件测试管理后台</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261129a">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130d">
     <script>
         // 同步父页面主题
         function syncParentTheme() {
@@ -167,7 +167,7 @@
                 <div style="display:flex;gap:8px;">
                     <input type="text" name="icon" placeholder="{{ t('menu.iconPicker.placeholder') }}" autocomplete="off" class="layui-input" style="flex:1;">
                     <button type="button" class="layui-btn layui-btn-sm" id="iconPickerBtn">
-                        <i class="layui-icon layui-icon-search"></i> {{ t('common.confirm') }}
+                        <i class="layui-icon layui-icon-search"></i> {{ t('common.search') }}
                     </button>
                 </div>
                 <div id="iconPreview" style="margin-top:5px;font-size:20px;"></div>
@@ -226,8 +226,8 @@
             </div>
         </div>
         <div class="menu-form-actions">
-            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="menuSubmit">{{ t('common.confirm') }}</button>
-            <button type="reset" class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.reset') }}</button>
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="menuSubmit">{{ t('common.save') }}</button>
+            <button type="button" data-dialog-cancel class="layui-btn layui-btn-sm layui-btn-primary">{{ t('common.cancel') }}</button>
         </div>
     </form>
 </script>
@@ -245,7 +245,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-    <script src="/static/layui/js/common.js?v=20261129a"></script>
+    <script src="/static/layui/js/common.js?v=20261130d"></script>
     <script src="/static/layui/js/i18n.js"></script>
     <script>
 inheritTheme();
@@ -593,11 +593,11 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             if (id) {
                 putApi('/admin/api/rbac/menus/' + id + '/', submitData, function(res) {
                     if (res.code !== 200) {
-                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                         layer.msg(res.msg || t('common.fail'), {icon: 2});
                         return;
                     }
-                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                     layer.msg(t('common.updateSuccess'), {icon: 1});
                     layer.closeAll();
                     loadMenuTree();
@@ -606,11 +606,11 @@ layui.use(['table', 'tree', 'form', 'layer'], function(){
             } else {
                 postApi('/admin/api/rbac/menus/create/', submitData, function(res) {
                     if (res.code !== 200) {
-                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                        $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                         layer.msg(res.msg || t('common.fail'), {icon: 2});
                         return;
                     }
-                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                    $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                     layer.msg(t('common.addSuccess'), {icon: 1});
                     layer.closeAll();
                     loadMenuTree();

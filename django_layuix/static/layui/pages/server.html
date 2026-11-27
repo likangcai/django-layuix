@@ -6,7 +6,7 @@
     <title>服务器管理</title>
     <link rel="icon" type="image/x-icon" href="/static/layui/favicon.ico">
     <link rel="stylesheet" href="/static/layui/lib/layui.css">
-    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261129a">
+    <link rel="stylesheet" href="/static/layui/css/admin.css?v=20261130d">
     <script>
         function syncParentTheme() {
             var themeMode = 'dark';
@@ -233,7 +233,7 @@
             <button type="button" class="layui-btn layui-btn-warm" id="testConnectBtn" style="margin-right:8px;">
                 <i class="layui-icon layui-icon-engine"></i> {{ t('server.testConnect') }}
             </button>
-            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="serverSubmit">{{ t('common.confirm') }}</button>
+            <button type="button" class="layui-btn layui-btn-sm" lay-submit lay-filter="serverSubmit">{{ t('common.save') }}</button>
             <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="cancelServerForm">{{ t('common.cancel') }}</button>
         </div>
     </form>
@@ -296,7 +296,7 @@
 </script>
 
 <script src="/static/layui/lib/layui.js"></script>
-<script src="/static/layui/js/common.js?v=20261129a"></script>
+<script src="/static/layui/js/common.js?v=20261130d"></script>
 <script src="/static/layui/js/i18n.js"></script>
 <script>
 inheritTheme();
@@ -541,7 +541,7 @@ layui.use(['table', 'form', 'layer'], function(){
                     if (currentEdit) {
                         putApi('/admin/api/ops/servers/' + currentEditData.id + '/update/', submitData, function(res) {
                             // 恢复按钮状态
-                            $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                            $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                             
                             if (res.code === 200) {
                                 layer.msg(t('common.updateSuccess'), {icon: 1});
@@ -554,7 +554,7 @@ layui.use(['table', 'form', 'layer'], function(){
                     } else {
                         postApi('/admin/api/ops/servers/create/', submitData, function(res) {
                             // 恢复按钮状态
-                            $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.confirm') || '确认');
+                            $btn.prop('disabled', false).removeClass('layui-btn-disabled').text(t('common.save') || '保存');
                             
                             if (res.code === 200) {
                                 layer.msg(t('common.addSuccess'), {icon: 1});
