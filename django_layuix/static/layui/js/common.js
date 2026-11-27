@@ -538,6 +538,14 @@ function openStandardDialog(options) {
             layer.close(idx);
         };
     }
+    if (config.area && config.area.length) {
+        var width = String(config.area[0] || '');
+        var match = /^(\d+)px$/i.exec(width);
+        if (match) {
+            var maxWidth = Math.max(320, window.innerWidth - 24);
+            if (parseInt(match[1], 10) > maxWidth) config.area[0] = maxWidth + 'px';
+        }
+    }
     return layer.open(config);
 }
 

@@ -9,6 +9,14 @@
 
 ## [Unreleased]
 
+### 🧾 文档收敛
+- 📝 新增 `docs/DOCS_INDEX.md`，明确当前权威文档与历史评审文档边界
+- 🟡 为历史版本评审与旧审查报告添加“历史文档”提示，避免过时“待确认”项被误读为当前缺口
+- 🟡 README 详细文档索引链接到统一索引
+
+### 🪟 响应式修复
+- 🟡 公共弹窗宽度按视口自动钳制，`900px` 弹窗在 `768px` 视口实际宽度为 `744px`，不再横向溢出
+
 ### 🔐 安全加固
 - 🔴 **写接口强制 Token** — 后台 API 的 `POST/PUT/PATCH/DELETE` 默认要求显式 `Authorization: Bearer` 或 `X-Token`，登录/注册除外
 - 🔴 **前端 Token 链路** — 登录页直接持久化 Token，图片上传与数据导入补齐 Authorization 头
